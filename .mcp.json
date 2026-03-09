@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "context-plugin-catalog": {
+      "type": "sse",
+      "url": "https://chatbotapi.apimatic.io/mcp/catalog"
+    }
+  }
+}
