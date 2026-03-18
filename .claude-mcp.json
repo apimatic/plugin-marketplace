@@ -1,9 +1,10 @@
 {
   "mcpServers": {
     "api-context-plugins": {
+      "type": "http",
       "url": "https://chatbotapi.apimatic.io/mcp/plugins",
       "headers": {
-        "X-Apimatic-Mcp-Client": "Cursor"
+        "X-Apimatic-Mcp-Client": "ClaudeCode"
       }
     }
   }
