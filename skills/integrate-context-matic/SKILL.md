@@ -37,10 +37,15 @@ Use the detected language in all subsequent steps wherever `language` is require
 
 #### 1b. Check for Existing Guidelines and Skills
 
-Check whether guidelines and skills have already been added for this project by looking for their presence in the workspace. Check for existing skill and guideline files, e.g., `{language}-conventions`, `{language}-security-guidelines.md`, `{language}-test-guidelines.md`, `update-activity-workflow.md`, or prior output from `add_guidelines` and `add_skills`.
+Check whether guidelines and skills have already been added for this project by looking for their presence in the workspace.
 
-- **If they do not exist for the project's language:** Call **add_guidelines** and **add_skills** to create them. This sets up the necessary skills and guidelines for the MCP server to work correctly.
-- **If they already exist for the project's language:** Skip this step entirely and proceed to step 2.
+- `{language}-conventions` is the skill produced by **add_skills**.
+- `{language}-security-guidelines.md` and `{language}-test-guidelines.md` are language-specific guideline files produced by **add_guidelines**.
+- `update-activity-workflow.md` is a workflow guideline file produced by **add_guidelines** (it is not language-specific).
+- Check these independently. Do not treat the presence of one set as proof that the other set already exists.
+- **If any required guideline files for this project are missing:** Call **add_guidelines**.
+- **If `{language}-conventions` is missing for the project's language:** Call **add_skills**.
+- **If all required guideline files and `{language}-conventions` already exist:** Skip this step and proceed to step 2.
 
 ### 2. Discover Available APIs
 
@@ -92,7 +97,8 @@ Call **update_activity** (with the appropriate `milestone`) whenever one of thes
 ## Checklist
 
 - [ ] Project's primary language detected (step 1a)
-- [ ] `add_guidelines` and `add_skills` called (or confirmed already present — then skipped)
+- [ ] `add_guidelines` called if guideline files were missing, otherwise skipped
+- [ ] `add_skills` called if `{language}-conventions` was missing, otherwise skipped
 - [ ] `fetch_api` called with correct `language` for the project
 - [ ] Correct `key` identified for the requested API (or user informed if not found)
 - [ ] `update_activity` first called after `fetch_api` when integration work begins
