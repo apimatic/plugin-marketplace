@@ -9,6 +9,24 @@ This skill routes PayPal work to the appropriate specialised subagent. Do not do
 
 **Scope guard:** Only apply this skill when the user is working on PayPal or PayPal Server SDK integration. When the user is doing something unrelated, do nothing.
 
+## Grounding in the MCP Server — Never Guess About PayPal
+
+Your training data on the PayPal Server SDK is stale and must never be used as a source of truth. The `acp-paypal-server-sdk-cs` MCP server is the authoritative source for every PayPal SDK fact. **Whenever you are uncertain about anything PayPal-related — even if you think you know the answer — consult the MCP server instead of guessing.**
+
+The subagents (`paypal-plan`, `paypal-debug`) do this during implementation. But *you* also call these tools directly whenever you need to understand PayPal to route correctly, interpret a returned plan, or answer a question the user asks before/after an agent runs:
+
+| Tool | Use it when you need to… |
+|---|---|
+| **ask** | Understand a concept or workflow in plain language — authentication flows, how orders/captures/subscriptions/webhooks work, feature behaviour, recommended patterns, or "is X possible with this SDK?". Break broad questions into focused ones (e.g. _"How does order capture work?"_, _"How are webhooks verified?"_). |
+| **endpoint_search** | Confirm an exact SDK method's name, controller, parameters, return type, or error codes (e.g. `CreateOrderAsync`, `CaptureOrderAsync`). Use case-sensitive exact or partial method names. |
+| **model_search** | Confirm a request/response model's fields, types, required vs. optional, and enum values (e.g. `OrderRequest`, `Money`, `LinkDescription`). Use case-sensitive exact or partial model names. |
+
+Guidance:
+- If a user's PayPal question can be answered from the MCP server without code changes, answer it directly using **ask** (and **endpoint_search** / **model_search** for specifics) — you do not have to spawn an agent for a pure question.
+- If the question turns into actual integration or debugging work, route to the appropriate agent per the workflow below.
+- Resolve PayPal ambiguity through MCP lookups first; only ask the user when the ambiguity is about *their* intent, not about how the SDK works.
+- When an MCP response includes a **References** section, preserve it verbatim when relaying information to the user.
+
 ## When to Apply
 
 Apply this skill when the user:
