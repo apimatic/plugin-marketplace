@@ -9,8 +9,12 @@
   },
   "license": "MIT",
   "homepage": "https://www.apimatic.io",
-  "repository": "https://github.com/apimatic/api-context-plugins",
+  "repository": "https://github.com/apimatic/plugin-marketplace",
   "keywords": [ "api context", "api integration", "mcp", "apimatic", "third-party-apis", "sdks" ],
   "logo": "assets/logo.svg",
-  "mcpServers": "./.cursor-mcp.json"
+  "mcpServers": "./.mcp.json",
+  "skills": [
+    "./skills/integrate-context-matic",
+    "./skills/onboard-context-matic"
+  ]
 }

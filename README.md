@@ -35,8 +35,8 @@ This Cursor deeplink embeds the Cursor-specific MCP configuration directly and a
 
 2. Ask your agent to install the bundled skills from these files:
 
-- [skills/integrate-context-matic/SKILL.md](skills/integrate-context-matic/SKILL.md)
-- [skills/onboard-context-matic/SKILL.md](skills/onboard-context-matic/SKILL.md)
+- [plugins/context-matic/skills/integrate-context-matic/SKILL.md](plugins/context-matic/skills/integrate-context-matic/SKILL.md)
+- [plugins/context-matic/skills/onboard-context-matic/SKILL.md](plugins/context-matic/skills/onboard-context-matic/SKILL.md)
 
 Use prompts like these:
 
@@ -65,13 +65,13 @@ Install in Claude Code with these commands:
 1. Add this repository as a marketplace:
 
 ```text
-/plugin marketplace add apimatic/context-matic
+/plugin marketplace add apimatic/plugin-marketplace
 ```
 
 2. Install the plugin:
 
 ```text
-/plugin install context-matic@apimatic-context-matic
+/plugin install context-matic@apimatic
 ```
 If prompted, choose `Install for you (user scope).`.
 
@@ -116,6 +116,82 @@ After installing, use the **`/onboard-context-matic`** skill to get an interacti
 ```
 /onboard-context-matic
 ```
+---
+
+## ACP PayPal Plugin
+
+The marketplace also ships **`acp-paypal`** — a PayPal-focused plugin built on the same SDK-native context engine. It adds the `acp-paypal-server-sdk-cs` MCP server, an `/integrate-paypal` skill, and two specialized subagents:
+
+- **`paypal-plan`** — a read-only planner that produces a precise, SDK-contract-grounded PayPal integration plan (endpoints, models, auth) before any code is written.
+- **`paypal-debug`** — diagnoses and fixes PayPal API issues in your project, verifying every change against the MCP server.
+
+Install it alongside (or instead of) ContextMatic:
+
+<details>
+<summary><strong>Cursor</strong></summary>
+
+1. Install the MCP server and add this repository as a marketplace, then install the plugin:
+
+```text
+/plugin marketplace add apimatic/plugin-marketplace
+```
+
+2. Install the `acp-paypal` plugin from the marketplace, or add the MCP server manually via `Ctrl+Shift+P` > `>View: Open MCP Settings`.
+3. Ensure the `acp-paypal-server-sdk-cs` MCP server is enabled.
+
+</details>
+
+<details>
+<summary><strong>Claude Code</strong></summary>
+
+1. Add this repository as a marketplace:
+
+```text
+/plugin marketplace add apimatic/plugin-marketplace
+```
+
+2. Install the plugin:
+
+```text
+/plugin install acp-paypal@apimatic
+```
+If prompted, choose `Install for you (user scope).`.
+
+3. Reload plugins:
+
+```text
+/reload-plugins
+```
+
+4. Confirm the `acp-paypal-server-sdk-cs` MCP server is connected:
+
+```text
+/mcp
+```
+
+</details>
+
+<details>
+<summary><strong>VS Code</strong></summary>
+
+1. Open the Extensions view with `Ctrl+Shift+X`.
+2. Search for the plugin with:
+
+```text
+@agentPlugins acp-paypal
+```
+
+3. Select ACP PayPal and click **Install**.
+4. Ensure the bundled `acp-paypal-server-sdk-cs` MCP server is enabled by `Ctrl+Shift+P` > `>MCP: List Servers` > `acp-paypal-server-sdk-cs` > enable
+
+</details>
+
+Once installed, use the `/integrate-paypal` skill (or just describe a PayPal task or error) to route work to the `paypal-plan` and `paypal-debug` agents:
+
+```
+/integrate-paypal Add PayPal order creation and capture to my ASP.NET Core checkout.
+```
+
 ---
 
 ## Supported APIs
@@ -514,23 +590,44 @@ For API providers: [request a demo](https://www.apimatic.io/request-demo) to gen
 
 ## Repository Structure
 
+This repository is a **multi-plugin marketplace** that targets Claude Code, Cursor, and VS Code. Each plugin carries one manifest per IDE, and each manifest points at its own MCP config file so it can send an IDE-specific telemetry header.
+
 ```
-ContextMatic/
-├── .claude-mcp.json    # Claude Code MCP server configuration
-├── .claude-plugin/     # Claude Code plugin configuration
-│   ├── marketplace.json
-│   └── plugin.json
-├── .cursor-mcp.json    # Cursor MCP server configuration
-├── .cursor-plugin/     # Cursor plugin configuration
-│   └── plugin.json
+plugin-marketplace/
+├── .claude-plugin/
+│   └── marketplace.json          # Claude Code marketplace catalog (lists both plugins)
+├── .cursor-plugin/
+│   └── marketplace.json          # Cursor marketplace catalog (lists both plugins)
 ├── .github/
-│   └── ISSUE_TEMPLATE/ # Issue templates for API, language, and feature requests
-├── .mcp.json           # VS Code MCP server configuration
-├── assets/             # Logos and static assets
-├── skills/
-│   ├── integrate-context-matic/  # AI agent skill for end-to-end API integration guidance
-│   └── onboard-context-matic/    # AI agent skill for interactive MCP onboarding tour
-├── CLAUDE.md           # Claude Code agent instructions
+│   └── ISSUE_TEMPLATE/           # Issue templates for API, language, and feature requests
+├── assets/                       # Shared logos and static assets used by the README
+├── docs/
+│   └── cross-platform-agents.md  # Authoring reference for cross-platform agent files
+├── plugins/
+│   ├── context-matic/            # MCP "context-matic" + integrate/onboard skills
+│   │   ├── .claude-plugin/plugin.json   # Claude  → ./.claude-mcp.json
+│   │   ├── .cursor-plugin/plugin.json   # Cursor  → ./.cursor-mcp.json (logo: assets/logo.svg)
+│   │   ├── plugin.json                  # VS Code → ./.mcp.json
+│   │   ├── .claude-mcp.json             # header X-Apimatic-Mcp-Client: ClaudeCode
+│   │   ├── .cursor-mcp.json             # header X-Apimatic-Mcp-Client: Cursor
+│   │   ├── .mcp.json                    # header X-Apimatic-Mcp-Client: VSCode
+│   │   ├── assets/logo.svg
+│   │   └── skills/
+│   │       ├── integrate-context-matic/ # end-to-end API integration guidance
+│   │       └── onboard-context-matic/   # interactive MCP onboarding tour
+│   └── acp-paypal/               # MCP "acp-paypal-server-sdk-cs" + PayPal skill & agents
+│       ├── .claude-plugin/plugin.json
+│       ├── .cursor-plugin/plugin.json
+│       ├── plugin.json
+│       ├── .claude-mcp.json
+│       ├── .cursor-mcp.json
+│       ├── .mcp.json
+│       ├── assets/logo.svg
+│       ├── skills/integrate-paypal/     # PayPal integration guidance
+│       └── agents/
+│           ├── paypal-plan.md           # read-only PayPal API planner
+│           └── paypal-debug.md          # diagnoses & fixes PayPal issues
+├── CLAUDE.md
 ├── LICENSE.txt
 └── README.md
 ```
