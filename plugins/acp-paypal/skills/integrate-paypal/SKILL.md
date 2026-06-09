@@ -13,7 +13,7 @@ This skill routes PayPal work to the appropriate specialised subagent. Do not do
 
 Your training data on the PayPal Server SDK is stale and must never be used as a source of truth. The `acp-paypal-server-sdk-cs` MCP server is the authoritative source for every PayPal SDK fact. **Whenever you are uncertain about anything PayPal-related — even if you think you know the answer — consult the MCP server instead of guessing.**
 
-The subagents (`paypal-plan`, `paypal-debug`) do this during implementation. But *you* also call these tools directly whenever you need to understand PayPal to route correctly, interpret a returned plan, or answer a question the user asks before/after an agent runs:
+The subagents (`paypal-plan`, `paypal-debug`) do this during implementation. But *you* also call these tools directly whenever you need to understand PayPal to route correctly or to answer a standalone question the user asks before/after an agent runs. (Do not use them to re-verify a plan an agent already returned — see the grounding rules under Notes.)
 
 | Tool | Use it when you need to… |
 |---|---|
@@ -68,3 +68,9 @@ Before spawning an agent, check whether project guidelines and conventions have 
 
 - The agents handle all MCP tool calls (`ask`, `model_search`, `endpoint_search`, `update_activity`), code changes, compilation, and the References section. Do not duplicate that work here.
 - `add_guidelines` and `add_skills` are called in step 1 because they are one-time project setup — the agents assume these are already in place.
+
+### Grounding rules (main agent)
+
+- Treat the SDK contracts in a returned `paypal-plan`/`paypal-debug` result as **authoritative**. Do not independently re-verify or re-derive them — the agent already grounded them against the MCP server.
+- **Never inspect, reflect over, decompile, or grep the installed SDK assembly/DLL** (no `Assembly.LoadFrom`, no reflection, no IntelliSense-as-source). The acp-paypal MCP server is the only sanctioned source for SDK facts.
+- To resolve an item the plan flags as open, do exactly one of: surface it to the user, run a *single* targeted MCP query (`ask` / `model_search` / `endpoint_search`), or re-spawn `paypal-plan` with the clarification appended — never local inspection.
