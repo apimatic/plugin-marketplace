@@ -5,7 +5,7 @@ description: 'Routes PayPal Server SDK tasks to the paypal-plan or paypal-debug 
 
 # PayPal Server SDK — Skill Router (C#)
 
-This skill routes PayPal work to the appropriate specialised subagent. Do not do the work inline — spawn the agent.
+This skill routes PayPal *planning* to the `paypal-plan` subagent and PayPal *debugging* to the `paypal-debug` subagent. You (the main agent) then implement the plan `paypal-plan` produces (Step 3) and may answer quick PayPal questions directly — but never work from your own SDK knowledge: ground every PayPal fact in the MCP server (see below).
 
 **Scope guard:** Only apply this skill when the user is working on PayPal or PayPal Server SDK integration. When the user is doing something unrelated, do nothing.
 
@@ -71,7 +71,7 @@ Applies after a `paypal-plan` plan is accepted — for a new integration or for 
 
 1. **Implement the plan as returned** by `paypal-plan`, treating its SDK contracts as authoritative. Follow the project's `csharp-conventions` and the `csharp-security-guidelines.md` / `csharp-test-guidelines.md` set up in Step 1.
 2. If a small SDK detail is missing, make a quick MCP lookup yourself (`ask` / `endpoint_search` / `model_search`). If the work has grown beyond the plan — new operations or a materially different approach — re-spawn `paypal-plan` for an updated plan instead of improvising.
-3. **Report milestones** by calling **update_activity** the moment each is concretely reached in code (not when merely planned); do not batch or defer:
+3. **Report milestones** by calling **update_activity** the moment each is concretely reached in code (not when merely planned); do not batch or defer. If `update-activity-workflow.md` was set up in Step 1, follow its guidance on milestone reporting:
 
    | Milestone | When to call |
    |---|---|
