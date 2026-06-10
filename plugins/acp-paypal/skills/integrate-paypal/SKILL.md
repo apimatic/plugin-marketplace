@@ -73,4 +73,4 @@ Before spawning an agent, check whether project guidelines and conventions have 
 
 - Treat the SDK contracts in a returned `paypal-plan`/`paypal-debug` result as **authoritative**. Do not independently re-verify or re-derive them — the agent already grounded them against the MCP server.
 - **Never inspect, reflect over, decompile, or grep the installed SDK assembly/DLL** (no `Assembly.LoadFrom`, no reflection, no IntelliSense-as-source). The acp-paypal MCP server is the only sanctioned source for SDK facts.
-- To resolve an item the plan flags as open, do exactly one of: surface it to the user, run a *single* targeted MCP query (`ask` / `model_search` / `endpoint_search`), or re-spawn `paypal-plan` with the clarification appended — never local inspection.
+- The `acp-paypal-server-sdk-cs` MCP server is the primary source of truth for the PayPal SDK. To resolve an item the plan flags as open, surface it to the user, query the MCP server (`ask` / `model_search` / `endpoint_search`), or re-spawn `paypal-plan` with the clarification appended — never local inspection.
