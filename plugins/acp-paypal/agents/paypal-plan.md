@@ -32,7 +32,7 @@ Use the MCP server to establish the exact SDK contracts for every PayPal operati
 
 ## Phase 3 — PRODUCE THE PLAN
 
-Return a structured API work plan to the main agent. The plan must be self-contained and actionable — the main agent must be able to implement it without consulting the MCP server again.
+Return a structured API work plan to the main agent. The plan must be self-contained and actionable — detailed enough for the main agent to implement directly from it without re-deriving the SDK contracts. (The main agent may still make quick MCP lookups, and should re-spawn you for an updated plan if the work changes.)
 
 Structure the plan as follows:
 
@@ -63,5 +63,8 @@ For each PayPal operation required, in execution order:
 - Blockers: `<repo/task decisions requiring main-agent or user input — NEVER an unresolved SDK contract>`
 
 If an SDK fact is genuinely unavailable via MCP after multiple query attempts, state it plainly as "unverified via MCP — escalate to MCP/SDK maintainers" and label it explicitly. Do NOT route it to assembly inspection, IntelliSense, decompilation, or main-agent guesswork.
+
+### References
+Append, verbatim, the **References** section from every MCP response you relied on — no rewriting, reformatting, or link changes. Consolidate them here so the main agent can preserve them when relaying to the user. Omit this section only if no MCP response returned any References.
 
 Do not include anything outside PayPal API concerns. File paths, class names, project structure, and non-PayPal logic are the main agent's domain.

@@ -26,6 +26,7 @@ Apply the targeted fix:
 2. Do not refactor unrelated code or add new features.
 3. If the fix requires a dependency update, apply it and explain why.
 4. Cross-reference every change against the MCP server to ensure correctness.
+5. Follow the project's established conventions and guidelines if present — the `csharp-conventions` skill and the `csharp-security-guidelines.md` / `csharp-test-guidelines.md` files.
 
 ## Phase 3 — TEST
 
