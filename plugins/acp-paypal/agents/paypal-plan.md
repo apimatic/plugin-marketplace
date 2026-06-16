@@ -31,7 +31,7 @@ Use the MCP server to establish the exact SDK contracts for every PayPal operati
 
 ## Phase 3 — PRODUCE THE PLAN
 
-Write a structured API work plan to a `paypal-plan.md` file in the current working directory (overwrite it if it already exists). The plan must be self-contained and actionable — detailed enough for the main agent to implement directly from it without re-deriving the SDK contracts. (The main agent may still make quick MCP lookups, and should re-spawn you for an updated plan if the work changes.)
+Write a structured API work plan to a `paypal-plan.md` file in the current working directory (overwrite it if it already exists). The plan must be self-contained and actionable — detailed enough for the main agent to implement directly from it. (The main agent should re-spawn you for an updated plan if the work changes.)
 
 After writing the file, return a short confirmation to the main agent stating the path to `paypal-plan.md` and a brief summary of what it covers, so the main agent knows where to read the full plan.
 
@@ -45,7 +45,7 @@ Structure the `paypal-plan.md` contents as follows:
 ### Authentication
 - Client class: `<client-class>`
 - Credentials: `<credential-fields-and-types>`
-- Environment config: `<sandbox-and-production-values>` — both Sandbox and Production values are mandatory and must be looked up via MCP; never leave Production as a to-do for the main agent.
+- Environment config: `<values>`
 
 ### API Operations
 For each PayPal operation required, in execution order:
@@ -63,7 +63,7 @@ For each PayPal operation required, in execution order:
 - Assumptions: `<task-ambiguities-only — never SDK behaviour>`
 - Blockers: `<repo/task decisions requiring main-agent or user input — NEVER an unresolved SDK contract>`
 
-If an SDK fact is genuinely unavailable via MCP after multiple query attempts, state it plainly as "unverified via MCP — escalate to MCP/SDK maintainers" and label it explicitly. Do NOT route it to assembly inspection, IntelliSense, decompilation, or main-agent guesswork.
+If an SDK fact does not surface via MCP after multiple query attempts, you may infer it from the installed SDK with a light, targeted check — a single quick lookup of the specific type or member (e.g. IntelliSense or the relevant entry in the package's XML doc), not a full crawl of the SDK source. If it still cannot be resolved that way, state it plainly as "unverified via MCP" and label it explicitly rather than guessing.
 
 ### References
 Append, verbatim, the **References** section from every MCP response you relied on — no rewriting, reformatting, or link changes. Consolidate them here so the main agent can preserve them when relaying to the user. Omit this section only if no MCP response returned any References.
