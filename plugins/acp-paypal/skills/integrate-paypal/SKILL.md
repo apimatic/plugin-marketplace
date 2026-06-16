@@ -1,9 +1,9 @@
 ---
 name: integrate-paypal
-description: 'Routes PayPal Server SDK tasks to the paypal-plan or paypal-debug subagent. Use when the user asks to integrate PayPal, implement PayPal payments, or reports a PayPal error or unexpected SDK behaviour in a C# project.'
+description: 'Routes PayPal Server SDK tasks to the paypal-plan or paypal-debug subagent. Use when the user asks to integrate PayPal, implement PayPal payments, or reports a PayPal error or unexpected SDK behaviour in their project (any language).'
 ---
 
-# PayPal Server SDK — Skill Router (C#)
+# PayPal Server SDK — Skill Router
 
 This skill routes PayPal *planning* to the `paypal-plan` subagent and PayPal *debugging* to the `paypal-debug` subagent. You (the main agent) then implement the plan `paypal-plan` produces (Step 3) and may answer quick PayPal questions directly — but never work from your own SDK knowledge: ground every PayPal fact in the MCP server (see below).
 
@@ -11,14 +11,14 @@ This skill routes PayPal *planning* to the `paypal-plan` subagent and PayPal *de
 
 ## Grounding in the MCP Server — Never Guess About PayPal
 
-Your training data on the PayPal Server SDK is stale and must never be used as a source of truth. The `acp-paypal-server-sdk-cs` MCP server is the authoritative source for every PayPal SDK fact. **Whenever you are uncertain about anything PayPal-related — even if you think you know the answer — consult the MCP server instead of guessing.**
+Your training data on the PayPal Server SDK is stale and must never be used as a source of truth. The `acp-paypal-server-sdk-ts` MCP server is the authoritative source for every PayPal SDK fact. **Whenever you are uncertain about anything PayPal-related — even if you think you know the answer — consult the MCP server instead of guessing.**
 
 The subagents (`paypal-plan`, `paypal-debug`) do this during their runs. You also call these tools directly for **quick lookups** — to route correctly, to answer a standalone question, or to fill a small gap while implementing a plan. But use **paypal-plan** for any actual *planning*, and implement the plan it returns rather than re-deriving it; re-spawn `paypal-plan` if you need a new or expanded plan (see the grounding rules under Notes).
 
 | Tool | Use it when you need to… |
 |---|---|
 | **ask** | Understand a concept or workflow in plain language — authentication flows, how orders/captures/subscriptions/webhooks work, feature behaviour, recommended patterns, or "is X possible with this SDK?". Break broad questions into focused ones (e.g. _"How does order capture work?"_, _"How are webhooks verified?"_). |
-| **endpoint_search** | Confirm an exact SDK method's name, controller, parameters, return type, or error codes (e.g. `CreateOrderAsync`, `CaptureOrderAsync`). Use case-sensitive exact or partial method names. |
+| **endpoint_search** | Confirm an exact SDK method's name, controller, parameters, return type, or error codes (e.g. the create-order / capture-order operations). Use case-sensitive exact or partial method names, matching the SDK's casing convention for the project's language (PascalCase, camelCase, or snake_case). |
 | **model_search** | Confirm a request/response model's fields, types, required vs. optional, and enum values (e.g. `OrderRequest`, `Money`, `LinkDescription`). Use case-sensitive exact or partial model names. |
 
 Guidance:
@@ -30,11 +30,11 @@ Guidance:
 ## When to Apply
 
 Apply this skill when the user:
-- Asks to integrate PayPal into a C# project
+- Asks to integrate PayPal into their project
 - Wants to implement PayPal payments, orders, subscriptions, payouts, or webhooks
 - Reports a PayPal error, failed payment, incorrect API response, or unexpected SDK behaviour
 - Needs to maintain or change existing PayPal code — SDK version upgrades, deprecated fields, or new parameters on existing calls
-- Mentions PayPal and C# implementation, integration, or debugging
+- Mentions PayPal implementation, integration, or debugging
 
 ## Workflow
 
@@ -42,11 +42,10 @@ Apply this skill when the user:
 
 Before spawning an agent, check whether project guidelines and conventions have already been set up.
 
-- `csharp-conventions` is the skill produced by **add_skills**.
-- `csharp-security-guidelines.md`, `csharp-test-guidelines.md`, and `update-activity-workflow.md` are files produced by **add_guidelines**.
-- Check these independently. Do not treat the presence of one as proof the others exist.
-- **If any guideline files are missing:** Call **add_guidelines** with `language: "csharp"`.
-- **If `csharp-conventions` is missing:** Call **add_skills** with `language: "csharp"`.
+- **add_skills** produces a conventions skill; **add_guidelines** produces the security/test guideline files and `update-activity-workflow.md`. Both tools return the exact file names and target paths for the project's language — use whatever they return.
+- Check for these independently. Do not treat the presence of one as proof the others exist.
+- **If any guideline files are missing:** Call **add_guidelines** and create the files it returns.
+- **If the conventions skill is missing:** Call **add_skills** and create the files it returns.
 - **If all already exist:** Skip and proceed to step 2.
 
 ### Step 2 — Select and Spawn the Agent
@@ -69,17 +68,17 @@ Before spawning an agent, check whether project guidelines and conventions have 
 
 Applies after a `paypal-plan` plan is accepted — for a new integration or for maintenance of existing PayPal code. (`paypal-debug` implements and verifies its own fixes, so this step does not apply to the debug path.)
 
-1. **Implement the plan as returned** by `paypal-plan`, treating its SDK contracts as authoritative. Follow the project's `csharp-conventions` and the `csharp-security-guidelines.md` / `csharp-test-guidelines.md` set up in Step 1.
+1. **Implement the plan as returned** by `paypal-plan`, treating its SDK contracts as authoritative. Follow the conventions skill and the security/test guideline files set up in Step 1.
 2. If a small SDK detail is missing, make a quick MCP lookup yourself (`ask` / `endpoint_search` / `model_search`). If the work has grown beyond the plan — new operations or a materially different approach — re-spawn `paypal-plan` for an updated plan instead of improvising.
 3. **Report milestones** by calling **update_activity** the moment each is concretely reached in code (not when merely planned); do not batch or defer. If `update-activity-workflow.md` was set up in Step 1, follow its guidance on milestone reporting:
 
    | Milestone | When to call |
    |---|---|
-   | `sdk_setup` | SDK package installed and confirmed (e.g. `dotnet add package` succeeded). |
+   | `sdk_setup` | SDK package installed and confirmed via the project's package manager. |
    | `auth_configured` | PayPal credentials written into the project's runtime environment **and** referenced in actual code. |
    | `first_call_made` | First PayPal API call code written and executed. |
 
-4. **Verify:** after every code change, run `dotnet build` and fix all errors; then run any tests covering the integration.
+4. **Verify:** after every code change, run the project's build/compile step and fix all errors; then run any tests covering the integration.
 5. If you hit a PayPal-specific error you cannot resolve from the plan or a quick lookup, spawn **paypal-debug** with the details rather than guessing.
 6. Preserve every **References** section — from the plan and from any MCP lookups you make — verbatim when relaying to the user.
 
@@ -91,5 +90,5 @@ Applies after a `paypal-plan` plan is accepted — for a new integration or for 
 ### Grounding rules (main agent)
 
 - Treat the SDK contracts in a returned `paypal-plan`/`paypal-debug` result as **authoritative**. Do not independently re-verify or re-derive them — the agent already grounded them against the MCP server.
-- **Never inspect, reflect over, decompile, or grep the installed SDK assembly/DLL** (no `Assembly.LoadFrom`, no reflection, no IntelliSense-as-source). The acp-paypal MCP server is the only sanctioned source for SDK facts.
-- The `acp-paypal-server-sdk-cs` MCP server is the primary source of truth for the PayPal SDK. To resolve an item the plan flags as open, surface it to the user, query the MCP server (`ask` / `model_search` / `endpoint_search`), or re-spawn `paypal-plan` with the clarification appended — never local inspection.
+- **Do not inspect, reflect over, decompile, or grep the installed SDK package as a substitute for the MCP** — the acp-paypal MCP server is the source of truth and you must consult it first. Only when a specific fact genuinely cannot be resolved via the MCP (after trying `ask` / `endpoint_search` / `model_search`) may you fall back to a light, targeted check of the installed package — a single quick lookup of the specific type or member in its source or type-definition files, never a full crawl or reflection-based discovery.
+- The `acp-paypal-server-sdk-ts` MCP server is the primary source of truth for the PayPal SDK. To resolve an item the plan flags as open, surface it to the user, query the MCP server (`ask` / `model_search` / `endpoint_search`), or re-spawn `paypal-plan` with the clarification appended; only as a last resort, after the MCP cannot resolve it, use the light, targeted check described above.
