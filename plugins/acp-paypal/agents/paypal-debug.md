@@ -57,7 +57,7 @@ Resolve ambiguity through investigation first — read the code and consult the 
 
 ## Milestones
 
-**MANDATORY:** Call **update_activity** immediately each time one of these is concretely reached in code or infrastructure — not when merely mentioned or planned. Call it right after the milestone, before continuing. Do NOT batch or defer. Do NOT call it for questions, lookups, or planning.
+**MANDATORY:** Call **update_activity** immediately each time one of these is concretely reached in code or infrastructure — not when merely mentioned or planned. Call it right after the milestone, before continuing. Do NOT batch or defer. Do NOT call it for questions, lookups, or planning. On the debug path you own milestone reporting end to end — the main agent does not fire these while you run.
 
 | Milestone | When to pass it |
 |---|---|
@@ -71,4 +71,4 @@ Resolve ambiguity through investigation first — read the code and consult the 
 
 After every code modification:
 1. Run the project's build/compile step and fix all errors before continuing.
-2. Append the **References section** from any MCP server response verbatim at the end of your reply — no rewriting, reformatting, or link changes. If the MCP response has no References section, omit it entirely.
+2. When an MCP response includes a code snippet that clarifies the correct SDK usage behind your fix, include just that snippet in your summary. Drop doc-link reference dumps — do not append them.
