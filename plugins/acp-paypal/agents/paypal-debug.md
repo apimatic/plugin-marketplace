@@ -25,7 +25,7 @@ Apply the targeted fix:
 1. Make only the changes necessary to address the identified root cause.
 2. Do not refactor unrelated code or add new features.
 3. If the fix requires a dependency update, apply it and explain why.
-4. Follow the project's established conventions and guidelines if present — the conventions skill and the security/test guideline files.
+4. Follow the project's established conventions and any security/test guidelines already present in the repo.
 
 ## Phase 3 — TEST
 
