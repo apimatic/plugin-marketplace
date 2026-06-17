@@ -27,6 +27,18 @@ Guidance:
 - Resolve PayPal ambiguity through MCP lookups first; only ask the user when the ambiguity is about *their* intent, not about how the SDK works.
 - Keep only the SDK code snippets from an MCP response that help write the integration; drop doc-link reference dumps rather than carrying them into your context or relaying them.
 
+### Tool names and the operational tools
+
+All tools this skill uses are MCP tools on the `acp-paypal-server-sdk-ts` server, addressed with the `mcp__acp-paypal-server-sdk-ts__` prefix (e.g. `ask` → `mcp__acp-paypal-server-sdk-ts__ask`). Besides the three lookup tools above, the workflow relies on three **operational** tools on the same server:
+
+| Tool | Use it to… |
+|---|---|
+| **add_skills** | Generate the project's conventions skill (Step 1). |
+| **add_guidelines** | Generate the security/test guideline files and `update-activity-workflow.md` (Step 1). |
+| **update_activity** | Report integration milestones on the plan/implementation path (Step 3). |
+
+If the connected server does not expose one of these, skip the step that needs it rather than fabricating a substitute.
+
 ## When to Apply
 
 Apply this skill when the user:
