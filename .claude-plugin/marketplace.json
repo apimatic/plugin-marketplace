@@ -20,6 +20,11 @@
       "name": "paypal-sdk-v4",
       "source": "./plugins/paypal-sdk-v4",
       "description": "Skill-only guidance for integrating the PayPal Server SDK v4 into your project."
+    },
+    {
+      "name": "advanced-billing-sdk-v4",
+      "source": "./plugins/advanced-billing-sdk-v4",
+      "description": "Skill-only guidance for installing, initializing, and using the Advanced Billing .NET SDK (v4) in your project."
     }
   ]
 }
