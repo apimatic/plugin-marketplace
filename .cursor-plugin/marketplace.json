@@ -15,6 +15,11 @@
       "name": "acp-paypal",
       "source": "./plugins/acp-paypal",
       "description": "Integrate and debug PayPal APIs using the acp-paypal MCP server."
+    },
+    {
+      "name": "paypal-sdk-v4",
+      "source": "./plugins/paypal-sdk-v4",
+      "description": "Skill-only guidance for integrating the PayPal Server SDK v4 into your project."
     }
   ]
 }
