@@ -20,6 +20,16 @@
       "name": "paypal-sdk-v4",
       "source": "./plugins/paypal-sdk-v4",
       "description": "Skill-only guidance for integrating the PayPal Server SDK v4 into your project."
+    },
+    {
+      "name": "paypal-plugin",
+      "source": "./plugins/paypal-plugin",
+      "description": "Install and consume the PayPal .NET Server SDK, plus reusable guidance for any APIMatic-generated .NET SDK."
+    },
+    {
+      "name": "maxio-plugin",
+      "source": "./plugins/maxio-plugin",
+      "description": "Plan and debug Maxio Advanced Billing .NET SDK integrations with maxio-plan and maxio-debug agents, grounded in bundled Maxio SDK skills and the cloned SDK source. No MCP server."
     }
   ]
 }
