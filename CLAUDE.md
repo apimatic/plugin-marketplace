@@ -4,7 +4,7 @@ General-purpose AI models are trained on public code and documentation, much of 
 
 APIMatic gives coding assistants deterministic, version-aware API context, generated directly from your API definition and SDKs. Instead of scraping public documentation or guessing from memory, the AI is grounded in the exact OpenAPI definition, current SDK versions, executable, idiomatic code samples, and recommended integration workflows.
 
-This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Claude Code, Cursor, and VS Code**. It ships two plugins under `plugins/`.
+This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Claude Code, Cursor, and VS Code**. It ships four plugins under `plugins/`: `context-matic`, `acp-paypal`, `maxio-plugin`, and `maxio-sdk`.
 
 ## Plugins
 
@@ -57,6 +57,31 @@ plan/debug agent orchestration but replaces the MCP server with a **skills + SDK
 
 Self-contained — bundles its own copies of the Maxio SDK skills, so it has no dependency on any other plugin (do not install a separate skills-only Maxio plugin alongside it, or skill names would collide).
 
+### maxio-sdk
+
+Maxio Advanced Billing (formerly Chargify) **.NET SDK** plugin, skills-only — no MCP server, no
+agents, no telemetry, Claude Code only, C#/.NET only. Its core feature is a bundled, generated
+**SDK map** (`skills/maxio-getting-started/sdk-map.md` + `map/`): the agent answers every
+signature/model/enum/error question by map lookup, clones the SDK source **only on first need**
+for a full body the map doesn't carry, and never greps the clone or opens the SDK's
+`api-reference.md`.
+
+**Skills**
+
+- **maxio-getting-started** — SDK-specific entry point: identity, client construction, servers/auth,
+  the SDK map, lookup hygiene ("keep lookups cheap"), and the contract-sheet workflow.
+- Seven `dotnet-*` companions (`dotnet-client-initialization`, `dotnet-authentication`,
+  `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`,
+  `dotnet-configuration-resilience`, `dotnet-testing`) — usage guidance layered on the map.
+
+The map's generated pages are never hand-edited — they are produced by the
+`sdk-map-generator` repo and verified field-exact against the SDK source
+(github.com/asadali214/advanced-billing-sample-sdk, pinned per map stamp).
+
+Do **not** install `maxio-sdk` and `maxio-plugin` together — both bundle skills named
+`maxio-getting-started` / `dotnet-*`, so the names collide. (`maxio-plugin` still carries the
+older pre-map skill copies — a known, deliberate divergence.)
+
 ## Per-IDE manifest convention
 
 MCP-backed plugins carry one manifest per IDE, and each manifest points at its own MCP config file so it can send an IDE-specific `X-Apimatic-Mcp-Client` telemetry header:
@@ -65,4 +90,4 @@ MCP-backed plugins carry one manifest per IDE, and each manifest points at its o
 - Cursor: `.cursor-plugin/plugin.json` → `.cursor-mcp.json` (header `Cursor`)
 - VS Code: root `plugin.json` (Copilot format) → `.mcp.json` (header `VSCode`)
 
-(maxio-plugin is the exception: it has no MCP server and ships only the Claude Code manifest.)
+(The two Maxio plugins are the exception: they have no MCP server and ship only the Claude Code manifest.)
