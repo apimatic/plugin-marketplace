@@ -35,6 +35,11 @@
       "name": "maxio-plugin",
       "source": "./plugins/maxio-plugin",
       "description": "Plan and debug Maxio Advanced Billing .NET SDK integrations with maxio-plan and maxio-debug agents, grounded in bundled Maxio SDK skills and the cloned SDK source. No MCP server."
+    },
+    {
+      "name": "maxio-sdk",
+      "source": "./plugins/maxio-sdk",
+      "description": "Install and consume the Maxio Advanced Billing .NET SDK with skill-only guidance plus a bundled SDK map — the agent looks up signatures, errors, enums, and unions in the map and opens only the exact source file it needs in the cloned SDK, instead of grepping. No MCP server."
     }
   ]
 }
