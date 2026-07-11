@@ -115,24 +115,26 @@ you to a file** (not up front), into your **system temp directory** (outside you
 it via the SDK map above. It is a read-only reference, **not** a build dependency (never add a project
 reference to it).
 
-**Make this idempotent — check for the clone before creating it.** Use a stable path in temp so the *same*
-clone is reused across every step and across sessions. If it's already there, refresh it with `git fetch`
-instead of cloning again; only clone when it's missing. Do **not** blindly re-run `git clone` (it errors on a
-non-empty directory and throws away a perfectly good local copy):
+**Clone into a fresh timestamped folder, once per session.** Create the folder as
+`<temp>/maxio-sdk-src/<yyyyMMdd-HHmmss>` the first time you need the source — the timestamp makes your
+clone private to this session, so concurrent agents on the same machine can never race on a shared path.
+**Record the full path the moment you create it and reuse that recorded path for every later lookup in the
+session** — never re-derive the timestamp and never clone a second time. Check your record before cloning:
+if you already made a clone this session, use it.
 
 ```bash
 # Linux:
-dir=/tmp/maxio-sdk-src
-if [ -d "$dir/.git" ]; then git -C "$dir" fetch --depth 1 origin; else \
-  git clone --depth 1 https://github.com/asadali214/advanced-billing-sample-sdk "$dir"; fi
-# macOS: same, with dir="$TMPDIR/maxio-sdk-src"
+dir=/tmp/maxio-sdk-src/$(date +%Y%m%d-%H%M%S)
+git clone --depth 1 https://github.com/asadali214/advanced-billing-sample-sdk "$dir"
+# macOS: same, with dir="$TMPDIR/maxio-sdk-src/$(date +%Y%m%d-%H%M%S)"
+# Then record $dir - it is your clone path for the rest of the session.
 ```
 
 ```powershell
 # Windows (PowerShell):
-$dir = "$env:TEMP\maxio-sdk-src"
-if (Test-Path "$dir\.git") { git -C $dir fetch --depth 1 origin }
-else { git clone --depth 1 https://github.com/asadali214/advanced-billing-sample-sdk $dir }
+$dir = "$env:TEMP\maxio-sdk-src\$(Get-Date -Format yyyyMMdd-HHmmss)"
+git clone --depth 1 https://github.com/asadali214/advanced-billing-sample-sdk $dir
+# Then record $dir - it is your clone path for the rest of the session.
 ```
 
 Then confirm the SDK shape **only** from that local clone — not by either of these:
@@ -158,23 +160,11 @@ Layout — where the SDK map's file references resolve (open these directly; don
 - `Servers/`, `MaxioAdvancedBillingClient.cs`, `ServiceCollectionExtensions.cs` — environments, the client, DI.
 
 If the source has drifted from your installed package version, check out the tag/release matching
-`AsadAli.AdvancedBilling.Sdk`'s version before relying on it (e.g. `git -C "$dir" checkout vX.Y.Z`). Pinning
-also makes the cached clone safe to reuse as long as your installed version is unchanged.
+`AsadAli.AdvancedBilling.Sdk`'s version before relying on it (e.g. `git -C "$dir" checkout vX.Y.Z`).
 
 **Leave the clone in place — don't delete it.** It's a read-only reference with nothing of yours in it, and
-keeping it is what lets the next step or next session reuse it instead of cloning again. The OS reaps the temp
-directory on its own; only delete it by hand if you deliberately want to force a fresh clone (or you've checked
-out a version you no longer want):
-
-```bash
-rm -rf /tmp/maxio-sdk-src        # Linux
-rm -rf "$TMPDIR/maxio-sdk-src"   # macOS
-```
-
-```powershell
-# Windows (PowerShell):
-Remove-Item -Recurse -Force "$env:TEMP\maxio-sdk-src"
-```
+keeping it is what lets every later step in this session reuse it instead of cloning again. The OS reaps the
+temp directory on its own; a future session simply makes its own timestamped clone.
 
 ## Integration workflow — load the companion skill at each step
 

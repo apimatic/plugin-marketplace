@@ -1,7 +1,7 @@
 {
   "name": "maxio-sdk",
   "displayName": "Maxio SDK Assistant",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Install and consume the Maxio Advanced Billing .NET SDK, plus reusable guidance for any APIMatic-generated .NET SDK. Bundles a generated SDK map so the agent navigates the cloned SDK source by lookup instead of grepping it.",
   "author": {
     "name": "APIMatic",
