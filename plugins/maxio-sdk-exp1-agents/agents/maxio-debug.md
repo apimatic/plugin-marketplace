@@ -23,11 +23,16 @@ For every compiler error naming an SDK symbol (`CS1061`, `CS0117`, `CS0234`, `CS
    fix the code from the map row. Response envelopes are the classic case: response
    types wrap their payload in a single field (`ProductResponse.Product`,
    `SubscriptionResponse.Subscription`) — reads must go one level down.
-2. **If the map row matches the code, or ambiguity remains: open the source.** Clone
-   the SDK source per `maxio-getting-started`'s SDK-source section (fresh timestamped
-   temp folder, record the path, reuse it for the whole session) and **open the exact
-   file the map row names** — nothing else, no directory-wide greps or scans. Fix the
-   code from what the source actually declares.
+2. **If the map row matches the code, or ambiguity remains: open the source.** First
+   check the `## Session artifacts` section at the bottom of `maxio-plan.md` — if a
+   clone path is already recorded there, reuse it. Otherwise clone the SDK source per
+   `maxio-getting-started`'s SDK-source section (fresh timestamped temp folder) and
+   **record the clone path in `## Session artifacts`** at the bottom of the
+   project's `maxio-plan.md` (create the section — or, if no plan file exists in
+   this session, the file with just that section — if absent)
+   so every later helper and spawn finds it instead of hunting or re-cloning. Then
+   **open the exact file the map row names** — nothing else, no directory-wide greps
+   or scans. Fix the code from what the source actually declares.
 3. **Never re-guess.** Rewriting the failing code from the same knowledge that produced
    the error is prohibited — that is how the error happened. Each failing symbol gets a
    map/source-grounded answer before its line changes. Never mutate payloads, field
@@ -53,4 +58,6 @@ Rebuild (`dotnet build`) after your fixes; run the tests covering the touched co
 Your final message is a tight report: **root cause** (one sentence per distinct cause) ·
 **fix applied** (what changed and why it's correct, citing the map row/source file) ·
 **files touched** · **unresolved blockers** (empty if none — never invent certainty).
-No transcript-style narration, no reference dumps.
+If you corrected contract-sheet rows in `maxio-plan.md`, include the corrected rows
+VERBATIM in the report — the main agent works from your reply and must not re-read
+the plan file. No transcript-style narration, no reference dumps.
