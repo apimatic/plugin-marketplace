@@ -35,10 +35,14 @@ do nothing.
 3. **Missing contract mid-implementation = look it up, never guess.** When you hit an
    SDK fact the sheet doesn't cover, either (a) ask `maxio-plan` ONE narrow question —
    it answers from the map in its reply, no file — or (b) make one targeted read of the
-   specific map page yourself (the sheet's rows name their map sources). Choose (b) for
-   a single field name; choose (a) when there are several related unknowns — and batch
-   them into ONE ask, not one per unknown. Then continue. Under no circumstances write
-   the call from memory "to fix later".
+   specific map page yourself (the sheet's rows name their map sources). Choose (b)
+   ONLY for a single fact on a page the sheet's citation names — and NEVER open
+   `map/models/records-*.md` yourself: they are the largest pages in the map and ride
+   in your context for every remaining turn. Model/enum field questions, several
+   related unknowns, or any urge to "double-check" sheet rows against the map → (a),
+   batched into ONE ask (the plan agent already holds those pages warm and answers in
+   seconds). Then continue. Under no circumstances write the call from memory "to fix
+   later".
 4. **Reuse helpers; don't re-spawn them.** Every fresh spawn rebuilds a prompt cache
    from scratch (the dominant helper cost). If your harness can send a follow-up
    message to an already-spawned agent (e.g. a SendMessage/continue tool), direct all
@@ -55,14 +59,34 @@ spawn covers the whole implementation). The brief must **dictate the output path
 the absolute path where it writes the plan (`<project repo root>/maxio-plan.md`) —
 do not let the helper pick its own location.
 
-It writes `maxio-plan.md` (plan + contract sheet) and returns its path. (Repo
-reconnaissance — where the integration lands in this codebase — is not its job;
-use your normal exploration approach for that.)
+It writes `maxio-plan.md` (plan + contract sheet) and returns its path.
 
-**HARD GATE — wait, then verify:** do not create or edit any project file until the
-plan agent has RETURNED, the file EXISTS at the path you dictated (check it —
-helpers have misreported save locations), and you have read it. Kicking off the spawn
-and starting to code "meanwhile" defeats the entire plan-first design.
+**Parallelize the wait — prerequisites only.** Repo reconnaissance (where the
+integration lands in this codebase) is not `maxio-plan`'s job: kick it off in the
+SAME message as the `maxio-plan` spawn (parallel tool calls; background spawns if
+your harness has them). While `maxio-plan` works, do ONLY work that needs no SDK
+knowledge and touches no project file:
+
+- the repo survey (read-only exploration of conventions and layering) — brief it to
+  return each convention as *pattern + the ONE exemplar file path to imitate*, NOT
+  inline code snippets: you will Read the exemplar at edit time anyway (edits need
+  the file's exact current text), so a snippet dump gets paid for twice;
+- `dotnet restore` and a baseline `dotnet build` / `dotnet test` of the UNTOUCHED
+  solution, so later failures are attributable to your changes;
+- locating the SDK package and its version in the project;
+- credentials/environment verification (per the task's secret-handling rules);
+- setting up your task tracking.
+
+Never sit idle waiting on a helper — every one of the items above fits inside the
+plan agent's runtime. Equally: never use the wait to get a "head start" on
+implementation. Writing or editing ANY project file before the gate below is a
+defect, no matter how obvious the code seems.
+
+**HARD GATE — no project-file creation or edits until:** the plan agent has
+RETURNED, the file EXISTS at the path you dictated (check it — helpers have
+misreported save locations), and you have read it. The gate bars coding
+"meanwhile"; it does not bar the read-only prerequisite work above. Starting to
+code before the sheet exists defeats the entire plan-first design.
 
 Before implementing, check the plan's **Assumptions & Blockers** section:
 - Blocker or major assumption → surface it to the user in plain language, get their
@@ -100,6 +124,8 @@ mode and relay its grounded answer. Never answer from memory, even for "easy" qu
 
 - Give each spawn a complete, self-contained brief (task scope, project paths, the
   plan-file path when relevant, exact error text for debug).
+- Independent helpers are spawned together in ONE message, never serially — every
+  foreground helper you wait on alone is pure idle time.
 - Require tight returns: `maxio-plan` returns a path + one-paragraph summary (narrow
   mode: just the answer); `maxio-debug` returns root cause + fix applied + files touched
   + unresolved blockers. If a return arrives bloated, use what you need and drop the

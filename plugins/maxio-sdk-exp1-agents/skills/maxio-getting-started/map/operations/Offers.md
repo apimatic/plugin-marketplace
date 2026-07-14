@@ -2,8 +2,11 @@
 
 Accessor: `client.Offers` · Source: `Api/Offers.cs` · 5 operations
 
+**Parameter names are literal.** Signatures are generated code verbatim — in named arguments use the exact parameter names shown (the cancellation-token parameter is named `ct`).
+
 ### ArchiveOffer
 - **HTTP**: `PUT /offers/{offer_id}/archive.json` (Production)
+- **Notes**: Archives an existing offer. Please provide an `offer_id` in order to archive the correct item.
 - **Signature**: `ArchiveOffer(int offerId, CancellationToken ct = default)`
 - **Returns**: `void` (Task)
 - **Error**: `SdkException<RawError>` — **Case B**
@@ -13,6 +16,7 @@ Accessor: `client.Offers` · Source: `Api/Offers.cs` · 5 operations
 
 ### CreateOffer
 - **HTTP**: `POST /offers.json` (Production)
+- **Notes**: Creates an offer within your Advanced Billing site. Documentation Offers allow you to package complicated combinations of products, components and coupons into a convenient package which can then be subscribed to just like products. Once an offer is defined it can be used as an alternative to the product when creating subscriptions. Full …
 - **Signature**: `CreateOffer(CreateOfferRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `OfferResponse`
@@ -23,8 +27,11 @@ Accessor: `client.Offers` · Source: `Api/Offers.cs` · 5 operations
 
 ### ListOffers
 - **HTTP**: `GET /offers.json` (Production)
+- **Notes**: Lists offers for a site.
 - **Signature**: `ListOffers(bool? includeArchived, int? page = 1, int? perPage = 20, CancellationToken ct = default)`
   - `includeArchived` — nullable, no default → **must pass explicitly**
+  - defaults: `page` = 1, `perPage` = 20
+- **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `include_archived` ← `includeArchived`
 - **Returns**: `ListOffersResponse`
 - **Error**: `SdkException<ListOffersError>` — **Case A (typed)**
 - **Error accessors**: `TryGetErrorListResponse1(out ErrorListResponse1)` [422] · `TryGetRawError(out RawError)` [fallback]
@@ -33,6 +40,7 @@ Accessor: `client.Offers` · Source: `Api/Offers.cs` · 5 operations
 
 ### ReadOffer
 - **HTTP**: `GET /offers/{offer_id}.json` (Production)
+- **Notes**: Returns a specific offer's attributes. This is different from listing all offers for a site, as it requires an `offer_id`.
 - **Signature**: `ReadOffer(int offerId, CancellationToken ct = default)`
 - **Returns**: `OfferResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
@@ -42,6 +50,7 @@ Accessor: `client.Offers` · Source: `Api/Offers.cs` · 5 operations
 
 ### UnarchiveOffer
 - **HTTP**: `PUT /offers/{offer_id}/unarchive.json` (Production)
+- **Notes**: Unarchives a previously archived offer. Please provide an `offer_id` in order to unarchive the correct item.
 - **Signature**: `UnarchiveOffer(int offerId, CancellationToken ct = default)`
 - **Returns**: `void` (Task)
 - **Error**: `SdkException<RawError>` — **Case B**

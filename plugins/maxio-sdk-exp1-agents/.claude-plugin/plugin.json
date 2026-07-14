@@ -1,8 +1,8 @@
 {
   "name": "maxio-sdk-exp1-agents",
   "displayName": "Maxio SDK Assistant (EXPERIMENTAL: subagent orchestration)",
-  "version": "0.2.0",
-  "description": "EXPERIMENTAL VARIANT of maxio-sdk (map + skills, v0.1.1 data layer, byte-identical) adding subagent orchestration: an integrate-maxio router, a maxio-plan agent that produces a map-grounded contract sheet before any code is written, and a maxio-debug agent whose first step on SDK-name compile errors is opening the exact source file the map names. Tests whether procedural structure rescues weak models and cuts main-context cost. Not for production install.",
+  "version": "0.3.0",
+  "description": "EXPERIMENTAL VARIANT of maxio-sdk (map + skills, v0.1.1 data layer plus generated map enrichments: operation Notes from XML remarks, literal enum member names, namespaces, literal-parameter-name headers) adding subagent orchestration: an integrate-maxio router, a maxio-plan agent that produces a map-grounded contract sheet before any code is written, and a maxio-debug agent whose first step on SDK-name compile errors is opening the exact source file the map names. Tests whether procedural structure rescues weak models and cuts main-context cost. Not for production install.",
   "author": {
     "name": "APIMatic",
     "email": "developer@apimatic.io"

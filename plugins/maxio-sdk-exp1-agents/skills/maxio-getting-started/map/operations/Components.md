@@ -2,8 +2,11 @@
 
 Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
+**Parameter names are literal.** Signatures are generated code verbatim — in named arguments use the exact parameter names shown (the cancellation-token parameter is named `ct`).
+
 ### ArchiveComponent
 - **HTTP**: `DELETE /product_families/{product_family_id}/components/{component_id}.json` (Production)
+- **Notes**: Archives the component; all current subscribers will continue to be charged as usual.
 - **Signature**: `ArchiveComponent(int productFamilyId, string componentId, CancellationToken ct = default)`
 - **Returns**: `Component`
 - **Error**: `SdkException<ArchiveComponentError>` — **Case A (typed)**
@@ -13,6 +16,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreateEventBasedComponent
 - **HTTP**: `POST /product_families/{product_family_id}/event_based_components.json` (Production)
+- **Notes**: Creates an event-based component definition under the specified product family. An event-based component can then be added and “allocated” for a subscription. Event-based components are similar to other component types, in that you define the component parameters (such as name and taxability) and the pricing. A key difference for the event-based …
 - **Signature**: `CreateEventBasedComponent(string productFamilyId, CreateEbbComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -23,6 +27,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreateMeteredComponent
 - **HTTP**: `POST /product_families/{product_family_id}/metered_components.json` (Production)
+- **Notes**: Creates a metered component definition under the specified product family. A metered component can then be added and “allocated” for a subscription. Metered components are used to bill for any type of unit that resets to 0 at the end of the billing period (think daily Google Ads clicks or monthly cell phone minutes). This is most commonly …
 - **Signature**: `CreateMeteredComponent(string productFamilyId, CreateMeteredComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -33,6 +38,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreateOnOffComponent
 - **HTTP**: `POST /product_families/{product_family_id}/on_off_components.json` (Production)
+- **Notes**: Creates an On/Off component definition under the specified product family. An On/Off component can then be added and “allocated” for a subscription. On/off components are used for any flat fee, recurring add on (think $99/month for tech support or a flat add on shipping fee). For more information on components, see our documentation here .
 - **Signature**: `CreateOnOffComponent(string productFamilyId, CreateOnOffComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -43,6 +49,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreatePrepaidUsageComponent
 - **HTTP**: `POST /product_families/{product_family_id}/prepaid_usage_components.json` (Production)
+- **Notes**: Creates a prepaid usage component definition under the specified product family. A prepaid component can then be added and “allocated” for a subscription. Prepaid components allow customers to pre-purchase units that can be used up over time on their subscription. In a sense, they are the mirror image of metered components; while metered …
 - **Signature**: `CreatePrepaidUsageComponent(string productFamilyId, CreatePrepaidComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -53,6 +60,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreateQuantityBasedComponent
 - **HTTP**: `POST /product_families/{product_family_id}/quantity_based_components.json` (Production)
+- **Notes**: Creates a Quantity Based component definition under the specified product family. A Quantity Based component can then be added and “allocated” for a subscription. When defining a Quantity Based component, you can choose one of 2 types: Recurring Recurring quantity-based components are used to bill for the number of some unit (think monthly …
 - **Signature**: `CreateQuantityBasedComponent(string productFamilyId, CreateQuantityBasedComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -63,7 +71,9 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### FindComponent
 - **HTTP**: `GET /components/lookup.json` (Production)
+- **Notes**: Returns information for a component matching the provided handle. You can identify your components with a handle so you don't have to save or reference the IDs we generate.
 - **Signature**: `FindComponent(string handle, CancellationToken ct = default)`
+- **Query params (wire ← C#)**: `handle` ← `handle`
 - **Returns**: `ComponentResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
 - **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
@@ -72,9 +82,11 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### ListComponents
 - **HTTP**: `GET /components.json` (Production)
+- **Notes**: Lists components for a site.
 - **Signature**: `ListComponents(BasicDateField? dateField, string? startDate, string? endDate, string? startDatetime, string? endDatetime, bool? includeArchived, ListComponentsFilter? filter, int? page = 1, int? perPage = 20, CancellationToken ct = default)`
-  - **Must pass explicitly** (nullable, no default): `dateField`, `startDate`, `endDate`, `startDatetime`, `endDatetime`, `includeArchived`, `filter`
-  - `page` = 1, `perPage` = 20 (optional defaults)
+  - 7 params (`dateField` … `filter`) — nullable, no default → **must pass explicitly** (pass `null` to skip)
+  - defaults: `page` = 1, `perPage` = 20
+- **Query params (wire ← C#)**: `date_field` ← `dateField`, `start_date` ← `startDate`, `end_date` ← `endDate`, `start_datetime` ← `startDatetime`, `end_datetime` ← `endDatetime`, `include_archived` ← `includeArchived`, `page` ← `page`, `per_page` ← `perPage`, `filter` ← `filter`
 - **Returns**: `IReadOnlyList<ComponentResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
 - **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
@@ -83,9 +95,11 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### ListComponentsForProductFamily
 - **HTTP**: `GET /product_families/{product_family_id}/components.json` (Production)
+- **Notes**: Lists components for a particular product family.
 - **Signature**: `ListComponentsForProductFamily(int productFamilyId, bool? includeArchived, ListComponentsFilter? filter, BasicDateField? dateField, string? endDate, string? endDatetime, string? startDate, string? startDatetime, int? page = 1, int? perPage = 20, CancellationToken ct = default)`
-  - **Must pass explicitly** (nullable, no default): `includeArchived`, `filter`, `dateField`, `endDate`, `endDatetime`, `startDate`, `startDatetime`
-  - `page` = 1, `perPage` = 20 (optional defaults)
+  - 7 params (`includeArchived` … `startDatetime`) — nullable, no default → **must pass explicitly** (pass `null` to skip)
+  - defaults: `page` = 1, `perPage` = 20
+- **Query params (wire ← C#)**: `include_archived` ← `includeArchived`, `page` ← `page`, `per_page` ← `perPage`, `filter` ← `filter`, `date_field` ← `dateField`, `end_date` ← `endDate`, `end_datetime` ← `endDatetime`, `start_date` ← `startDate`, `start_datetime` ← `startDatetime`
 - **Returns**: `IReadOnlyList<ComponentResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
 - **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
@@ -94,6 +108,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### ReadComponent
 - **HTTP**: `GET /product_families/{product_family_id}/components/{component_id}.json` (Production)
+- **Notes**: Returns information regarding a component from a specific product family. You can read the component by either the component's id or handle. When using the handle, it must be prefixed with `handle:`.
 - **Signature**: `ReadComponent(int productFamilyId, string componentId, CancellationToken ct = default)`
 - **Returns**: `ComponentResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
@@ -103,6 +118,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### UpdateComponent
 - **HTTP**: `PUT /components/{component_id}.json` (Production)
+- **Notes**: Updates a component. You may read the component by either the component's id or handle. When using the handle, it must be prefixed with `handle:`.
 - **Signature**: `UpdateComponent(string componentId, UpdateComponentRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -113,6 +129,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### UpdateProductFamilyComponent
 - **HTTP**: `PUT /product_families/{product_family_id}/components/{component_id}.json` (Production)
+- **Notes**: Updates a component from a specific product family. You may read the component by either the component's id or handle. When using the handle, it must be prefixed with `handle:`.
 - **Signature**: `UpdateProductFamilyComponent(int productFamilyId, string componentId, UpdateComponentRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`

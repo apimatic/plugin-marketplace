@@ -2,8 +2,11 @@
 
 Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs` · 11 operations
 
+**Parameter names are literal.** Signatures are generated code verbatim — in named arguments use the exact parameter names shown (the cancellation-token parameter is named `ct`).
+
 ### CancelScheduledRenewalConfiguration
 - **HTTP**: `PUT /subscriptions/{subscription_id}/scheduled_renewals/{id}/cancel.json` (Production)
+- **Notes**: Cancels a scheduled renewal configuration.
 - **Signature**: `CancelScheduledRenewalConfiguration(int subscriptionId, int id, CancellationToken ct = default)`
 - **Returns**: `ScheduledRenewalConfigurationResponse`
 - **Error**: `SdkException<CancelScheduledRenewalConfigurationError>` — **Case A (typed)**
@@ -13,6 +16,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### CreateScheduledRenewalConfiguration
 - **HTTP**: `POST /subscriptions/{subscription_id}/scheduled_renewals.json` (Production)
+- **Notes**: Creates a scheduled renewal configuration for a subscription. The scheduled renewal is based on the subscription’s current product and component setup.
 - **Signature**: `CreateScheduledRenewalConfiguration(int subscriptionId, ScheduledRenewalConfigurationRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ScheduledRenewalConfigurationResponse`
@@ -23,6 +27,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### CreateScheduledRenewalConfigurationItem
 - **HTTP**: `POST /subscriptions/{subscription_id}/scheduled_renewals/{scheduled_renewals_configuration_id}/configuration_items.json` (Production)
+- **Notes**: Adds product and component line items to the scheduled renewal.
 - **Signature**: `CreateScheduledRenewalConfigurationItem(int subscriptionId, int scheduledRenewalsConfigurationId, ScheduledRenewalConfigurationItemRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ScheduledRenewalConfigurationItemResponse`
@@ -33,8 +38,9 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### DeleteScheduledRenewalConfigurationItem
 - **HTTP**: `DELETE /subscriptions/{subscription_id}/scheduled_renewals/{scheduled_renewals_configuration_id}/configuration_items/{id}.json` (Production)
+- **Notes**: Removes an item from the pending renewal configuration.
 - **Signature**: `DeleteScheduledRenewalConfigurationItem(int subscriptionId, int scheduledRenewalsConfigurationId, int id, CancellationToken ct = default)`
-- **Returns**: `void`
+- **Returns**: `void` (Task)
 - **Error**: `SdkException<DeleteScheduledRenewalConfigurationItemError>` — **Case A (typed)**
 - **Error accessors**: `TryGetErrorListResponse1(out ErrorListResponse1)` [422] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
@@ -42,8 +48,10 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### ListScheduledRenewalConfigurations
 - **HTTP**: `GET /subscriptions/{subscription_id}/scheduled_renewals.json` (Production)
+- **Notes**: Lists scheduled renewal configurations for the subscription and permits an optional status query filter.
 - **Signature**: `ListScheduledRenewalConfigurations(int subscriptionId, Status? status, CancellationToken ct = default)`
   - `status` — nullable, no default → **must pass explicitly**
+- **Query params (wire ← C#)**: `status` ← `status`
 - **Returns**: `ScheduledRenewalConfigurationsResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
 - **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
@@ -52,6 +60,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### LockInScheduledRenewalImmediately
 - **HTTP**: `PUT /subscriptions/{subscription_id}/scheduled_renewals/{id}/immediate_lock_in.json` (Production)
+- **Notes**: Locks in the renewal immediately.
 - **Signature**: `LockInScheduledRenewalImmediately(int subscriptionId, int id, CancellationToken ct = default)`
 - **Returns**: `ScheduledRenewalConfigurationResponse`
 - **Error**: `SdkException<LockInScheduledRenewalImmediatelyError>` — **Case A (typed)**
@@ -61,6 +70,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### ReadScheduledRenewalConfiguration
 - **HTTP**: `GET /subscriptions/{subscription_id}/scheduled_renewals/{id}.json` (Production)
+- **Notes**: Retrieves the configuration settings for the scheduled renewal.
 - **Signature**: `ReadScheduledRenewalConfiguration(int subscriptionId, int id, CancellationToken ct = default)`
 - **Returns**: `ScheduledRenewalConfigurationResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
@@ -70,6 +80,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### ScheduleScheduledRenewalLockIn
 - **HTTP**: `PUT /subscriptions/{subscription_id}/scheduled_renewals/{id}/schedule_lock_in.json` (Production)
+- **Notes**: Schedules a future lock-in date for the renewal.
 - **Signature**: `ScheduleScheduledRenewalLockIn(int subscriptionId, int id, ScheduledRenewalLockInRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ScheduledRenewalConfigurationResponse`
@@ -80,6 +91,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### UnpublishScheduledRenewalConfiguration
 - **HTTP**: `PUT /subscriptions/{subscription_id}/scheduled_renewals/{id}/unpublish.json` (Production)
+- **Notes**: Returns a scheduled renewal configuration to an editable state.
 - **Signature**: `UnpublishScheduledRenewalConfiguration(int subscriptionId, int id, CancellationToken ct = default)`
 - **Returns**: `ScheduledRenewalConfigurationResponse`
 - **Error**: `SdkException<UnpublishScheduledRenewalConfigurationError>` — **Case A (typed)**
@@ -89,6 +101,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### UpdateScheduledRenewalConfiguration
 - **HTTP**: `PUT /subscriptions/{subscription_id}/scheduled_renewals/{id}.json` (Production)
+- **Notes**: Updates an existing configuration.
 - **Signature**: `UpdateScheduledRenewalConfiguration(int subscriptionId, int id, ScheduledRenewalConfigurationRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ScheduledRenewalConfigurationResponse`
@@ -99,6 +112,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 
 ### UpdateScheduledRenewalConfigurationItem
 - **HTTP**: `PUT /subscriptions/{subscription_id}/scheduled_renewals/{scheduled_renewals_configuration_id}/configuration_items/{id}.json` (Production)
+- **Notes**: Updates an existing configuration item’s pricing and quantity.
 - **Signature**: `UpdateScheduledRenewalConfigurationItem(int subscriptionId, int scheduledRenewalsConfigurationId, int id, ScheduledRenewalUpdateRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ScheduledRenewalConfigurationItemResponse`

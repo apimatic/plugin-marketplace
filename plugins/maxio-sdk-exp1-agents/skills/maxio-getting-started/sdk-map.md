@@ -9,9 +9,11 @@
 | SDK display name | Maxio Advanced Billing (formerly Chargify) — sample SDK |
 | Package id | `AsadAli.AdvancedBilling.Sdk` |
 | Root namespace/module | `MaxioAdvancedBilling` |
+<!-- gen:stamp -->
 | Version | `1.0.0` (csproj) — release tag `v1.0.2` |
 | Target framework(s) | `netstandard2.0` (C# `LangVersion 14`, `Nullable enable`) |
 | Source commit (spec stamp) | `15db14b` (`15db14b2e663ebe9e957e061bd67634630429035`, tagged `v1.0.2`) |
+<!-- /gen:stamp -->
 | Generator | APIMatic |
 | Repo | https://github.com/asadali214/advanced-billing-sample-sdk |
 
@@ -151,18 +153,34 @@ type, error Case A/B + accessors, pagination).
 
 ## Models
 
+<!-- gen:models-table -->
 | Group | Count | Page |
 |---|---:|---|
-| Records (plain `record` data models) | 555 | [Ac–Cr](map/models/records-1-Ac-Cr.md) · [Cr–Pa](map/models/records-2-Cr-Pa.md) · [Pa–Su](map/models/records-3-Pa-Su.md) · [Su–We](map/models/records-4-Su-We.md) |
+| Records (plain `record` data models) | 555 | [Ac–Cr](map/models/records-1-Ac-Cr.md) · [Cr–Ne](map/models/records-2-Cr-Ne.md) · [Of–Su](map/models/records-3-Of-Su.md) · [Su–We](map/models/records-4-Su-We.md) |
 | Unions (`OneOf` / `AnyOf`) — variant factories + `TryGet…` | 7 + 83 | [map/models/unions.md](map/models/unions.md) |
-| Enums (`StringEnum<T>` / `IntEnum<T>`) — full value lists | 98 | [map/models/enums.md](map/models/enums.md) |
+| Enums (`StringEnum<T>` / `IntEnum<T>`) — literal C# member names + wire values | 98 | [map/models/enums.md](map/models/enums.md) |
+<!-- /gen:models-table -->
 
 Model conventions: records are immutable with `init`-only setters; `required` properties must be set in the
 object initializer; nullable (`T?`) properties are optional. Each record field is listed as
 `CSharpName (wire_name): Type` — the parenthesized name is the JSON wire name (`[JsonPropertyName]`).
 Unions wrap `Optional<T>` variants — construct via a static factory or implicit
 conversion, read back via `TryGet…(out …)`. Enums are **not** C# enums — build with `Type.FromValue("wire")`
-or the static members.
+or the static members (enums.md lists the literal member names: `CollectionMethod.Invoice`, not
+`CollectionMethod.invoice`).
+
+<!-- gen:namespaces -->
+Namespaces by content type (add `using` accordingly):
+
+| Contents | Namespace(s) |
+|---|---|
+| Client & options (root) | `MaxioAdvancedBilling` |
+| Operation controllers (`Api/`) | `MaxioAdvancedBilling.Api` |
+| Records (`Models/`) | `MaxioAdvancedBilling.Models` |
+| Enums (`Models/Enums/`) | `MaxioAdvancedBilling.Models.Enums` |
+| Unions (`Models/AnyOf/`, `Models/OneOf/`) | `MaxioAdvancedBilling.Models.AnyOf` · `MaxioAdvancedBilling.Models.OneOf` |
+| Error classes (`Errors/`) | `MaxioAdvancedBilling.Errors` |
+<!-- /gen:namespaces -->
 
 ---
 

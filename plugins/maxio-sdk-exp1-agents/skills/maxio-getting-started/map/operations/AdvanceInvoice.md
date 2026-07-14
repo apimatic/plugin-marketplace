@@ -2,8 +2,11 @@
 
 Accessor: `client.AdvanceInvoice` · Source: `Api/AdvanceInvoice.cs` · 3 operations
 
+**Parameter names are literal.** Signatures are generated code verbatim — in named arguments use the exact parameter names shown (the cancellation-token parameter is named `ct`).
+
 ### IssueAdvanceInvoice
 - **HTTP**: `POST /subscriptions/{subscription_id}/advance_invoice/issue.json` (Production)
+- **Notes**: Generate an invoice in advance for a subscription's next renewal date. See our docs for more information on advance invoices, including eligibility for generating one; for the most part, they function like any other invoice, except they are issued early and have special behavior upon being voided. A subscription may only have one advance invoice …
 - **Signature**: `IssueAdvanceInvoice(int subscriptionId, IssueAdvanceInvoiceRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `Invoice`
@@ -14,6 +17,7 @@ Accessor: `client.AdvanceInvoice` · Source: `Api/AdvanceInvoice.cs` · 3 operat
 
 ### ReadAdvanceInvoice
 - **HTTP**: `GET /subscriptions/{subscription_id}/advance_invoice.json` (Production)
+- **Notes**: Returns the advance invoice generated for a subscription's upcoming renewal. There can only be one advance invoice per subscription per billing cycle.
 - **Signature**: `ReadAdvanceInvoice(int subscriptionId, CancellationToken ct = default)`
 - **Returns**: `Invoice`
 - **Error**: `SdkException<ReadAdvanceInvoiceError>` — **Case A (typed)**
@@ -23,6 +27,7 @@ Accessor: `client.AdvanceInvoice` · Source: `Api/AdvanceInvoice.cs` · 3 operat
 
 ### VoidAdvanceInvoice
 - **HTTP**: `POST /subscriptions/{subscription_id}/advance_invoice/void.json` (Production)
+- **Notes**: Void a subscription's existing advance invoice. Once voided, it can later be regenerated if desired. A `reason` is required in order to void, and the invoice must have an open status. Voiding will cause any prepayments and credits that were applied to the invoice to be returned to the subscription. For a full overview of the impact of voiding, see …
 - **Signature**: `VoidAdvanceInvoice(int subscriptionId, VoidInvoiceRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `Invoice`

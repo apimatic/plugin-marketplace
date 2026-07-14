@@ -2,8 +2,11 @@
 
 Accessor: `client.SubscriptionNotes` · Source: `Api/SubscriptionNotes.cs` · 5 operations
 
+**Parameter names are literal.** Signatures are generated code verbatim — in named arguments use the exact parameter names shown (the cancellation-token parameter is named `ct`).
+
 ### CreateSubscriptionNote
 - **HTTP**: `POST /subscriptions/{subscription_id}/notes.json` (Production)
+- **Notes**: Creates a note for a subscription. How to Use Subscription Notes Notes allow you to record information about a particular Subscription in a free text format. If you have structured data such as birth date, color, etc., consider using Metadata instead. Full documentation on how to use Notes in the Advanced Billing UI can be located here .
 - **Signature**: `CreateSubscriptionNote(int subscriptionId, UpdateSubscriptionNoteRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `SubscriptionNoteResponse`
@@ -14,8 +17,9 @@ Accessor: `client.SubscriptionNotes` · Source: `Api/SubscriptionNotes.cs` · 5 
 
 ### DeleteSubscriptionNote
 - **HTTP**: `DELETE /subscriptions/{subscription_id}/notes/{note_id}.json` (Production)
+- **Notes**: Deletes a note for a Subscription.
 - **Signature**: `DeleteSubscriptionNote(int subscriptionId, int noteId, CancellationToken ct = default)`
-- **Returns**: `void`
+- **Returns**: `void` (Task)
 - **Error**: `SdkException<RawError>` — **Case B**
 - **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
 - **No-throw variant**: absent
@@ -23,8 +27,10 @@ Accessor: `client.SubscriptionNotes` · Source: `Api/SubscriptionNotes.cs` · 5 
 
 ### ListSubscriptionNotes
 - **HTTP**: `GET /subscriptions/{subscription_id}/notes.json` (Production)
+- **Notes**: Retrieves a list of notes associated with a subscription. The response will be an array of Notes.
 - **Signature**: `ListSubscriptionNotes(int subscriptionId, int? page = 1, int? perPage = 20, CancellationToken ct = default)`
-  - `page` = 1, `perPage` = 20 — optional
+  - defaults: `page` = 1, `perPage` = 20
+- **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`
 - **Returns**: `IReadOnlyList<SubscriptionNoteResponse>`
 - **Error**: `SdkException<ListSubscriptionNotesError>` — **Case A (typed)**
 - **Error accessors**: `TryGetErrorListResponse1(out ErrorListResponse1)` [422] · `TryGetRawError(out RawError)` [fallback]
@@ -33,6 +39,7 @@ Accessor: `client.SubscriptionNotes` · Source: `Api/SubscriptionNotes.cs` · 5 
 
 ### ReadSubscriptionNote
 - **HTTP**: `GET /subscriptions/{subscription_id}/notes/{note_id}.json` (Production)
+- **Notes**: Retrieves a specific note attached to a subscription.
 - **Signature**: `ReadSubscriptionNote(int subscriptionId, int noteId, CancellationToken ct = default)`
 - **Returns**: `SubscriptionNoteResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
@@ -42,6 +49,7 @@ Accessor: `client.SubscriptionNotes` · Source: `Api/SubscriptionNotes.cs` · 5 
 
 ### UpdateSubscriptionNote
 - **HTTP**: `PUT /subscriptions/{subscription_id}/notes/{note_id}.json` (Production)
+- **Notes**: Updates a note for a subscription.
 - **Signature**: `UpdateSubscriptionNote(int subscriptionId, int noteId, UpdateSubscriptionNoteRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `SubscriptionNoteResponse`
