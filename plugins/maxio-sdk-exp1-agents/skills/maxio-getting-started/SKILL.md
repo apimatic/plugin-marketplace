@@ -122,7 +122,8 @@ from the map fails to compile, trust the compiler and re-read the source file th
 The clone is the ground truth the map was generated from, but it is a **last resort, not a step** — most
 integrations never open it. Clone only when the map has actually failed you: a map-sourced name fails to
 compile, ambiguity remains after the map lookup, or you need a full method/model body the map doesn't
-carry. (In this plugin's flow that moment belongs to `maxio-debug` — see `integrate-maxio`; nobody clones
+carry. (In this plugin's flow the helpers — `maxio-plan` and `maxio-debug` — own that moment, and the
+cloning itself is done by `maxio-sdk-clone`, which records the path in `## Session artifacts`; nobody clones
 "just in case".) Clone into your **system temp directory** (outside your solution) and navigate it via the
 SDK map above. It is a read-only reference, **not** a build dependency (never add a project reference to it).
 

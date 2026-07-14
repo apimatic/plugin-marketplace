@@ -1,6 +1,6 @@
 ---
 name: integrate-maxio
-description: 'Entry point and router for all Maxio Advanced Billing .NET SDK work — routes planning to the maxio-plan subagent (which returns a map-grounded contract sheet) and SDK errors to the maxio-debug subagent. Use when the user asks to integrate Maxio (formerly Chargify) billing, implement subscriptions/customers/usage/invoices with the Maxio .NET SDK, or reports a Maxio error or unexpected SDK behaviour in a C#/.NET project.'
+description: 'Entry point and router for all Maxio Advanced Billing .NET SDK work — routes planning to the maxio-plan subagent (which returns a map-grounded contract sheet) and SDK errors to the maxio-debug subagent. Use when the user asks to integrate Maxio (formerly Chargify) billing, implement subscriptions/customers/usage/invoices with the Maxio .NET SDK, or reports a Maxio error or unexpected SDK behaviour in a C#/.NET project. Main agent: helpers own ALL SDK source access — never read, clone, or decompile SDK source or the installed NuGet package yourself; while a helper runs, wait for its return.'
 ---
 
 # Maxio Advanced Billing .NET SDK — Router (map + subagents)
@@ -8,15 +8,17 @@ description: 'Entry point and router for all Maxio Advanced Billing .NET SDK wor
 You (the main agent) orchestrate; the subagents carry the SDK knowledge. The division of
 labour exists to keep YOUR context small and YOUR code grounded:
 
-- **`maxio-plan`** does all SDK discovery against the bundled SDK map and returns a
-  **contract sheet** — the exact signatures, wire names, envelope shapes, error
-  accessors, and enum values for the operations in scope. You implement from the sheet.
-  It has **no Bash**: it cannot clone, run, or inspect SDK source, and it cannot run
-  commands of any kind. Never route a source lookup to it.
-- **`maxio-debug`** owns SDK-related build/runtime failures **and is the ONLY helper
-  that touches SDK source** — anything that needs the SDK cloned or a source file
-  opened goes to it. Its first move on a failing SDK name is opening the exact source
-  file the map names — never re-guessing.
+- **`maxio-plan`** does ALL SDK discovery — against the bundled map first and, where
+  the map falls short, against SDK source it has cloned via `maxio-sdk-clone` — and
+  returns a **contract sheet** with no open lookups: exact signatures, wire names,
+  envelope shapes, error accessors, enum values for the operations in scope. You
+  implement from the sheet. Route every SDK contract need to it, source-level ones
+  included.
+- **`maxio-debug`** owns SDK-related build/runtime failures — anything that needs a
+  failing SDK name diagnosed goes to it. Its first move on a failing SDK name is
+  opening the exact source file the map names — never re-guessing. Both helpers reach
+  SDK source only through `maxio-sdk-clone`; the clone path lives in
+  `## Session artifacts` — never with you.
 
 **Scope guard:** Maxio Advanced Billing .NET SDK (`AsadAli.AdvancedBilling.Sdk`,
 namespace `MaxioAdvancedBilling`) in C#/.NET projects only. Unrelated API or language —
@@ -49,6 +51,15 @@ do nothing.
    follow-up questions and plan revisions to the EXISTING `maxio-plan` agent — its map
    context is already warm. Spawn fresh only when that isn't available or the agent is
    gone.
+5. **When you wait, WAIT.** Whenever a helper is running, do nothing beyond the CLOSED
+   Step-1 prerequisite list. No side investigations, no "useful" detours, and above
+   all no self-serve SDK ground-truthing: never open SDK source, an SDK clone, the
+   NuGet package cache, or a decompiler (ilspycmd and friends) — not to verify a
+   sheet row, not to "save a round-trip" while a helper is already answering that
+   same question. Waiting idle is correct and costs nothing; a detour rides in your
+   context for every remaining turn. A prior session broke the design exactly this
+   way: it decompiled the SDK DLL out of the NuGet cache "to verify" facts a helper
+   was concurrently resolving.
 
 ## Workflow
 
@@ -77,9 +88,9 @@ knowledge and touches no project file:
 - credentials/environment verification (per the task's secret-handling rules);
 - setting up your task tracking.
 
-Never sit idle waiting on a helper — every one of the items above fits inside the
-plan agent's runtime. Equally: never use the wait to get a "head start" on
-implementation. Writing or editing ANY project file before the gate below is a
+The list above is CLOSED and fits inside the plan agent's runtime; once it is
+exhausted, wait idle (rule 5). Never use the wait to get a "head start" on
+implementation — writing or editing ANY project file before the gate below is a
 defect, no matter how obvious the code seems.
 
 **HARD GATE — no project-file creation or edits until:** the plan agent has
@@ -138,6 +149,7 @@ mode and relay its grounded answer. Never answer from memory, even for "easy" qu
   above all) via a `## Session artifacts` section at the bottom of `maxio-plan.md` —
   that rule lives in their own prompts; all you need to know is that such paths live
   there, not with you.
-- Neither you nor the subagents ever decompile/reflect over the NuGet package, open the
-  SDK's `api-reference.md`, or web-search Maxio topics. `maxio-debug` handles all SDK
-  source-clone needs per `maxio-getting-started`'s rules; you never clone.
+- Neither you nor the subagents ever decompile/reflect over the NuGet package (ilspycmd
+  and friends included), open the SDK's `api-reference.md`, or web-search Maxio topics.
+  `maxio-sdk-clone` is the only thing that ever clones — spawned by the helpers, never
+  by you; you never touch SDK source at all.
