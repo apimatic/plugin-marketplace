@@ -12,7 +12,7 @@ Accessor: `client.Sites` · Source: `Api/Sites.cs` · 3 operations
 - **Query params (wire ← C#)**: `cleanup_scope` ← `cleanupScope`
 - **Returns**: `void` (Task)
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -24,7 +24,7 @@ Accessor: `client.Sites` · Source: `Api/Sites.cs` · 3 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`
 - **Returns**: `ListPublicKeysResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -34,6 +34,6 @@ Accessor: `client.Sites` · Source: `Api/Sites.cs` · 3 operations
 - **Signature**: `ReadSite(CancellationToken ct = default)`
 - **Returns**: `SiteResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none

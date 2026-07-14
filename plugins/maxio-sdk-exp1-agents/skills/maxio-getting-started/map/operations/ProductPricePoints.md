@@ -73,7 +73,7 @@ Accessor: `client.ProductPricePoints` · Source: `Api/ProductPricePoints.cs` · 
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `currency_prices` ← `currencyPrices`, `filter[type]` ← `filterType`, `archived` ← `archived`
 - **Returns**: `ListProductPricePointsResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -83,7 +83,7 @@ Accessor: `client.ProductPricePoints` · Source: `Api/ProductPricePoints.cs` · 
 - **Signature**: `PromoteProductPricePointToDefault(int productId, int pricePointId, CancellationToken ct = default)`
 - **Returns**: `ProductResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -95,7 +95,7 @@ Accessor: `client.ProductPricePoints` · Source: `Api/ProductPricePoints.cs` · 
 - **Query params (wire ← C#)**: `currency_prices` ← `currencyPrices`
 - **Returns**: `ProductPricePointResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -105,7 +105,7 @@ Accessor: `client.ProductPricePoints` · Source: `Api/ProductPricePoints.cs` · 
 - **Signature**: `UnarchiveProductPricePoint(int productId, int pricePointId, CancellationToken ct = default)`
 - **Returns**: `ProductPricePointResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -127,6 +127,6 @@ Accessor: `client.ProductPricePoints` · Source: `Api/ProductPricePoints.cs` · 
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ProductPricePointResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none

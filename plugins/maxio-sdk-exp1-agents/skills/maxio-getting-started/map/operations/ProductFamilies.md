@@ -23,7 +23,7 @@ Accessor: `client.ProductFamilies` · Source: `Api/ProductFamilies.cs` · 4 oper
 - **Query params (wire ← C#)**: `date_field` ← `dateField`, `start_date` ← `startDate`, `end_date` ← `endDate`, `start_datetime` ← `startDatetime`, `end_datetime` ← `endDatetime`
 - **Returns**: `IReadOnlyList<ProductFamilyResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -46,6 +46,6 @@ Accessor: `client.ProductFamilies` · Source: `Api/ProductFamilies.cs` · 4 oper
 - **Signature**: `ReadProductFamily(int id, CancellationToken ct = default)`
 - **Returns**: `ProductFamilyResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none

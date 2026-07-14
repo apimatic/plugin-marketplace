@@ -35,7 +35,7 @@ Accessor: `client.Invoices` · Source: `Api/Invoices.cs` · 17 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `direction` ← `direction`
 - **Returns**: `ConsolidatedInvoice`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -48,7 +48,7 @@ Accessor: `client.Invoices` · Source: `Api/Invoices.cs` · 17 operations
 - **Query params (wire ← C#)**: `subscription_id` ← `subscriptionId`, `page` ← `page`, `per_page` ← `perPage`, `line_items` ← `lineItems`, `discounts` ← `discounts`, `taxes` ← `taxes`, `refunds` ← `refunds`, `applications` ← `applications`
 - **Returns**: `ListCreditNotesResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -61,7 +61,7 @@ Accessor: `client.Invoices` · Source: `Api/Invoices.cs` · 17 operations
 - **Query params (wire ← C#)**: `since_date` ← `sinceDate`, `since_id` ← `sinceId`, `page` ← `page`, `per_page` ← `perPage`, `invoice_uid` ← `invoiceUid`, `with_change_invoice_status` ← `withChangeInvoiceStatus`, `event_types` ← `eventTypes`
 - **Returns**: `ListInvoiceEventsResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -74,7 +74,7 @@ Accessor: `client.Invoices` · Source: `Api/Invoices.cs` · 17 operations
 - **Query params (wire ← C#)**: `start_date` ← `startDate`, `end_date` ← `endDate`, `status` ← `status`, `subscription_id` ← `subscriptionId`, `subscription_group_uid` ← `subscriptionGroupUid`, `consolidation_level` ← `consolidationLevel`, `page` ← `page`, `per_page` ← `perPage`, `direction` ← `direction`, `line_items` ← `lineItems`, `discounts` ← `discounts`, `taxes` ← `taxes`, `credits` ← `credits`, `payments` ← `payments`, `custom_fields` ← `customFields`, `refunds` ← `refunds`, `date_field` ← `dateField`, `start_datetime` ← `startDatetime`, `end_datetime` ← `endDatetime`, `customer_ids` ← `customerIds`, `number` ← `number`, `product_ids` ← `productIds`, `sort` ← `sort`
 - **Returns**: `ListInvoicesResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -94,7 +94,7 @@ Accessor: `client.Invoices` · Source: `Api/Invoices.cs` · 17 operations
 - **Signature**: `ReadCreditNote(string uid, CancellationToken ct = default)`
 - **Returns**: `CreditNote`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -104,7 +104,7 @@ Accessor: `client.Invoices` · Source: `Api/Invoices.cs` · 17 operations
 - **Signature**: `ReadInvoice(string uid, CancellationToken ct = default)`
 - **Returns**: `Invoice`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 

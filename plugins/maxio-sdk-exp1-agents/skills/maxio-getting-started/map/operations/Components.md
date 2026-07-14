@@ -76,7 +76,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 - **Query params (wire ← C#)**: `handle` ← `handle`
 - **Returns**: `ComponentResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -89,7 +89,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 - **Query params (wire ← C#)**: `date_field` ← `dateField`, `start_date` ← `startDate`, `end_date` ← `endDate`, `start_datetime` ← `startDatetime`, `end_datetime` ← `endDatetime`, `include_archived` ← `includeArchived`, `page` ← `page`, `per_page` ← `perPage`, `filter` ← `filter`
 - **Returns**: `IReadOnlyList<ComponentResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -102,7 +102,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 - **Query params (wire ← C#)**: `include_archived` ← `includeArchived`, `page` ← `page`, `per_page` ← `perPage`, `filter` ← `filter`, `date_field` ← `dateField`, `end_date` ← `endDate`, `end_datetime` ← `endDatetime`, `start_date` ← `startDate`, `start_datetime` ← `startDatetime`
 - **Returns**: `IReadOnlyList<ComponentResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -112,7 +112,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 - **Signature**: `ReadComponent(int productFamilyId, string componentId, CancellationToken ct = default)`
 - **Returns**: `ComponentResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 

@@ -10,7 +10,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
 - **Signature**: `ArchiveCoupon(int productFamilyId, int couponId, CancellationToken ct = default)`
 - **Returns**: `CouponResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -32,7 +32,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `CouponSubcodesResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -67,7 +67,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
 - **Query params (wire ← C#)**: `product_family_id` ← `productFamilyId`, `code` ← `code`, `currency_prices` ← `currencyPrices`
 - **Returns**: `CouponResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -79,7 +79,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`
 - **Returns**: `CouponSubcodes`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -93,7 +93,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `filter` ← `filter`, `currency_prices` ← `currencyPrices`
 - **Returns**: `IReadOnlyList<CouponResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -107,7 +107,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `filter` ← `filter`, `currency_prices` ← `currencyPrices`
 - **Returns**: `IReadOnlyList<CouponResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -119,7 +119,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
 - **Query params (wire ← C#)**: `currency_prices` ← `currencyPrices`
 - **Returns**: `CouponResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -129,7 +129,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
 - **Signature**: `ReadCouponUsage(int productFamilyId, int couponId, CancellationToken ct = default)`
 - **Returns**: `IReadOnlyList<CouponUsage>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -151,7 +151,7 @@ Accessor: `client.Coupons` · Source: `Api/Coupons.cs` · 14 operations
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `CouponSubcodesResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 

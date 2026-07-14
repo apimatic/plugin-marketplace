@@ -21,7 +21,7 @@ Accessor: `client.SubscriptionNotes` · Source: `Api/SubscriptionNotes.cs` · 5 
 - **Signature**: `DeleteSubscriptionNote(int subscriptionId, int noteId, CancellationToken ct = default)`
 - **Returns**: `void` (Task)
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -43,7 +43,7 @@ Accessor: `client.SubscriptionNotes` · Source: `Api/SubscriptionNotes.cs` · 5 
 - **Signature**: `ReadSubscriptionNote(int subscriptionId, int noteId, CancellationToken ct = default)`
 - **Returns**: `SubscriptionNoteResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 

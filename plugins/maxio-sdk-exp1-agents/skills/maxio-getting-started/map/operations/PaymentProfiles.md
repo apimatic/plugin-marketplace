@@ -41,7 +41,7 @@ Accessor: `client.PaymentProfiles` · Source: `Api/PaymentProfiles.cs` · 12 ope
 - **Signature**: `DeleteSubscriptionGroupPaymentProfile(string uid, int paymentProfileId, CancellationToken ct = default)`
 - **Returns**: `void` (Task)
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -51,7 +51,7 @@ Accessor: `client.PaymentProfiles` · Source: `Api/PaymentProfiles.cs` · 12 ope
 - **Signature**: `DeleteSubscriptionsPaymentProfile(int subscriptionId, int paymentProfileId, CancellationToken ct = default)`
 - **Returns**: `void` (Task)
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -74,7 +74,7 @@ Accessor: `client.PaymentProfiles` · Source: `Api/PaymentProfiles.cs` · 12 ope
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `customer_id` ← `customerId`
 - **Returns**: `IReadOnlyList<PaymentProfileResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 

@@ -13,7 +13,7 @@ Accessor: `client.Events` · Source: `Api/Events.cs` · 3 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `since_id` ← `sinceId`, `max_id` ← `maxId`, `direction` ← `direction`, `filter` ← `filter`, `date_field` ← `dateField`, `start_date` ← `startDate`, `end_date` ← `endDate`, `start_datetime` ← `startDatetime`, `end_datetime` ← `endDatetime`
 - **Returns**: `IReadOnlyList<EventResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -26,7 +26,7 @@ Accessor: `client.Events` · Source: `Api/Events.cs` · 3 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `since_id` ← `sinceId`, `max_id` ← `maxId`, `direction` ← `direction`, `filter` ← `filter`
 - **Returns**: `IReadOnlyList<EventResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -39,6 +39,6 @@ Accessor: `client.Events` · Source: `Api/Events.cs` · 3 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `since_id` ← `sinceId`, `max_id` ← `maxId`, `direction` ← `direction`, `filter` ← `filter`
 - **Returns**: `CountResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`

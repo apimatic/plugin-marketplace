@@ -54,7 +54,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 - **Query params (wire ← C#)**: `status` ← `status`
 - **Returns**: `ScheduledRenewalConfigurationsResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -74,7 +74,7 @@ Accessor: `client.SubscriptionRenewals` · Source: `Api/SubscriptionRenewals.cs`
 - **Signature**: `ReadScheduledRenewalConfiguration(int subscriptionId, int id, CancellationToken ct = default)`
 - **Returns**: `ScheduledRenewalConfigurationResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 

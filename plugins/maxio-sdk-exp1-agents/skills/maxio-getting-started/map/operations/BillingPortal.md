@@ -42,6 +42,6 @@ Accessor: `client.BillingPortal` · Source: `Api/BillingPortal.cs` · 4 operatio
 - **Signature**: `RevokeBillingPortalAccess(int customerId, CancellationToken ct = default)`
 - **Returns**: `RevokedInvitation`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none

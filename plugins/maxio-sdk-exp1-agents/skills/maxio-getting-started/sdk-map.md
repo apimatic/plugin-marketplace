@@ -7,10 +7,9 @@
 | | |
 |---|---|
 | SDK display name | Maxio Advanced Billing (formerly Chargify) — sample SDK |
-| Package id | `AsadAli.AdvancedBilling.Sdk` |
 | Root namespace/module | `MaxioAdvancedBilling` |
 <!-- gen:stamp -->
-| Version | `1.0.0` (csproj) — release tag `v1.0.2` |
+| NuGet package | `AsadAli.AdvancedBilling.Sdk` `1.0.0` (csproj `PackageId`/`Version`) — release tag `v1.0.2` |
 | Target framework(s) | `netstandard2.0` (C# `LangVersion 14`, `Nullable enable`) |
 | Source commit (spec stamp) | `15db14b` (`15db14b2e663ebe9e957e061bd67634630429035`, tagged `v1.0.2`) |
 <!-- /gen:stamp -->
@@ -88,6 +87,17 @@ Operations are **throw-based**. On an error status the SDK throws `SdkException<
   status each maps to.
 - **Case B — raw error.** `TError` is `RawError` (`Core/ErrorResponse/RawError.cs`): `StatusCode`,
   `ReadAsString()`, `ReadAsJson<T>()`, `ReadAsBytes()`.
+
+<!-- gen:error-core -->
+Core error types (`Core/ErrorResponse/`) — public members with their **declared types**, verbatim from source:
+
+| Type | Public members | Source |
+|---|---|---|
+| `ApiError` — abstract base of all 163 typed error classes in `Errors/` | `TryGetRawError(out RawError error): bool` | `Core/ErrorResponse/ApiError.cs` |
+| `RawError` | `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?` | `Core/ErrorResponse/RawError.cs` |
+
+Typed-error payload shapes (the `out` types in each operation page's error-accessor cells) are ordinary records/unions: field names, declared types, and JSON wire names live on the records pages / `unions.md` like any other model.
+<!-- /gen:error-core -->
 
 ```csharp
 try { var resp = await client.Customers.CreateCustomer(body); }

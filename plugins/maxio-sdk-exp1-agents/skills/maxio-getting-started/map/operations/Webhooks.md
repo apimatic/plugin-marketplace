@@ -22,7 +22,7 @@ Accessor: `client.Webhooks` · Source: `Api/Webhooks.cs` · 6 operations
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `EnableWebhooksResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -32,7 +32,7 @@ Accessor: `client.Webhooks` · Source: `Api/Webhooks.cs` · 6 operations
 - **Signature**: `ListEndpoints(CancellationToken ct = default)`
 - **Returns**: `IReadOnlyList<Endpoint>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -45,7 +45,7 @@ Accessor: `client.Webhooks` · Source: `Api/Webhooks.cs` · 6 operations
 - **Query params (wire ← C#)**: `status` ← `status`, `since_date` ← `sinceDate`, `until_date` ← `untilDate`, `page` ← `page`, `per_page` ← `perPage`, `order` ← `order`, `subscription` ← `subscription`
 - **Returns**: `IReadOnlyList<WebhookResponse>`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -56,7 +56,7 @@ Accessor: `client.Webhooks` · Source: `Api/Webhooks.cs` · 6 operations
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ReplayWebhooksResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 

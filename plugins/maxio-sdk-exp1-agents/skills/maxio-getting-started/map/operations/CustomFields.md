@@ -59,7 +59,7 @@ Accessor: `client.CustomFields` · Source: `Api/CustomFields.cs` · 9 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`
 - **Returns**: `PaginatedMetadata`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -72,7 +72,7 @@ Accessor: `client.CustomFields` · Source: `Api/CustomFields.cs` · 9 operations
 - **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`, `date_field` ← `dateField`, `start_date` ← `startDate`, `end_date` ← `endDate`, `start_datetime` ← `startDatetime`, `end_datetime` ← `endDatetime`, `with_deleted` ← `withDeleted`, `resource_ids` ← `resourceIds`, `direction` ← `direction`
 - **Returns**: `PaginatedMetadata`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -86,7 +86,7 @@ Accessor: `client.CustomFields` · Source: `Api/CustomFields.cs` · 9 operations
 - **Query params (wire ← C#)**: `name` ← `name`, `page` ← `page`, `per_page` ← `perPage`, `direction` ← `direction`
 - **Returns**: `ListMetafieldsResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 

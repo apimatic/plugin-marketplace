@@ -69,7 +69,7 @@ Accessor: `client.SubscriptionInvoiceAccount` · Source: `Api/SubscriptionInvoic
 - **Signature**: `ReadAccountBalances(int subscriptionId, CancellationToken ct = default)`
 - **Returns**: `AccountBalances`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 

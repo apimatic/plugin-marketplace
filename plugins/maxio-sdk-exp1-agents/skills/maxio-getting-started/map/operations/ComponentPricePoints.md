@@ -83,7 +83,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 - **Query params (wire ← C#)**: `currency_prices` ← `currencyPrices`, `page` ← `page`, `per_page` ← `perPage`, `filter[type]` ← `filterType`
 - **Returns**: `ComponentPricePointsResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: manual `page`+`perPage`
 
@@ -93,7 +93,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 - **Signature**: `PromoteComponentPricePointToDefault(int componentId, int pricePointId, CancellationToken ct = default)`
 - **Returns**: `ComponentResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -105,7 +105,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 - **Query params (wire ← C#)**: `currency_prices` ← `currencyPrices`
 - **Returns**: `ComponentPricePointCurrencyOverageResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -115,7 +115,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 - **Signature**: `UnarchiveComponentPricePoint(int componentId, int pricePointId, CancellationToken ct = default)`
 - **Returns**: `ComponentPricePointResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
-- **Error accessors**: `StatusCode` · `ReadAsString()` · `ReadAsJson<T>()` · `ReadAsBytes()`
+- **Error accessors**: `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?`
 - **No-throw variant**: absent
 - **Pagination**: none
 
