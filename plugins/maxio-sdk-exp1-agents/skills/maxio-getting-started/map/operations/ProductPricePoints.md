@@ -27,7 +27,7 @@ Accessor: `client.ProductPricePoints` · Source: `Api/ProductPricePoints.cs` · 
 
 ### CreateProductCurrencyPrices
 - **HTTP**: `POST /product_price_points/{product_price_point_id}/currency_prices.json` (Production)
-- **Notes**: Creates currency prices for a given currency that has been defined on the site level in your settings. When creating currency prices, they need to mirror the structure of your primary pricing. If the product price point defines a trial and/or setup fee, each currency must also define a trial and/or setup fee. Note: Currency Prices are not able to …
+- **Notes**: Creates currency prices for a given currency that has been defined on the site level in your settings. When creating currency prices, they need to mirror the structure of your primary pricing. If the product price point defines a trial and/or setup fee, each currency must also define a trial and/or setup fee. Note: Currency Prices are not able to be created for custom product price points.
 - **Signature**: `CreateProductCurrencyPrices(int productPricePointId, CreateProductCurrencyPricesRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `CurrencyPricesResponse`
@@ -111,7 +111,7 @@ Accessor: `client.ProductPricePoints` · Source: `Api/ProductPricePoints.cs` · 
 
 ### UpdateProductCurrencyPrices
 - **HTTP**: `PUT /product_price_points/{product_price_point_id}/currency_prices.json` (Production)
-- **Notes**: Updates the `price`s of currency prices for a given currency that exists on the product price point. When updating the pricing, it needs to mirror the structure of your primary pricing. If the product price point defines a trial and/or setup fee, each currency must also define a trial and/or setup fee. Note: Currency Prices cannot be updated for …
+- **Notes**: Updates the `price`s of currency prices for a given currency that exists on the product price point. When updating the pricing, it needs to mirror the structure of your primary pricing. If the product price point defines a trial and/or setup fee, each currency must also define a trial and/or setup fee. Note: Currency Prices cannot be updated for custom product price points.
 - **Signature**: `UpdateProductCurrencyPrices(int productPricePointId, UpdateCurrencyPricesRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `CurrencyPricesResponse`

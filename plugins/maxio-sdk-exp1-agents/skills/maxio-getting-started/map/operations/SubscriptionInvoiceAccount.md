@@ -6,7 +6,7 @@ Accessor: `client.SubscriptionInvoiceAccount` · Source: `Api/SubscriptionInvoic
 
 ### CreatePrepayment
 - **HTTP**: `POST /subscriptions/{subscription_id}/prepayments.json` (Production)
-- **Notes**: Creates a prepayment for a subscription. In order to specify a prepayment made against a subscription, specify the `amount, memo, details, method`. When the `method` specified is `"credit_card_on_file"`, the prepayment amount will be collected using the default credit card payment profile and applied to the prepayment account balance. This is …
+- **Notes**: Creates a prepayment for a subscription. In order to specify a prepayment made against a subscription, specify the `amount, memo, details, method`. When the `method` specified is `"credit_card_on_file"`, the prepayment amount will be collected using the default credit card payment profile and applied to the prepayment account balance. This is especially useful for manual replenishment of prepaid subscriptions. Note that passing `amount_in_cents` is now allowed. 3D Secure (3DS) Authentication post-authentication flow When a payment requires 3DS Authentication to adhere to Strong Customer Authentication (SCA), the request enters a post-authentication flow where a 422 Unprocessable Entity status is returned with an action_link that will direct the customer through 3DS Authentication. See the 3D Secure Post-Authentication Flow article in the product documentation to learn how to manage the redirect flow.
 - **Signature**: `CreatePrepayment(int subscriptionId, CreatePrepaymentRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `CreatePrepaymentResponse`

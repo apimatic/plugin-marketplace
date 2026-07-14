@@ -104,7 +104,11 @@ mode.
    helper later revises the sheet, it replies with the changed rows verbatim: work
    from its reply, never re-read the file in full (a second full read rides in your
    context for every remaining turn). Treat the contracts as authoritative — do not
-   re-derive or "double-check" them from memory.
+   re-derive or "double-check" them from memory. If you are no longer sure what a
+   sheet row actually said, that is a rule-3 lookup — ask `maxio-plan`, or re-read
+   just that section of the sheet (Read with offset/limit). The ban is on FULL
+   re-reads, never on targeted ones; reconstructing a half-remembered row from
+   memory is guessing.
 2. Implement sequentially. Follow the repo's own conventions and layering.
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
 4. **Any compile or runtime error involving an SDK type or member** (`CS1061`,
@@ -130,11 +134,10 @@ mode and relay its grounded answer. Never answer from memory, even for "easy" qu
   mode: just the answer); `maxio-debug` returns root cause + fix applied + files touched
   + unresolved blockers. If a return arrives bloated, use what you need and drop the
   rest — do not paste it into files or re-quote it.
-- **Shared-artifact protocol:** any artifact one helper creates that another may need
-  (the SDK source clone path, above all) is recorded in a `## Session artifacts`
-  section at the bottom of `maxio-plan.md`. A helper needing another's artifact checks
-  that section FIRST — no filesystem hunting; and if it isn't recorded there, say so
-  in the return rather than silently working around it.
+- **Shared artifacts:** helpers pass artifacts to each other (the SDK clone path,
+  above all) via a `## Session artifacts` section at the bottom of `maxio-plan.md` —
+  that rule lives in their own prompts; all you need to know is that such paths live
+  there, not with you.
 - Neither you nor the subagents ever decompile/reflect over the NuGet package, open the
   SDK's `api-reference.md`, or web-search Maxio topics. `maxio-debug` handles all SDK
   source-clone needs per `maxio-getting-started`'s rules; you never clone.

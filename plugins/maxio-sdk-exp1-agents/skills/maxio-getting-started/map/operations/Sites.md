@@ -6,7 +6,7 @@ Accessor: `client.Sites` · Source: `Api/Sites.cs` · 3 operations
 
 ### ClearSite
 - **HTTP**: `POST /sites/clear_data.json` (Production)
-- **Notes**: Clears all data from a test site asynchronously. This call is asynchronous and there may be a delay before the site data is fully deleted. If you are clearing site data for an automated test, you will need to build in a delay and/or check that there are no products, etc., in the site before proceeding. This functionality will only work on sites in …
+- **Notes**: Clears all data from a test site asynchronously. This call is asynchronous and there may be a delay before the site data is fully deleted. If you are clearing site data for an automated test, you will need to build in a delay and/or check that there are no products, etc., in the site before proceeding. This functionality will only work on sites in TEST mode. Attempts to perform this on sites in “live” mode will result in a response of 403 FORBIDDEN.
 - **Signature**: `ClearSite(CleanupScope? cleanupScope, CancellationToken ct = default)`
   - `cleanupScope` — nullable, no default → **must pass explicitly**
 - **Query params (wire ← C#)**: `cleanup_scope` ← `cleanupScope`
@@ -30,7 +30,7 @@ Accessor: `client.Sites` · Source: `Api/Sites.cs` · 3 operations
 
 ### ReadSite
 - **HTTP**: `GET /site.json` (Production)
-- **Notes**: Retrieves site data. Full documentation on Sites in the Advanced Billing UI can be located here . Specifically, the Clearing Site Data section is relevant to this endpoint documentation. Relationship invoicing enabled If the site has RI enabled then you will see more settings like: "customer_hierarchy_enabled": true, "whopays_enabled": true, …
+- **Notes**: Retrieves site data. Full documentation on Sites in the Advanced Billing UI can be located here . Specifically, the Clearing Site Data section is relevant to this endpoint documentation. Relationship invoicing enabled If the site has RI enabled then you will see more settings like: "customer_hierarchy_enabled": true, "whopays_enabled": true, "whopays_default_payer": "self" You can read more about these settings here: Who Pays &amp; Customer Hierarchy
 - **Signature**: `ReadSite(CancellationToken ct = default)`
 - **Returns**: `SiteResponse`
 - **Error**: `SdkException<RawError>` — **Case B**

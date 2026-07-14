@@ -27,7 +27,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 
 ### CloneComponentPricePoint
 - **HTTP**: `POST /components/{component_id}/price_points/{price_point_id}/clone.json` (Production)
-- **Notes**: Clones a component price point. Custom price points (tied to a specific subscription) cannot be cloned. The following attributes are copied from the source price point: - Pricing scheme - All price tiers (with starting/ending quantities and unit prices) - Tax included setting - Currency prices (if definitive pricing is set) - Overage pricing (for …
+- **Notes**: Clones a component price point. Custom price points (tied to a specific subscription) cannot be cloned. The following attributes are copied from the source price point: - Pricing scheme - All price tiers (with starting/ending quantities and unit prices) - Tax included setting - Currency prices (if definitive pricing is set) - Overage pricing (for prepaid usage components) - Interval settings (if multi-frequency is enabled) - Event-based billing segments (if applicable)
 - **Signature**: `CloneComponentPricePoint(ComponentIdModel componentId, PricePointIdModel pricePointId, CloneComponentPricePointRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentPricePointCurrencyOverageResponse`
@@ -49,7 +49,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 
 ### CreateCurrencyPrices
 - **HTTP**: `POST /price_points/{price_point_id}/currency_prices.json` (Production)
-- **Notes**: Creates currency prices for a given currency defined at the site level. When creating currency prices, they need to mirror the structure of your primary pricing. For each price level defined on the component price point, there should be a matching price level created in the given currency. Note: Currency Prices are not able to be created for …
+- **Notes**: Creates currency prices for a given currency defined at the site level. When creating currency prices, they need to mirror the structure of your primary pricing. For each price level defined on the component price point, there should be a matching price level created in the given currency. Note: Currency Prices are not able to be created for custom price points.
 - **Signature**: `CreateCurrencyPrices(int pricePointId, CreateCurrencyPricesRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentCurrencyPricesResponse`
@@ -75,7 +75,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 
 ### ListComponentPricePoints
 - **HTTP**: `GET /components/{component_id}/price_points.json` (Production)
-- **Notes**: Lists the price points associated with a component. You may specify the component by using either the numeric id or the `handle:gold` syntax. When fetching a component's price points, if you have defined multiple currencies at the site level, you can optionally pass the `?currency_prices=true` query param to include an array of currency price data …
+- **Notes**: Lists the price points associated with a component. You may specify the component by using either the numeric id or the `handle:gold` syntax. When fetching a component's price points, if you have defined multiple currencies at the site level, you can optionally pass the `?currency_prices=true` query param to include an array of currency price data in the response. If the price point is set to `use_site_exchange_rate: true`, it will return pricing based on the current exchange rate. If the flag is set to false, it will return all of the defined prices for each currency.
 - **Signature**: `ListComponentPricePoints(int componentId, bool? currencyPrices, IReadOnlyList<PricePointType>? filterType, int? page = 1, int? perPage = 20, CancellationToken ct = default)`
   - `currencyPrices` — nullable, no default → **must pass explicitly**
   - `filterType` — nullable, no default → **must pass explicitly**
@@ -89,7 +89,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 
 ### PromoteComponentPricePointToDefault
 - **HTTP**: `PUT /components/{component_id}/price_points/{price_point_id}/default.json` (Production)
-- **Notes**: Sets a new default price point for the component. This new default will apply to all new subscriptions going forward - existing subscriptions will remain on their current price point. See Price Points Documentation for more information on price points and moving subscriptions between price points. Note: Custom price points are not able to be set …
+- **Notes**: Sets a new default price point for the component. This new default will apply to all new subscriptions going forward - existing subscriptions will remain on their current price point. See Price Points Documentation for more information on price points and moving subscriptions between price points. Note: Custom price points are not able to be set as the default for a component.
 - **Signature**: `PromoteComponentPricePointToDefault(int componentId, int pricePointId, CancellationToken ct = default)`
 - **Returns**: `ComponentResponse`
 - **Error**: `SdkException<RawError>` — **Case B**
@@ -121,7 +121,7 @@ Accessor: `client.ComponentPricePoints` · Source: `Api/ComponentPricePoints.cs`
 
 ### UpdateComponentPricePoint
 - **HTTP**: `PUT /components/{component_id}/price_points/{price_point_id}.json` (Production)
-- **Notes**: Updates a component price point and its associated prices. Passing in a price bracket without an `id` will attempt to create a new price. Including an `id` will update the corresponding price, and including the `_destroy` flag set to true along with the `id` will remove that price. Note: Custom price points cannot be updated directly. They must be …
+- **Notes**: Updates a component price point and its associated prices. Passing in a price bracket without an `id` will attempt to create a new price. Including an `id` will update the corresponding price, and including the `_destroy` flag set to true along with the `id` will remove that price. Note: Custom price points cannot be updated directly. They must be edited through the Subscription.
 - **Signature**: `UpdateComponentPricePoint(ComponentIdModel componentId, PricePointIdModel pricePointId, UpdateComponentPricePointRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentPricePointResponse`

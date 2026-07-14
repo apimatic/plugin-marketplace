@@ -6,7 +6,7 @@ Accessor: `client.ReasonCodes` · Source: `Api/ReasonCodes.cs` · 5 operations
 
 ### CreateReasonCode
 - **HTTP**: `POST /reason_codes.json` (Production)
-- **Notes**: Creates a reason code for a given site. Reason Codes Intro Reason Codes are a way to gain a high-level view of why your customers are cancelling the subscription to your product or service. Add a set of churn reason codes to be displayed in-app and/or the Maxio Billing Portal. As your subscribers decide to cancel their subscription, learn why they …
+- **Notes**: Creates a reason code for a given site. Reason Codes Intro Reason Codes are a way to gain a high-level view of why your customers are cancelling the subscription to your product or service. Add a set of churn reason codes to be displayed in-app and/or the Maxio Billing Portal. As your subscribers decide to cancel their subscription, learn why they decided to cancel. Reason Code Documentation Full documentation on how Reason Codes operate within Advanced Billing can be located under the following links. Churn Reason Codes Create Reason Code This method gives a merchant the option to create reason codes for a given site.
 - **Signature**: `CreateReasonCode(CreateReasonCodeRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ReasonCodeResponse`

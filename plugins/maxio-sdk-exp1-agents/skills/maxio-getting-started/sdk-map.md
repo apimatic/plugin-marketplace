@@ -156,7 +156,7 @@ type, error Case A/B + accessors, pagination).
 <!-- gen:models-table -->
 | Group | Count | Page |
 |---|---:|---|
-| Records (plain `record` data models) | 555 | [Ac–Cr](map/models/records-1-Ac-Cr.md) · [Cr–Ne](map/models/records-2-Cr-Ne.md) · [Of–Su](map/models/records-3-Of-Su.md) · [Su–We](map/models/records-4-Su-We.md) |
+| Records (plain `record` data models) | 555 | [`AccountBalance` … `CreateSegmentRequest`](map/models/records-1-Ac-Cr.md) · [`CreateSubscription` … `NetTerms`](map/models/records-2-Cr-Ne.md) · [`Offer` … `SubscriptionComponentSubscription`](map/models/records-3-Of-Su.md) · [`SubscriptionCustomPrice` … `WebhookResponse`](map/models/records-4-Su-We.md) |
 | Unions (`OneOf` / `AnyOf`) — variant factories + `TryGet…` | 7 + 83 | [map/models/unions.md](map/models/unions.md) |
 | Enums (`StringEnum<T>` / `IntEnum<T>`) — literal C# member names + wire values | 98 | [map/models/enums.md](map/models/enums.md) |
 <!-- /gen:models-table -->

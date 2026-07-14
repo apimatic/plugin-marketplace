@@ -6,7 +6,7 @@ Accessor: `client.ProformaInvoices` · Source: `Api/ProformaInvoices.cs` · 10 o
 
 ### CreateConsolidatedProformaInvoice
 - **HTTP**: `POST /subscription_groups/{uid}/proforma_invoices.json` (Production)
-- **Notes**: Creates a consolidated proforma invoice asynchronously. It will return a 201 with no message, or a 422 with any errors. To find and view the new consolidated proforma invoice, you may poll the subscription group listing for proforma invoices; only one consolidated proforma invoice may be created per group at a time. If the information becomes …
+- **Notes**: Creates a consolidated proforma invoice asynchronously. It will return a 201 with no message, or a 422 with any errors. To find and view the new consolidated proforma invoice, you may poll the subscription group listing for proforma invoices; only one consolidated proforma invoice may be created per group at a time. If the information becomes outdated, simply void the old consolidated proforma invoice and generate a new one. Restrictions Proforma invoices are only available on Relationship Invoicing sites. To create a proforma invoice, the subscription must not be prepaid, and must be in a live state.
 - **Signature**: `CreateConsolidatedProformaInvoice(string uid, CancellationToken ct = default)`
 - **Returns**: `void` (Task)
 - **Error**: `SdkException<CreateConsolidatedProformaInvoiceError>` — **Case A (typed)**
@@ -16,7 +16,7 @@ Accessor: `client.ProformaInvoices` · Source: `Api/ProformaInvoices.cs` · 10 o
 
 ### CreateProformaInvoice
 - **HTTP**: `POST /subscriptions/{subscription_id}/proforma_invoices.json` (Production)
-- **Notes**: Creates a proforma invoice and returns it as a response. If the information becomes outdated, simply void the old proforma invoice and generate a new one. If you would like to preview the next billing amounts without generating a full proforma invoice, use the renewal preview endpoint. Restrictions Proforma invoices are only available on …
+- **Notes**: Creates a proforma invoice and returns it as a response. If the information becomes outdated, simply void the old proforma invoice and generate a new one. If you would like to preview the next billing amounts without generating a full proforma invoice, use the renewal preview endpoint. Restrictions Proforma invoices are only available on Relationship Invoicing sites. To create a proforma invoice, the subscription must not be in a group, must not be prepaid, and must be in a live state.
 - **Signature**: `CreateProformaInvoice(int subscriptionId, CancellationToken ct = default)`
 - **Returns**: `ProformaInvoice`
 - **Error**: `SdkException<CreateProformaInvoiceError>` — **Case A (typed)**
@@ -26,7 +26,7 @@ Accessor: `client.ProformaInvoices` · Source: `Api/ProformaInvoices.cs` · 10 o
 
 ### CreateSignupProformaInvoice
 - **HTTP**: `POST /subscriptions/proforma_invoices.json` (Production)
-- **Notes**: Creates a proforma invoice to preview costs before a subscription's signup. This endpoint is only available for Relationship Invoicing sites and cannot be used to create consolidated proforma invoices or preview prepaid subscriptions. Like other proforma invoices, it can be emailed to the customer, voided, and publicly viewed on the chargifypay …
+- **Notes**: Creates a proforma invoice to preview costs before a subscription's signup. This endpoint is only available for Relationship Invoicing sites and cannot be used to create consolidated proforma invoices or preview prepaid subscriptions. Like other proforma invoices, it can be emailed to the customer, voided, and publicly viewed on the chargifypay domain. Pass a payload that resembles a subscription create or signup preview request. For example, you can specify components, coupons/a referral, offers, custom pricing, and an existing customer or payment profile to populate a shipping or billing address. A product and customer first name, last name, and email are the minimum requirements. We recommend associating the proforma invoice with a customer_id to easily find their proforma invoices, since the subscription_id will always be blank.
 - **Signature**: `CreateSignupProformaInvoice(CreateSubscriptionRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ProformaInvoice`
@@ -37,7 +37,7 @@ Accessor: `client.ProformaInvoices` · Source: `Api/ProformaInvoices.cs` · 10 o
 
 ### DeliverProformaInvoice
 - **HTTP**: `POST /proforma_invoices/{proforma_invoice_uid}/deliveries.json` (Production)
-- **Notes**: Delivers a proforma invoice programmatically via email. Supports email delivery to direct recipients, carbon-copy (cc) recipients, and blind carbon-copy (bcc) recipients. If `recipient_emails` is omitted, the system will fall back to the primary recipient derived from the invoice or subscription. At least one recipient must be present, either via …
+- **Notes**: Delivers a proforma invoice programmatically via email. Supports email delivery to direct recipients, carbon-copy (cc) recipients, and blind carbon-copy (bcc) recipients. If `recipient_emails` is omitted, the system will fall back to the primary recipient derived from the invoice or subscription. At least one recipient must be present, either via the request body or via this default behavior, so an empty body may still succeed when defaults are available.
 - **Signature**: `DeliverProformaInvoice(string proformaInvoiceUid, DeliverProformaInvoiceRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ProformaInvoice`
@@ -61,7 +61,7 @@ Accessor: `client.ProformaInvoices` · Source: `Api/ProformaInvoices.cs` · 10 o
 
 ### ListSubscriptionGroupProformaInvoices
 - **HTTP**: `GET /subscription_groups/{uid}/proforma_invoices.json` (Production)
-- **Notes**: Lists proforma invoices with a `consolidation_level` of parent for the subscription group. By default, proforma invoices returned on the index will only include totals, not detailed breakdowns for `line_items`, `discounts`, `taxes`, `credits`, `payments`, `custom_fields`. To include breakdowns, pass the specific field as a key in the query with a …
+- **Notes**: Lists proforma invoices with a `consolidation_level` of parent for the subscription group. By default, proforma invoices returned on the index will only include totals, not detailed breakdowns for `line_items`, `discounts`, `taxes`, `credits`, `payments`, `custom_fields`. To include breakdowns, pass the specific field as a key in the query with a value set to true.
 - **Signature**: `ListSubscriptionGroupProformaInvoices(string uid, bool? lineItems = false, bool? discounts = false, bool? taxes = false, bool? credits = false, bool? payments = false, bool? customFields = false, CancellationToken ct = default)`
   - defaults: `lineItems` = false, `discounts` = false, `taxes` = false, `credits` = false, `payments` = false, `customFields` = false
 - **Query params (wire ← C#)**: `line_items` ← `lineItems`, `discounts` ← `discounts`, `taxes` ← `taxes`, `credits` ← `credits`, `payments` ← `payments`, `custom_fields` ← `customFields`
@@ -73,7 +73,7 @@ Accessor: `client.ProformaInvoices` · Source: `Api/ProformaInvoices.cs` · 10 o
 
 ### PreviewProformaInvoice
 - **HTTP**: `POST /subscriptions/{subscription_id}/proforma_invoices/preview.json` (Production)
-- **Notes**: Returns a preview of the data that will be included on a given subscription's proforma invoice if one were to be generated. It will have similar line items and totals as a renewal preview, but the response will be presented in the format of a proforma invoice. Consequently it will include additional information such as the name and addresses that …
+- **Notes**: Returns a preview of the data that will be included on a given subscription's proforma invoice if one were to be generated. It will have similar line items and totals as a renewal preview, but the response will be presented in the format of a proforma invoice. Consequently it will include additional information such as the name and addresses that will appear on the proforma invoice. The preview endpoint is subject to all the same conditions as the proforma invoice endpoint. For example, previews are only available on the Relationship Invoicing architecture, and previews cannot be made for end-of-life subscriptions. If all the data returned in the preview is as expected, you may then create a static proforma invoice and send it to your customer. The data within a preview will not be saved and will not be accessible after the call is made. Alternatively, if you have some proforma invoices already, you may make a preview call to determine whether any billing information for the subscription's upcoming renewal has changed.
 - **Signature**: `PreviewProformaInvoice(int subscriptionId, CancellationToken ct = default)`
 - **Returns**: `ProformaInvoice`
 - **Error**: `SdkException<PreviewProformaInvoiceError>` — **Case A (typed)**
@@ -83,7 +83,7 @@ Accessor: `client.ProformaInvoices` · Source: `Api/ProformaInvoices.cs` · 10 o
 
 ### PreviewSignupProformaInvoice
 - **HTTP**: `POST /subscriptions/proforma_invoices/preview.json` (Production)
-- **Notes**: Creates a signup preview in the format of a proforma invoice to preview costs before a subscription's signup. This endpoint is only available for Relationship Invoicing sites and cannot be used to create consolidated proforma invoice previews or preview prepaid subscriptions. You have the option of previewing the first renewal's costs as well. The …
+- **Notes**: Creates a signup preview in the format of a proforma invoice to preview costs before a subscription's signup. This endpoint is only available for Relationship Invoicing sites and cannot be used to create consolidated proforma invoice previews or preview prepaid subscriptions. You have the option of previewing the first renewal's costs as well. The proforma invoice preview will not be persisted. Pass a payload that resembles a subscription create or signup preview request. For example, you can specify components, coupons/a referral, offers, custom pricing, and an existing customer or payment profile to populate a shipping or billing address. A product and customer first name, last name, and email are the minimum requirements.
 - **Signature**: `PreviewSignupProformaInvoice(CreateSignupProformaPreviewInclude? include, CreateSubscriptionRequest? body, CancellationToken ct = default)`
   - `include` — nullable, no default → **must pass explicitly**
   - `body` — nullable, no default → **must pass explicitly**
@@ -106,7 +106,7 @@ Accessor: `client.ProformaInvoices` · Source: `Api/ProformaInvoices.cs` · 10 o
 
 ### VoidProformaInvoice
 - **HTTP**: `POST /proforma_invoices/{proforma_invoice_uid}/void.json` (Production)
-- **Notes**: Voids a proforma invoice that has the status "draft". Restrictions Proforma invoices are only available on Relationship Invoicing sites. Only proforma invoices that have the appropriate status may be reopened. If the invoice identified by {uid} does not have the appropriate status, the response will have HTTP status code 422 and an error message. …
+- **Notes**: Voids a proforma invoice that has the status "draft". Restrictions Proforma invoices are only available on Relationship Invoicing sites. Only proforma invoices that have the appropriate status may be reopened. If the invoice identified by {uid} does not have the appropriate status, the response will have HTTP status code 422 and an error message. A reason for the void operation is required to be included in the request body. If one is not provided, the response will have HTTP status code 422 and an error message.
 - **Signature**: `VoidProformaInvoice(string proformaInvoiceUid, VoidInvoiceRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ProformaInvoice`

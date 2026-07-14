@@ -60,7 +60,7 @@ Accessor: `client.Products` · Source: `Api/Products.cs` · 6 operations
 
 ### UpdateProduct
 - **HTTP**: `PUT /products/{product_id}.json` (Production)
-- **Notes**: Updates aspects of an existing product. Input Attributes Update Notes `update_return_params` The parameters we will append to your `update_return_url`. See Return URLs and Parameters Product Price Point Updating a product using this endpoint will create a new price point and set it as the default price point for this product. If you should like to …
+- **Notes**: Updates aspects of an existing product. Input Attributes Update Notes `update_return_params` The parameters we will append to your `update_return_url`. See Return URLs and Parameters Product Price Point Updating a product using this endpoint will create a new price point and set it as the default price point for this product. If you should like to update an existing product price point, that must be done separately.
 - **Signature**: `UpdateProduct(int productId, CreateOrUpdateProductRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ProductResponse`

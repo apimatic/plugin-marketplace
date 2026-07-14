@@ -16,7 +16,7 @@ Accessor: `client.Offers` · Source: `Api/Offers.cs` · 5 operations
 
 ### CreateOffer
 - **HTTP**: `POST /offers.json` (Production)
-- **Notes**: Creates an offer within your Advanced Billing site. Documentation Offers allow you to package complicated combinations of products, components and coupons into a convenient package which can then be subscribed to just like products. Once an offer is defined it can be used as an alternative to the product when creating subscriptions. Full …
+- **Notes**: Creates an offer within your Advanced Billing site. Documentation Offers allow you to package complicated combinations of products, components and coupons into a convenient package which can then be subscribed to just like products. Once an offer is defined it can be used as an alternative to the product when creating subscriptions. Full documentation on how to use offers in the Advanced Billing UI can be located here . Using a Product Price Point You can optionally pass in a `product_price_point_id` that corresponds with the `product_id` and the offer will use that price point. If a `product_price_point_id` is not passed in, the product's default price point will be used.
 - **Signature**: `CreateOffer(CreateOfferRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `OfferResponse`

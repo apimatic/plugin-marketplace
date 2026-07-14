@@ -16,7 +16,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreateEventBasedComponent
 - **HTTP**: `POST /product_families/{product_family_id}/event_based_components.json` (Production)
-- **Notes**: Creates an event-based component definition under the specified product family. An event-based component can then be added and “allocated” for a subscription. Event-based components are similar to other component types, in that you define the component parameters (such as name and taxability) and the pricing. A key difference for the event-based …
+- **Notes**: Creates an event-based component definition under the specified product family. An event-based component can then be added and “allocated” for a subscription. Event-based components are similar to other component types, in that you define the component parameters (such as name and taxability) and the pricing. A key difference for the event-based component is that it must be attached to a metric. This is because the metric provides the component with the actual quantity used in computing what and how much will be billed each period for each subscription. So, instead of reporting usage directly for each component (as you would with metered components), the usage is derived from analysis of your events. For more information on components, see our documentation here .
 - **Signature**: `CreateEventBasedComponent(string productFamilyId, CreateEbbComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -27,7 +27,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreateMeteredComponent
 - **HTTP**: `POST /product_families/{product_family_id}/metered_components.json` (Production)
-- **Notes**: Creates a metered component definition under the specified product family. A metered component can then be added and “allocated” for a subscription. Metered components are used to bill for any type of unit that resets to 0 at the end of the billing period (think daily Google Ads clicks or monthly cell phone minutes). This is most commonly …
+- **Notes**: Creates a metered component definition under the specified product family. A metered component can then be added and “allocated” for a subscription. Metered components are used to bill for any type of unit that resets to 0 at the end of the billing period (think daily Google Ads clicks or monthly cell phone minutes). This is most commonly associated with usage-based billing and many other pricing schemes. Note that this is different from recurring quantity-based components, which DO NOT reset to zero at the start of every billing period. If you want to bill for a quantity of something that does not change unless you change it, then you want quantity components, instead. For more information on components, see our documentation here .
 - **Signature**: `CreateMeteredComponent(string productFamilyId, CreateMeteredComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -49,7 +49,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreatePrepaidUsageComponent
 - **HTTP**: `POST /product_families/{product_family_id}/prepaid_usage_components.json` (Production)
-- **Notes**: Creates a prepaid usage component definition under the specified product family. A prepaid component can then be added and “allocated” for a subscription. Prepaid components allow customers to pre-purchase units that can be used up over time on their subscription. In a sense, they are the mirror image of metered components; while metered …
+- **Notes**: Creates a prepaid usage component definition under the specified product family. A prepaid component can then be added and “allocated” for a subscription. Prepaid components allow customers to pre-purchase units that can be used up over time on their subscription. In a sense, they are the mirror image of metered components; while metered components charge at the end of the period for the amount of units used, prepaid components are charged for at the time of purchase, and we subsequently keep track of the usage against the amount purchased. For more information on components, see our documentation here .
 - **Signature**: `CreatePrepaidUsageComponent(string productFamilyId, CreatePrepaidComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`
@@ -60,7 +60,7 @@ Accessor: `client.Components` · Source: `Api/Components.cs` · 12 operations
 
 ### CreateQuantityBasedComponent
 - **HTTP**: `POST /product_families/{product_family_id}/quantity_based_components.json` (Production)
-- **Notes**: Creates a Quantity Based component definition under the specified product family. A Quantity Based component can then be added and “allocated” for a subscription. When defining a Quantity Based component, you can choose one of 2 types: Recurring Recurring quantity-based components are used to bill for the number of some unit (think monthly …
+- **Notes**: Creates a Quantity Based component definition under the specified product family. A Quantity Based component can then be added and “allocated” for a subscription. When defining a Quantity Based component, you can choose one of 2 types: Recurring Recurring quantity-based components are used to bill for the number of some unit (think monthly software user licenses or the number of pairs of socks in a box-a-month club). This is most commonly associated with billing for user licenses, number of users, number of employees, etc. One-time One-time quantity-based components are used to create ad hoc usage charges that do not recur. For example, at the time of signup, you might want to charge your customer a one-time fee for onboarding or other services. The allocated quantity for one-time quantity-based components immediately gets reset back to zero after the allocation is made. For more information on components, see our documentation here .
 - **Signature**: `CreateQuantityBasedComponent(string productFamilyId, CreateQuantityBasedComponent? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ComponentResponse`

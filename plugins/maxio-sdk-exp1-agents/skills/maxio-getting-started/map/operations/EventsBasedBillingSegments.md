@@ -6,7 +6,7 @@ Accessor: `client.EventsBasedBillingSegments` · Source: `Api/EventsBasedBilling
 
 ### BulkCreateSegments
 - **HTTP**: `POST /components/{component_id}/price_points/{price_point_id}/segments/bulk.json` (Production)
-- **Notes**: Creates multiple segments in one request. The array of segments can contain up to `2000` records. If any of the records contain an error the whole request would fail and none of the requested segments get created. The error response contains a message for only the one segment that failed validation, with the corresponding index in the array. You …
+- **Notes**: Creates multiple segments in one request. The array of segments can contain up to `2000` records. If any of the records contain an error the whole request would fail and none of the requested segments get created. The error response contains a message for only the one segment that failed validation, with the corresponding index in the array. You may specify component and/or price point by using either the numeric ID or the `handle:gold` syntax.
 - **Signature**: `BulkCreateSegments(string componentId, string pricePointId, BulkCreateSegments? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ListSegmentsResponse`
@@ -17,7 +17,7 @@ Accessor: `client.EventsBasedBillingSegments` · Source: `Api/EventsBasedBilling
 
 ### BulkUpdateSegments
 - **HTTP**: `PUT /components/{component_id}/price_points/{price_point_id}/segments/bulk.json` (Production)
-- **Notes**: Updates multiple segments in one request. The array of segments can contain up to `1000` records. If any of the records contain an error the whole request would fail and none of the requested segments get updated. The error response contains a message for only the one segment that failed validation, with the corresponding index in the array. You …
+- **Notes**: Updates multiple segments in one request. The array of segments can contain up to `1000` records. If any of the records contain an error the whole request would fail and none of the requested segments get updated. The error response contains a message for only the one segment that failed validation, with the corresponding index in the array. You may specify component and/or price point by using either the numeric ID or the `handle:gold` syntax.
 - **Signature**: `BulkUpdateSegments(string componentId, string pricePointId, BulkUpdateSegments? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ListSegmentsResponse`

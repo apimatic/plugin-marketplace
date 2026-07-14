@@ -1,9 +1,19 @@
 ---
 name: maxio-getting-started
-description: Identify and orient in the Maxio Advanced Billing (formerly Chargify) .NET SDK — its NuGet package id and root namespace, the namespace layout, US/EU environments and the Basic-auth pattern, and how to clone and navigate the SDK source for reference. Bundles a generated SDK map (sdk-map.md + map/) — a table of contents over every operation signature, error type, model, enum, and union — so you look facts up in the map and open exactly the source file you need instead of grepping the clone. Use when installing, setting up, or first working with the Maxio SDK in a C#/.NET project. It also routes you to the companion dotnet-* skills (client-setup, auth, calling endpoints, models, error handling, configuration/resilience, testing) and gates loading each at its step — load them even after you've read the SDK source, since the source shows signatures but not the usage gotchas these skills carry.
+description: Identify and orient in the Maxio Advanced Billing (formerly Chargify) .NET SDK — its NuGet package id and root namespace, the namespace layout, US/EU environments and the Basic-auth pattern, and how to clone and navigate the SDK source for reference. Bundles a generated SDK map (sdk-map.md + map/) — a table of contents over every operation signature, error type, model, enum, and union — so you look facts up in the map and open exactly the source file you need instead of grepping the clone. This is the helper-facing reference layer, preloaded for the maxio-plan and maxio-debug subagents; the main agent routes Maxio work through integrate-maxio and works from its contract sheet instead of loading this skill or the map wholesale. It also routes you to the companion dotnet-* skills (client-setup, auth, calling endpoints, models, error handling, configuration/resilience, testing) and gates loading each at its step — load them even after you've read the SDK source, since the source shows signatures but not the usage gotchas these skills carry.
 ---
 
 # Getting started with the Maxio Advanced Billing .NET SDK
+
+> **Who this skill is for.** This is the helper-facing reference layer, preloaded for the
+> `maxio-plan` and `maxio-debug` subagents — if you are one of them, it is yours to follow
+> directly and fully. If you are the **main agent**, do not load this skill, the map pages,
+> or the companion `dotnet-*` skills wholesale: route the task through `integrate-maxio`
+> and implement from the contract sheet it produces (its rule 3 covers the one targeted
+> map-page read you may make). The "load the companion skill" steps below address whoever
+> is doing the grounding — in this plugin's flow, the helpers; the main agent receives
+> those traps as one-line notes on the contract sheet. This skill never calls back into
+> the router, so there is no loop.
 
 This is the **SDK-specific** entry point. For general patterns that apply to any APIMatic-generated
 .NET SDK (auth, calling endpoints, models, error handling, retries, testing), see the companion
@@ -107,17 +117,17 @@ Keep lookups cheap — the rules that keep a session's context small:
 Staleness check: `sdk-map.md` records the SDK version and source commit it was generated from. If a name
 from the map fails to compile, trust the compiler and re-read the source file the map's row names.
 
-## SDK source — clone on first need; don't reflect or fetch files
+## SDK source — clone only on a map-side issue; don't reflect or fetch files
 
-The clone is the ground truth the map was generated from, but you only need it for the full method/model
-bodies the map doesn't carry — most integrations never open it. **Clone it the first time the map sends
-you to a file** (not up front), into your **system temp directory** (outside your solution), and navigate
-it via the SDK map above. It is a read-only reference, **not** a build dependency (never add a project
-reference to it).
+The clone is the ground truth the map was generated from, but it is a **last resort, not a step** — most
+integrations never open it. Clone only when the map has actually failed you: a map-sourced name fails to
+compile, ambiguity remains after the map lookup, or you need a full method/model body the map doesn't
+carry. (In this plugin's flow that moment belongs to `maxio-debug` — see `integrate-maxio`; nobody clones
+"just in case".) Clone into your **system temp directory** (outside your solution) and navigate it via the
+SDK map above. It is a read-only reference, **not** a build dependency (never add a project reference to it).
 
 **Clone into a fresh timestamped folder, once per session.** Create the folder as
-`<temp>/maxio-sdk-src/<yyyyMMdd-HHmmss>` the first time you need the source — the timestamp makes your
-clone private to this session, so concurrent agents on the same machine can never race on a shared path.
+`<temp>/maxio-sdk-src/<yyyyMMdd-HHmmss>` the first time you need the source.
 **Record the full path the moment you create it and reuse that recorded path for every later lookup in the
 session** — never re-derive the timestamp and never clone a second time. Check your record before cloning:
 if you already made a clone this session, use it.

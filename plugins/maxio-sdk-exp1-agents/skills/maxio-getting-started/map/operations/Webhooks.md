@@ -62,7 +62,7 @@ Accessor: `client.Webhooks` · Source: `Api/Webhooks.cs` · 6 operations
 
 ### UpdateEndpoint
 - **HTTP**: `PUT /endpoints/{endpoint_id}.json` (Production)
-- **Notes**: Updates an Endpoint. You can change the `url` of your endpoint or the list of `webhook_subscriptions` to which you are subscribed. See the Webhooks Reference page for available events. Always send a complete list of events to which you want to subscribe. Sending a PUT request for an existing endpoint with an empty list of `webhook_subscriptions` …
+- **Notes**: Updates an Endpoint. You can change the `url` of your endpoint or the list of `webhook_subscriptions` to which you are subscribed. See the Webhooks Reference page for available events. Always send a complete list of events to which you want to subscribe. Sending a PUT request for an existing endpoint with an empty list of `webhook_subscriptions` will unsubscribe all events. If you want to unsubscribe from a specific event, send a list of `webhook_subscriptions` without the specific event key.
 - **Signature**: `UpdateEndpoint(int endpointId, CreateOrUpdateEndpointRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `EndpointResponse`

@@ -6,7 +6,7 @@ Accessor: `client.CustomFields` · Source: `Api/CustomFields.cs` · 9 operations
 
 ### CreateMetadata
 - **HTTP**: `POST /{resource_type}/{resource_id}/metadata.json` (Production)
-- **Notes**: Creates metadata and metafields for a specific subscription or customer, or updates metadata values of existing metafields for a subscription or customer. Metadata values are limited to 2 KB in size. If you create metadata on a subscription or customer with a metafield that does not already exist, the metafield is created with the metadata you …
+- **Notes**: Creates metadata and metafields for a specific subscription or customer, or updates metadata values of existing metafields for a subscription or customer. Metadata values are limited to 2 KB in size. If you create metadata on a subscription or customer with a metafield that does not already exist, the metafield is created with the metadata you specify and it is always added as a text field. You can update the input_type for the metafield with the Update Metafield endpoint. &gt;Note: Each site is limited to 100 unique metafields per resource. This means you can have 100 metafields for Subscriptions and another 100 for Customers.
 - **Signature**: `CreateMetadata(ResourceType resourceType, int resourceId, CreateMetadataRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `IReadOnlyList<Metadata>`
@@ -17,7 +17,7 @@ Accessor: `client.CustomFields` · Source: `Api/CustomFields.cs` · 9 operations
 
 ### CreateMetafields
 - **HTTP**: `POST /{resource_type}/metafields.json` (Production)
-- **Notes**: Creates metafields on a Site for either the Subscriptions or Customers resource. Metafields and their metadata are created in the Custom Fields configuration page on your Site. Metafields can be populated with metadata when you create them or later with the Update Metafield , Create Metadata , or Update Metadata endpoints. The Create Metadata and …
+- **Notes**: Creates metafields on a Site for either the Subscriptions or Customers resource. Metafields and their metadata are created in the Custom Fields configuration page on your Site. Metafields can be populated with metadata when you create them or later with the Update Metafield , Create Metadata , or Update Metadata endpoints. The Create Metadata and Update Metadata endpoints allow you to add metafields and metadata values to a specific subscription or customer. Each site is limited to 100 unique metafields per resource. This means you can have 100 metafields for Subscriptions and another 100 for Customers. &gt; Note: After creating a metafield, the resource type cannot be modified. In the UI and product documentation, metafields and metadata are called Custom Fields. Metafield is the custom field Metadata is the data populating the custom field. See Custom Fields Reference and Custom Fields Tab for information on using Custom Fields in the Advanced Billing UI.
 - **Signature**: `CreateMetafields(ResourceType resourceType, CreateMetafieldsRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `IReadOnlyList<Metafield>`
@@ -92,7 +92,7 @@ Accessor: `client.CustomFields` · Source: `Api/CustomFields.cs` · 9 operations
 
 ### UpdateMetadata
 - **HTTP**: `PUT /{resource_type}/{resource_id}/metadata.json` (Production)
-- **Notes**: Updates metadata and metafields on the Site and the customer or subscription specified, and updates the metadata value on a subscription or customer. If you update metadata on a subscription or customer with a metafield that does not already exist, the metafield is created with the metadata you specify and it is always added as a text field to the …
+- **Notes**: Updates metadata and metafields on the Site and the customer or subscription specified, and updates the metadata value on a subscription or customer. If you update metadata on a subscription or customer with a metafield that does not already exist, the metafield is created with the metadata you specify and it is always added as a text field to the Site and to the subscription or customer you specify. You can update the input_type for the metafield with the Update Metafield endpoint. Each site is limited to 100 unique metafields per resource. This means you can have 100 metafields for the Subscription resource and another 100 for the Customer resource.
 - **Signature**: `UpdateMetadata(ResourceType resourceType, int resourceId, UpdateMetadataRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `IReadOnlyList<Metadata>`
@@ -103,7 +103,7 @@ Accessor: `client.CustomFields` · Source: `Api/CustomFields.cs` · 9 operations
 
 ### UpdateMetafield
 - **HTTP**: `PUT /{resource_type}/metafields.json` (Production)
-- **Notes**: Updates metafields on your Site for a resource type. Depending on the request structure, you can update or add metafields and metadata to the Subscriptions or Customers resource. With this endpoint, you can: - Add metafields. If the metafield specified in current_name does not exist, a new metafield is added. &gt;Note: Each site is limited to 100 …
+- **Notes**: Updates metafields on your Site for a resource type. Depending on the request structure, you can update or add metafields and metadata to the Subscriptions or Customers resource. With this endpoint, you can: - Add metafields. If the metafield specified in current_name does not exist, a new metafield is added. &gt;Note: Each site is limited to 100 unique metafields per resource. This means you can have 100 metafields for Subscriptions and another 100 for Customers. - Change the name of a metafield. &gt;Note: To keep the metafield name the same and only update the metadata for the metafield, you must use the current metafield name in both the `current_name` and `name` parameters. Change the input type for the metafield. For example, you can change a metafield input type from text to a dropdown. If you change the input type from text to a dropdown or radio, you must update the specific subscriptions or customers where the metafield was used to reflect the updated metafield and metadata. - Add metadata values to the existing metadata for a dropdown or radio metafield. &gt;Note: Updates to metadata overwrite. To add one or more values, you must specify all metadata values including the new value you want to add. Add new metadata to a dropdown or radio for a metafield that was created without metadata. - Remove metadata for a dropdown or radio for a metafield. &gt;Note: Updates to metadata overwrite existing values. To remove one or more values, specify all metadata values except those you want to remove. - Add or update scope settings for a metafield. &gt;Note: Scope changes overwrite existing settings. You must specify the complete scope, including the changes you want to make.
 - **Signature**: `UpdateMetafield(ResourceType resourceType, UpdateMetafieldsRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `IReadOnlyList<Metafield>`
