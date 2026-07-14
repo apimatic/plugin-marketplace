@@ -220,10 +220,40 @@ var (isSuccess, response, error) = result;
 {ReturnType} value = result.GetResponseOrThrow();
 ```
 
+## Connection failures, and guarding every call
+
+The exception types above cover API errors (the server replied with a non-2xx status). They do
+**not** cover connection failures — host unreachable, DNS failure, dropped connection, or timeout.
+Those come through as `HttpRequestException` / `TaskCanceledException`, which a
+`catch (SdkException<...>)` will not match. If that catch is your only guard, a connection failure
+escapes and takes down whatever was running the call.
+
+**Convert connection failures to your own error type in one place.** If you wrap the SDK behind
+your own abstraction (a client interface, a service, a repository), catch connection failures at
+that boundary and rethrow the same error type you already use for API errors — so the rest of the
+code has a single failure type to handle instead of two unrelated ones:
+
+```csharp
+catch (SdkException<RawError> ex)                // API error (non-2xx)
+{
+    throw new {ProviderException}("...", ex);
+}
+catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)  // connection failure
+{
+    throw new {ProviderException}("provider unreachable", ex);
+}
+```
+
+**Guard every call site, not just the ones that change data.** It is easy to wrap the calls that
+create or modify something and overlook the calls that only read — especially reads that run
+automatically on a routine path (loading a screen, a scheduled job, a startup or health check). A
+connection failure during a read fails just as hard as one during a write. Wherever the SDK (or
+your wrapper) is called, the caller must catch the failure and degrade in a way that fits — a
+fallback, a retry, a clear message — rather than letting it escape. A call left unguarded next to
+one that is guarded is the one that breaks.
+
 ## Notes
 
-- Network/transport failures surface as the usual `HttpRequestException` / `TaskCanceledException`
-  (e.g. timeout or cancellation) — handle those separately from `SdkException<TError>`.
 - On an SDK with **multiple/composite auth schemes**, a call can also throw `AuthSchemeException`
   (under `{RootNamespace}.Core.Exceptions`) — an auth *application* failure, not an API error — when the
   configured schemes can't be satisfied; it carries `IReadOnlyList<Exception> SchemeFailures` and is **not**
