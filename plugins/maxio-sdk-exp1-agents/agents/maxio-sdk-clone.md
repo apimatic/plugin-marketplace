@@ -21,8 +21,11 @@ brief tells you the project repo root (where `maxio-plan.md` lives or should liv
      same wave whenever the map is regenerated against a newer SDK.)
    The clone is a read-only reference — never add it as a project or build dependency.
 3. **Record.** Append to `## Session artifacts` at the bottom of
-   `<repo root>/maxio-plan.md` (create the section — or the file with just that
-   section — if absent): `- SDK clone: <full path> (ref v1.0.2, cloned <timestamp>)`
+   `<repo root>/maxio-plan.md` (create the section if absent):
+   `- SDK clone: <full path> (ref v1.0.2, cloned <timestamp>)`
+   The file itself is the CALLER's to create — plan/debug make it before spawning
+   you. If it does not exist, do NOT create it: return an error telling the caller
+   to create it first.
 4. **Return** exactly: the full clone path, the ref, and `fresh` or `reused`. Nothing
    else — no directory listings, no file contents.
 

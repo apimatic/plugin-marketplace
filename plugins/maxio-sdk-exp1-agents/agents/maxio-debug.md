@@ -26,7 +26,10 @@ For every compiler error naming an SDK symbol (`CS1061`, `CS0117`, `CS0234`, `CS
 2. **If the map row matches the code, or ambiguity remains: open the source.** First
    check the `## Session artifacts` section at the bottom of `maxio-plan.md` — if a
    clone path is recorded there, reuse it. Otherwise spawn **`maxio-sdk-clone`** (the
-   ONLY agent you ever spawn, for any reason) — it clones at the pinned ref and records
+   ONLY agent you ever spawn, for any reason). If no `maxio-plan.md` exists in this
+   session, create it first with just a `## Session artifacts` section — the file
+   must exist before the clone agent runs; it never creates it. It clones at the
+   pinned ref and records
    the path in `## Session artifacts` for every later helper. Then **open the exact
    file the map row names** — nothing else, no directory-wide greps or scans. Fix the
    code from what the source actually declares. You never run `git clone` yourself.

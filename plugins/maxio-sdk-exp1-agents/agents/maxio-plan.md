@@ -20,14 +20,29 @@ member's exact declared type the map doesn't carry, a suspicious generated model
 resolve it from SDK source yourself:
 
 1. Check `## Session artifacts` at the bottom of `maxio-plan.md` for a recorded clone.
-2. None recorded → spawn **`maxio-sdk-clone`** (the ONLY agent you ever spawn, for any
-   reason) and use the path it returns.
-3. Read ONLY the exact file(s) the map row names under that clone path — never browse
-   the tree, never grep it, never open files the map didn't point you to.
+2. None recorded → **you own `maxio-plan.md`, so make sure it exists first**: if you
+   have not created it yet, Write it now as a skeleton — the plan header plus an
+   empty `## Session artifacts` section. That skeleton Write is the file's one
+   creation; the plan is completed afterward with targeted Edits, never a full
+   re-Write. Then spawn **`maxio-sdk-clone`** (the ONLY agent you ever spawn, for
+   any reason) and use the path it returns.
+3. Read ONLY files the map points you to under that clone path: the exact file a
+   map row or page names, or — when a row names a type but not its file — the file
+   that type resolves to under `maxio-getting-started`'s **Layout** section (e.g. a
+   Case-A error class `{Operation}Error` → `Errors/{Operation}Error.cs`). Never
+   browse the tree, never grep it, never open a file you cannot derive one of those
+   two ways. A type that resolves to no Layout entry is a Layout gap: record it as
+   a Blocker so the Layout section can be extended — never hunt for the file.
 4. A fact that even source cannot settle (e.g. whether the live API's wire payload
    truly matches a generated model) is still never left open: convert it into a
    concrete defensive-coding directive on the sheet ("extract best-effort, fall back
    to the generic message") and label the uncertainty honestly.
+
+When a brief asks how far a contract can be trusted, the trust judgment may cite
+ONLY evidence visible in the map or SDK source (e.g. two generated definitions
+that disagree, a suspicious shared model) — never training-data memory of this API
+and never claims about what the live wire "usually" sends. Anything only live
+traffic can confirm is labeled unverified.
 
 `SOURCE-LOOKUP NEEDED` rows are abolished. A sheet or narrow-mode reply that leaves a
 contract fact open for "whoever implements" is a defect.
