@@ -55,7 +55,11 @@ For every compiler error naming an SDK symbol (`CS1061`, `CS0117`, `CS0234`, `CS
 ## Verify and return
 
 Rebuild (`dotnet build`) after your fixes; run the tests covering the touched code
-(`dotnet test`) when they exist. Leave the SDK clone in place (the session may reuse it).
+(`dotnet test`) when they exist. **If you started any app/server process to diagnose (e.g.
+`dotnet run`, a background host or listener), stop it before returning — never leave it
+running for the main agent: a live `dotnet run` holds a lock on the build output, so the
+main agent's next `dotnet build` fails with a file-in-use error.** Leave only the SDK clone
+in place (the session may reuse it).
 
 Your final message is a tight report: **root cause** (one sentence per distinct cause) ·
 **fix applied** (what changed and why it's correct, citing the map row or the SDK source

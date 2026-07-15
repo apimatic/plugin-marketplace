@@ -60,8 +60,9 @@ All `MaxioAdvancedBillingClientOptions` properties (source: `MaxioAdvancedBillin
 | `Server` | `ServerOptions` |
 | `BasicAuth` | `BasicAuthCredentials?` |
 
-`RetryOptions` members (source: `Core/Configuration/RetryOptions.cs`; all members are `required`, so build a
-full instance or start from `RetryOptions.Default()`):
+`RetryOptions` members (namespace `MaxioAdvancedBilling.Core.Configuration` — add `using
+MaxioAdvancedBilling.Core.Configuration;`; source: `Core/Configuration/RetryOptions.cs`; all members are
+`required`, so build a full instance or start from `RetryOptions.Default()`):
 
 | Member | Type |
 |---|---|

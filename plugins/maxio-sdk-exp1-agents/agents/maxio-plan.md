@@ -99,9 +99,14 @@ the file's initial creation only.
    > **Every SDK type is written fully-qualified with the namespace the map gives it**
    > (e.g. `MaxioAdvancedBilling.Models.Enums.SubscriptionState`,
    > `MaxioAdvancedBilling.Models.AnyOf.SubscriptionIdOrReference`,
-   > `MaxioAdvancedBilling.Core.Authentication.Basic.BasicAuthCredentials`). The map
-   > carries these namespaces — do not drop them to the root or `.Models`, or the
-   > implementer guesses the wrong `using` and the build breaks.
+   > `MaxioAdvancedBilling.Core.Authentication.Basic.BasicAuthCredentials`, and the
+   > **client-config types**: `MaxioAdvancedBilling.Servers.ServerEnvironment`,
+   > `MaxioAdvancedBilling.Core.Configuration.RetryOptions`,
+   > `MaxioAdvancedBilling.Core.Configuration.ServerOptions`). The map carries these
+   > namespaces (a members table names the namespace, or a row gives the source path
+   > `Core/Configuration/…` ⇒ namespace `MaxioAdvancedBilling.Core.Configuration`) — do not
+   > drop them to the root or `.Models`, or the implementer guesses the wrong `using` and the
+   > build breaks.
    Then one table row per operation: controller property · method
    signature (params in order, types, required-but-nullable flags) · request model +
    its fields (`Name (wire_name): type, required?`) · response envelope + the inner
