@@ -9,14 +9,14 @@
 | SDK display name | Maxio Advanced Billing (formerly Chargify) — sample SDK |
 | Root namespace/module | `MaxioAdvancedBilling` |
 <!-- gen:stamp -->
-| NuGet package | `AsadAli.AdvancedBilling.Sdk` `1.0.0` (csproj `PackageId`/`Version`) — release tag `v1.0.2` |
+| NuGet package | `AsadAli.AdvancedBilling.Sdk` |
 | Target framework(s) | `netstandard2.0` (C# `LangVersion 14`, `Nullable enable`) |
 | Source commit (spec stamp) | `15db14b` (`15db14b2e663ebe9e957e061bd67634630429035`, tagged `v1.0.2`) |
 <!-- /gen:stamp -->
 | Generator | APIMatic |
 | Repo | https://github.com/asadali214/advanced-billing-sample-sdk |
 
-Staleness check: if the SDK is regenerated, the version and commit stamp above change. If a lookup here fails to
+Staleness check: if the SDK is regenerated, the source commit/tag stamp above changes. If a lookup here fails to
 compile, trust the compiler and re-read the source file linked in the row.
 
 ---
