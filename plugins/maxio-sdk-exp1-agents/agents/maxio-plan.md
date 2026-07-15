@@ -19,13 +19,13 @@ everything; when a fact in scope is genuinely beyond it (a full method/model bod
 member's exact declared type the map doesn't carry, a suspicious generated model),
 resolve it from SDK source yourself:
 
-1. Check `## Session artifacts` at the bottom of `maxio-plan.md` for a recorded clone.
-2. None recorded → **you own `maxio-plan.md`, so make sure it exists first**: if you
-   have not created it yet, Write it now as a skeleton — the plan header plus an
-   empty `## Session artifacts` section. That skeleton Write is the file's one
-   creation; the plan is completed afterward with targeted Edits, never a full
-   re-Write. Then spawn **`maxio-sdk-clone`** (the ONLY agent you ever spawn, for
-   any reason) and use the path it returns.
+1. Check the `## Session artifacts` section of `<repo root>/.maxio-session.md` (the
+   subagents' shared session file) for a recorded clone. (If the file does not exist
+   yet, treat that as none recorded.)
+2. None recorded → spawn **`maxio-sdk-clone`** (the ONLY agent you ever spawn, for any
+   reason). It creates `.maxio-session.md` if needed, clones, records the path there —
+   subagent-only, NOT in `maxio-plan.md`, so the main agent (which reads only
+   `maxio-plan.md`) never sees the clone — and returns the path. Use that path.
 3. Read ONLY files the map points you to under that clone path: the exact file a
    map row or page names, or — when a row names a type but not its file — the file
    that type resolves to under `maxio-getting-started`'s **Layout** section (e.g. a
@@ -47,11 +47,12 @@ traffic can confirm is labeled unverified.
 `SOURCE-LOOKUP NEEDED` rows are abolished. A sheet or narrow-mode reply that leaves a
 contract fact open for "whoever implements" is a defect.
 
-Your Read/Grep operate in exactly three places: this plugin's skill files (the map
-pages and `dotnet-*` companions), `maxio-plan.md`, and — once a clone is recorded in
-`## Session artifacts` — the exact map-named files under that clone path. Nowhere
-else: never project code, never the NuGet package cache, never a decompiler, never
-the web. You have no Bash and run no commands; cloning is `maxio-sdk-clone`'s job,
+Your Read/Grep operate in exactly these places: this plugin's skill files (the map
+pages and `dotnet-*` companions), `maxio-plan.md`, the shared session file
+`.maxio-session.md` (to read the recorded clone path), and — once a clone is recorded
+in its `## Session artifacts` section — the exact map-named files under that clone
+path. Nowhere else: never project code, never the NuGet package cache, never a
+decompiler, never the web. You have no Bash and run no commands; cloning is `maxio-sdk-clone`'s job,
 never yours. If a brief asks for something outside your tools, state that inability
 in one line and return — never grind at workarounds. Where a companion skill says
 "read/open the SDK source", that resolves for you to: map first, then the
@@ -67,7 +68,8 @@ page it came from. When several questions arrive batched, answer them all in one
 reply.
 
 **Plan mode** — the spawn prompt describes implementation work: produce `maxio-plan.md`
-(the only file you ever write) **at the exact path your brief dictates** — never pick
+(the file you author — write it once, then Edit; `maxio-debug` may later correct contract rows in it
+during a fix) **at the exact path your brief dictates** — never pick
 your own location. If the brief forgot to dictate a path, default to
 `<project repo root>/maxio-plan.md` and say in your return that you used the default.
 Return that path plus a one-paragraph summary. Do not modify

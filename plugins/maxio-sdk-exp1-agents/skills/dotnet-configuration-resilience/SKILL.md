@@ -69,8 +69,8 @@ Notes:
 - The *n*th retry waits `Delay * BackOffFactor^(n-1) + random(0, MaxJitter)` — so the 1st retry waits
   `Delay` (1s), the 2nd `Delay * BackOffFactor` (2s), and so on. Set `UseExponentialBackoff = false` for a
   constant `Delay` between attempts.
-- `POST`/`DELETE` are **not** retried by default (not in `HttpMethodsToRetry`); add them only if the
-  operation is idempotent.
+- Anything not in `HttpMethodsToRetry` — i.e. `POST`, `PATCH`, `DELETE` — is **not** retried by default;
+  add a verb only if the operation is idempotent.
 - Multipart/form-data requests are never retried.
 - `Timeout` is **per attempt**, not total — to cap a whole call, use a `CancellationToken` (below). It is
   nullable: set `Timeout = null` to disable the per-attempt timeout entirely.
