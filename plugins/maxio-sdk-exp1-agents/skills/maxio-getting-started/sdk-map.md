@@ -26,6 +26,7 @@ compile, trust the compiler and re-read the source file linked in the row.
 ```csharp
 using MaxioAdvancedBilling;
 using MaxioAdvancedBilling.Core.Authentication.Basic;
+using MaxioAdvancedBilling.Servers; // ServerEnvironment lives here
 
 var options = new MaxioAdvancedBillingClientOptions
 {
