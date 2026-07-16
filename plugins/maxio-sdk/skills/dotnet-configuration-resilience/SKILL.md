@@ -1,6 +1,6 @@
 ---
 name: dotnet-configuration-resilience
-description: Tune an APIMatic-generated C#/.NET SDK client — RetryOptions retries/backoff (retries cover idempotent GET/HEAD/PUT/OPTIONS only by default, and Timeout is per-attempt, not total), per-request timeout/cancellation, auto-paginate list operations via IAsyncEnumerable, consume Server-Sent Events (SSE) streams with a StreamReadTimeout, override the base URL/server, and add request/response logging by attaching a DelegatingHandler (there's no built-in logging hook). Use whenever adjusting retry policy, timeouts, the base URL, paging through results, streaming/SSE, or adding logging to any APIMatic .NET SDK — load it even after reading the options in the source, since the fields don't reveal that POST/DELETE aren't retried, Timeout is per-attempt, or that only marked operations auto-paginate.
+description: Tune an APIMatic-generated C#/.NET SDK client — RetryOptions retries/backoff (retries cover idempotent GET/HEAD/PUT/OPTIONS only by default, and Timeout is per-attempt, not total), per-request timeout/cancellation, auto-paginate list operations via IAsyncEnumerable, consume Server-Sent Events (SSE) streams with idle-timeout handling, override the base URL/server, and add request/response logging by attaching a DelegatingHandler (there's no built-in logging hook). Use whenever adjusting retry policy, timeouts, the base URL, paging through results, streaming/SSE, or adding logging to any APIMatic .NET SDK — load it even after reading the options in the source, since the fields don't reveal that POST/DELETE aren't retried, Timeout is per-attempt, or that only marked operations auto-paginate.
 ---
 
 # Configuration & resilience for an APIMatic .NET SDK
@@ -69,8 +69,8 @@ Notes:
 - The *n*th retry waits `Delay * BackOffFactor^(n-1) + random(0, MaxJitter)` — so the 1st retry waits
   `Delay` (1s), the 2nd `Delay * BackOffFactor` (2s), and so on. Set `UseExponentialBackoff = false` for a
   constant `Delay` between attempts.
-- `POST`/`DELETE` are **not** retried by default (not in `HttpMethodsToRetry`); add them only if the
-  operation is idempotent.
+- Anything not in `HttpMethodsToRetry` — i.e. `POST`, `PATCH`, `DELETE` — is **not** retried by default;
+  add a verb only if the operation is idempotent.
 - Multipart/form-data requests are never retried.
 - `Timeout` is **per attempt**, not total — to cap a whole call, use a `CancellationToken` (below). It is
   nullable: set `Timeout = null` to disable the per-attempt timeout entirely.
@@ -147,7 +147,7 @@ try
     await foreach (var frame in stream.WithCancellation(ct))   // each frame as the server emits it
         Process(frame);
 }
-catch (SseTimeoutException ex)              // no frame arrived within StreamReadTimeout
+catch (SseTimeoutException ex)              // no frame arrived within the idle-timeout window
 {
     // ex.IdleTimeout — the window that elapsed
 }
@@ -157,12 +157,11 @@ catch (SseDeserializationException ex)      // a JSON frame didn't match {Item}
 }
 ```
 
-**Config:** `StreamReadTimeout` — a `TimeSpan?` on the options class (default **60s**) — bounds the wait
-**between frames** (a stalled stream throws rather than hanging). Set it (or `null` to disable) when building
-the client:
-```csharp
-var options = new {Api}ClientOptions { StreamReadTimeout = TimeSpan.FromSeconds(30) };
-```
+**Idle timeout.** A stalled stream is bounded by an **idle timeout** — the maximum wait **between frames** —
+which throws `SseTimeoutException` (rather than hanging) when it elapses. This is **not** a client-options
+property (there is no `StreamReadTimeout`); the idle window is a `TimeSpan?` carried on the SSE response
+itself, defaulting to **none** — a null window disables the check. When it does fire,
+`SseTimeoutException.IdleTimeout` reports the window that elapsed.
 
 **Errors** (all under `{RootNamespace}.Core.Exceptions`):
 - **Before the stream opens** — the opening `await` throws `SdkException<TError>`, with `TError` the same
@@ -170,7 +169,7 @@ var options = new {Api}ClientOptions { StreamReadTimeout = TimeSpan.FromSeconds(
   operation declares (see **dotnet-error-handling**).
 - **While enumerating** — both of the following derive from a common `SseException` base (catch `SseException`
   to handle either):
-  - `SseTimeoutException` — no frame arrived within `StreamReadTimeout`; carries `IdleTimeout`.
+  - `SseTimeoutException` — no frame arrived within the idle-timeout window; carries `IdleTimeout`.
   - `SseDeserializationException` — a frame couldn't be deserialized to `{Item}` (JSON streams); carries the
     `RawFrame` text and the underlying `JsonException` as `InnerException`.
 - Retries do **not** apply once the stream is open; cancel via the `CancellationToken`

@@ -98,8 +98,9 @@ var body = new {RequestType}
 
 ## Enums
 
-Enums are type-safe string-enums (`StringEnum<T>`): use the static constants, or `FromValue(...)` for a
-value not known at compile time. They convert implicitly to `string`.
+Enums are type-safe string- **or int-**enums (`StringEnum<T>` / `IntEnum<T>`), not C# enums — use the
+static constants, or `FromValue(...)` for a value not known at compile time. See **dotnet-models** for
+read-back semantics (they convert to their underlying value; `==` compares by value; guard unknowns).
 
 ```csharp
 SomeProp = {EnumType}.SomeConstant;
@@ -153,12 +154,9 @@ exist. See **dotnet-error-handling**.
 
 ## Cancellation
 
-Pass a `CancellationToken` to bound an individual call (independent of the client-wide retry timeout):
-
-```csharp
-using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-var response = await client.{ApiGroup}.{Operation}(/* ... */, ct: cts.Token);
-```
+Every operation takes a `CancellationToken` as its last argument, passed as `ct:`. To bound an individual
+call with a timeout, use the per-request cancellation pattern in **dotnet-configuration-resilience** (it
+owns timeouts).
 
 ## Worked example — a list/GET call
 

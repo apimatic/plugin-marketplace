@@ -75,28 +75,18 @@ client per request or per call.
 ## Choosing the server / base URL
 
 Environments are modeled as a `ServerEnvironment` string-enum with one constant per environment the API
-defines (e.g. `ServerEnvironment.Production`, or region constants). `ServerOptions` holds the base-URL
-templates and any templated parameters (such as a subdomain). Set the environment on options, and
-override template parameters via `Server` when the base URL contains placeholders:
-
-```csharp
-var options = new {Api}ClientOptions
-{
-    Environment = ServerEnvironment.Default(),
-    Server = new ServerOptions
-    {
-        // e.g. Production = new ProductionOptions { ... templated params ... }
-    }
-};
-```
-
-Inspect the SDK's `Servers/ServerEnvironment.cs` and `ServerOptions.cs` for the exact constants and
-template parameters of your API.
+defines (e.g. `ServerEnvironment.Production`, or region constants). Select one on `options.Environment`.
+Overriding a templated parameter or the base URL is nested **per server AND per environment** —
+`options.Server.{ServerName}.{Environment}.BaseUrl` (with any templated params at the same level), NOT
+directly on `ServerOptions`. **dotnet-configuration-resilience** documents this in full and owns
+server / base-URL configuration. Inspect `Servers/ServerEnvironment.cs` and `Servers/{ServerName}Options.cs`
+for the exact constants and template parameters of your API.
 
 ## Dependency injection (ASP.NET Core / generic host)
 
 Every APIMatic .NET SDK ships a `ServiceCollection` extension named `Add{Api}Client`, which registers the
-client (transient) and wires an `IHttpClientFactory`-managed `HttpClient` (it resolves the **default,
+client (transient — fine, because the expensive `HttpClient`/handler pipeline it wraps stays long-lived
+and shared via the factory) and wires an `IHttpClientFactory`-managed `HttpClient` (it resolves the **default,
 unnamed** factory client, and the `options` you configure are captured once at registration):
 
 ```csharp

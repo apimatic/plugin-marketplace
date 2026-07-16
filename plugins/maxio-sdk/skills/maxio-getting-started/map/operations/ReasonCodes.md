@@ -2,8 +2,11 @@
 
 Accessor: `client.ReasonCodes` · Source: `Api/ReasonCodes.cs` · 5 operations
 
+**Parameter names are literal.** Signatures are generated code verbatim — in named arguments use the exact parameter names shown (the cancellation-token parameter is named `ct`).
+
 ### CreateReasonCode
 - **HTTP**: `POST /reason_codes.json` (Production)
+- **Notes**: Creates a reason code for a given site. Reason Codes Intro Reason Codes are a way to gain a high-level view of why your customers are cancelling the subscription to your product or service. Add a set of churn reason codes to be displayed in-app and/or the Maxio Billing Portal. As your subscribers decide to cancel their subscription, learn why they decided to cancel. Reason Code Documentation Full documentation on how Reason Codes operate within Advanced Billing can be located under the following links. Churn Reason Codes Create Reason Code This method gives a merchant the option to create reason codes for a given site.
 - **Signature**: `CreateReasonCode(CreateReasonCodeRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ReasonCodeResponse`
@@ -14,6 +17,7 @@ Accessor: `client.ReasonCodes` · Source: `Api/ReasonCodes.cs` · 5 operations
 
 ### DeleteReasonCode
 - **HTTP**: `DELETE /reason_codes/{reason_code_id}.json` (Production)
+- **Notes**: Deletes a reason code from the Churn Reason Codes. This code will be immediately removed. This action is not reversible.
 - **Signature**: `DeleteReasonCode(int reasonCodeId, CancellationToken ct = default)`
 - **Returns**: `OkResponse`
 - **Error**: `SdkException<DeleteReasonCodeError>` — **Case A (typed)**
@@ -23,7 +27,10 @@ Accessor: `client.ReasonCodes` · Source: `Api/ReasonCodes.cs` · 5 operations
 
 ### ListReasonCodes
 - **HTTP**: `GET /reason_codes.json` (Production)
+- **Notes**: Lists all current churn codes for a given site.
 - **Signature**: `ListReasonCodes(int? page = 1, int? perPage = 20, CancellationToken ct = default)`
+  - defaults: `page` = 1, `perPage` = 20
+- **Query params (wire ← C#)**: `page` ← `page`, `per_page` ← `perPage`
 - **Returns**: `IReadOnlyList<ReasonCodeResponse>`
 - **Error**: `SdkException<ListReasonCodesError>` — **Case A (typed)**
 - **Error accessors**: `TryGetErrorListResponse1(out ErrorListResponse1)` [422] · `TryGetRawError(out RawError)` [fallback]
@@ -32,6 +39,7 @@ Accessor: `client.ReasonCodes` · Source: `Api/ReasonCodes.cs` · 5 operations
 
 ### ReadReasonCode
 - **HTTP**: `GET /reason_codes/{reason_code_id}.json` (Production)
+- **Notes**: Returns a particular churn reason code for a given site by its unique ID.
 - **Signature**: `ReadReasonCode(int reasonCodeId, CancellationToken ct = default)`
 - **Returns**: `ReasonCodeResponse`
 - **Error**: `SdkException<ReadReasonCodeError>` — **Case A (typed)**
@@ -41,6 +49,7 @@ Accessor: `client.ReasonCodes` · Source: `Api/ReasonCodes.cs` · 5 operations
 
 ### UpdateReasonCode
 - **HTTP**: `PUT /reason_codes/{reason_code_id}.json` (Production)
+- **Notes**: Updates an existing reason code for a given site.
 - **Signature**: `UpdateReasonCode(int reasonCodeId, UpdateReasonCodeRequest? body, CancellationToken ct = default)`
   - `body` — nullable, no default → **must pass explicitly**
 - **Returns**: `ReasonCodeResponse`

@@ -7,15 +7,16 @@
 | | |
 |---|---|
 | SDK display name | Maxio Advanced Billing (formerly Chargify) — sample SDK |
-| Package id | `AsadAli.AdvancedBilling.Sdk` |
 | Root namespace/module | `MaxioAdvancedBilling` |
-| Version | `1.0.0` (csproj) — release tag `v1.0.2` |
+<!-- gen:stamp -->
+| NuGet package | `AsadAli.AdvancedBilling.Sdk` |
 | Target framework(s) | `netstandard2.0` (C# `LangVersion 14`, `Nullable enable`) |
 | Source commit (spec stamp) | `15db14b` (`15db14b2e663ebe9e957e061bd67634630429035`, tagged `v1.0.2`) |
+<!-- /gen:stamp -->
 | Generator | APIMatic |
 | Repo | https://github.com/asadali214/advanced-billing-sample-sdk |
 
-Staleness check: if the SDK is regenerated, the version and commit stamp above change. If a lookup here fails to
+Staleness check: if the SDK is regenerated, the source commit/tag stamp above changes. If a lookup here fails to
 compile, trust the compiler and re-read the source file linked in the row.
 
 ---
@@ -25,6 +26,7 @@ compile, trust the compiler and re-read the source file linked in the row.
 ```csharp
 using MaxioAdvancedBilling;
 using MaxioAdvancedBilling.Core.Authentication.Basic;
+using MaxioAdvancedBilling.Servers; // ServerEnvironment lives here
 
 var options = new MaxioAdvancedBillingClientOptions
 {
@@ -58,8 +60,9 @@ All `MaxioAdvancedBillingClientOptions` properties (source: `MaxioAdvancedBillin
 | `Server` | `ServerOptions` |
 | `BasicAuth` | `BasicAuthCredentials?` |
 
-`RetryOptions` members (source: `Core/Configuration/RetryOptions.cs`; all members are `required`, so build a
-full instance or start from `RetryOptions.Default()`):
+`RetryOptions` members (namespace `MaxioAdvancedBilling.Core.Configuration` — add `using
+MaxioAdvancedBilling.Core.Configuration;`; source: `Core/Configuration/RetryOptions.cs`; all members are
+`required`, so build a full instance or start from `RetryOptions.Default()`):
 
 | Member | Type |
 |---|---|
@@ -86,6 +89,17 @@ Operations are **throw-based**. On an error status the SDK throws `SdkException<
   status each maps to.
 - **Case B — raw error.** `TError` is `RawError` (`Core/ErrorResponse/RawError.cs`): `StatusCode`,
   `ReadAsString()`, `ReadAsJson<T>()`, `ReadAsBytes()`.
+
+<!-- gen:error-core -->
+Core error types (`Core/ErrorResponse/`) — public members with their **declared types**, verbatim from source:
+
+| Type | Public members | Source |
+|---|---|---|
+| `ApiError` — abstract base of all 163 typed error classes in `Errors/` | `TryGetRawError(out RawError error): bool` | `Core/ErrorResponse/ApiError.cs` |
+| `RawError` | `StatusCode: HttpStatusCode` · `ReadAsBytes(): ReadOnlyMemory<byte>` · `ReadAsString(): string` · `ReadAsJson<T>(): T?` | `Core/ErrorResponse/RawError.cs` |
+
+Typed-error payload shapes (the `out` types in each operation page's error-accessor cells) are ordinary records/unions: field names, declared types, and JSON wire names live on the records pages / `unions.md` like any other model.
+<!-- /gen:error-core -->
 
 ```csharp
 try { var resp = await client.Customers.CreateCustomer(body); }
@@ -151,18 +165,34 @@ type, error Case A/B + accessors, pagination).
 
 ## Models
 
+<!-- gen:models-table -->
 | Group | Count | Page |
 |---|---:|---|
-| Records (plain `record` data models) | 555 | [Ac–Cr](map/models/records-1-Ac-Cr.md) · [Cr–Pa](map/models/records-2-Cr-Pa.md) · [Pa–Su](map/models/records-3-Pa-Su.md) · [Su–We](map/models/records-4-Su-We.md) |
+| Records (plain `record` data models) | 555 | [`AccountBalance` … `CreateSegmentRequest`](map/models/records-1-Ac-Cr.md) · [`CreateSubscription` … `NetTerms`](map/models/records-2-Cr-Ne.md) · [`Offer` … `SubscriptionComponentSubscription`](map/models/records-3-Of-Su.md) · [`SubscriptionCustomPrice` … `WebhookResponse`](map/models/records-4-Su-We.md) |
 | Unions (`OneOf` / `AnyOf`) — variant factories + `TryGet…` | 7 + 83 | [map/models/unions.md](map/models/unions.md) |
-| Enums (`StringEnum<T>` / `IntEnum<T>`) — full value lists | 98 | [map/models/enums.md](map/models/enums.md) |
+| Enums (`StringEnum<T>` / `IntEnum<T>`) — literal C# member names + wire values | 98 | [map/models/enums.md](map/models/enums.md) |
+<!-- /gen:models-table -->
 
 Model conventions: records are immutable with `init`-only setters; `required` properties must be set in the
 object initializer; nullable (`T?`) properties are optional. Each record field is listed as
 `CSharpName (wire_name): Type` — the parenthesized name is the JSON wire name (`[JsonPropertyName]`).
 Unions wrap `Optional<T>` variants — construct via a static factory or implicit
 conversion, read back via `TryGet…(out …)`. Enums are **not** C# enums — build with `Type.FromValue("wire")`
-or the static members.
+or the static members (enums.md lists the literal member names: `CollectionMethod.Invoice`, not
+`CollectionMethod.invoice`).
+
+<!-- gen:namespaces -->
+Namespaces by content type (add `using` accordingly):
+
+| Contents | Namespace(s) |
+|---|---|
+| Client & options (root) | `MaxioAdvancedBilling` |
+| Operation controllers (`Api/`) | `MaxioAdvancedBilling.Api` |
+| Records (`Models/`) | `MaxioAdvancedBilling.Models` |
+| Enums (`Models/Enums/`) | `MaxioAdvancedBilling.Models.Enums` |
+| Unions (`Models/AnyOf/`, `Models/OneOf/`) | `MaxioAdvancedBilling.Models.AnyOf` · `MaxioAdvancedBilling.Models.OneOf` |
+| Error classes (`Errors/`) | `MaxioAdvancedBilling.Errors` |
+<!-- /gen:namespaces -->
 
 ---
 

@@ -85,8 +85,8 @@ A null collection is omitted from the JSON; an **empty** collection is serialize
   and let the SDK handle the wire format. For manual formatting/parsing use the BCL (`DateTimeOffset.Parse`,
   `.ToString("O")`); the SDK's date handling is internal.
 - Money/quantities may be `string`, `decimal`, or a string-or-number `AnyOf` union; the model's property
-  type is the source of truth.
-  Numeric ids are typically `double?`.
+  type is the source of truth. Numeric types vary per SDK (`int`, `long`, `double`, …) — take the exact
+  type from the map signature / model page; don't assume `double`.
 
 ## Enums
 

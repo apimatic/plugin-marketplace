@@ -4,7 +4,8 @@ A Claude Code plugin that helps developers **install and consume the Maxio Advan
 .NET SDK**, plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
 Sourced from [apimatic/v4-plugins](https://github.com/apimatic/v4-plugins) `plugins/maxio-sdk`,
-extended with a bundled **SDK map**.
+extended with a bundled **SDK map** and **subagent orchestration** (an `integrate-maxio` router plus
+`maxio-plan` and `maxio-debug` agents).
 
 ## The SDK map
 
@@ -39,6 +40,9 @@ bundled (as it is here), they defer to it for lookup before touching the SDK sou
 
 ## Skills
 
+- **integrate-maxio** — orchestrator/router. Routes a Maxio .NET SDK task to the `maxio-plan` or
+  `maxio-debug` agent, handles blocker hand-back, and drives the implement-and-verify loop. Grounds
+  every fact in the bundled skills + SDK map — never model knowledge.
 - **maxio-getting-started** — NuGet install, US/EU environments, Basic-auth quickstart, the bundled
   SDK map, and how to clone and navigate the SDK source. Start here.
 - **dotnet-client-initialization** — construct `<Api>Client` + `<Api>ClientOptions`, supply an `HttpClient`,
@@ -52,6 +56,13 @@ bundled (as it is here), they defer to it for lookup before touching the SDK sou
 - **dotnet-configuration-resilience** — retries, timeouts, pagination, logging.
 - **dotnet-testing** — unit-test SDK calls by injecting a fake `HttpClient` / `HttpMessageHandler`.
 
+## Agents
+
+- **maxio-plan** — read-only planner. Loads the bundled skills + SDK map and writes a
+  contract-grounded `maxio-plan.md` before any code is written. No MCP.
+- **maxio-debug** — diagnoses and fixes Maxio code in place, map-first (its first step on an
+  SDK-name error is the map row), verifying with `dotnet build` / `dotnet test`. No MCP.
+
 ## Install
 
 ```
@@ -61,6 +72,3 @@ bundled (as it is here), they defer to it for lookup before touching the SDK sou
 
 Then ask a usage question (e.g. *"how do I authenticate this SDK with an API key?"*) to trigger the
 relevant skill.
-
-> **Note:** do not install this alongside `maxio-plugin` from the same marketplace — both bundle
-> skills named `maxio-getting-started` and `dotnet-*`, so the skill names would collide.

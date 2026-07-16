@@ -17,19 +17,9 @@
       "description": "Integrate and debug PayPal APIs using the acp-paypal MCP server."
     },
     {
-      "name": "maxio-plugin",
-      "source": "./plugins/maxio-plugin",
-      "description": "Plan and debug Maxio Advanced Billing .NET SDK integrations with maxio-plan and maxio-debug agents, grounded in bundled Maxio SDK skills and the cloned SDK source. No MCP server."
-    },
-    {
       "name": "maxio-sdk",
       "source": "./plugins/maxio-sdk",
-      "description": "Install and consume the Maxio Advanced Billing .NET SDK with skill-only guidance plus a bundled SDK map — the agent looks up signatures, errors, enums, and unions in the map and opens only the exact source file it needs in the cloned SDK, instead of grepping. No MCP server."
-    },
-    {
-      "name": "maxio-sdk-exp1-agents",
-      "source": "./plugins/maxio-sdk-exp1-agents",
-      "description": "EXPERIMENTAL variant of maxio-sdk adding subagent orchestration (integrate-maxio router + maxio-plan contract-sheet agent + maxio-debug escalation-first agent) on top of the identical map/skills data layer. dev-raw only; not for production install."
+      "description": "Install and consume the Maxio Advanced Billing .NET SDK with skill-only guidance, a bundled SDK map, and subagent orchestration (integrate-maxio router + maxio-plan contract-sheet agent + maxio-debug escalation-first agent). The agent looks up signatures, errors, enums, and unions in the map and opens only the exact source file it needs in the cloned SDK, instead of grepping. No MCP server."
     }
   ]
 }
