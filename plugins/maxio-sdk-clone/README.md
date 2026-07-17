@@ -1,19 +1,17 @@
-# Maxio SDK Assistant — map-in-clone variant (Claude Code plugin)
+# Maxio SDK Assistant (Claude Code plugin)
 
-**Experimental variant of `maxio-sdk`** (descends from `maxio-sdk` v0.2.0). It helps developers
-**install and consume the Maxio Advanced Billing .NET SDK**, plus reusable guidance for working with
-**any APIMatic-generated .NET SDK**.
+A Claude Code plugin that helps developers **install and consume the Maxio Advanced Billing .NET SDK**,
+plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
-What makes this variant different: the **SDK map is not bundled in the plugin** — it ships inside the
-SDK's own source, and the agents clone the SDK to read it. Sourced from
+The **SDK map ships inside the SDK's own source**, and the agents clone the SDK to read it. Sourced from
 [apimatic/v4-plugins](https://github.com/apimatic/v4-plugins) `plugins/maxio-sdk`, extended with
 **subagent orchestration** (an `integrate-maxio` router plus `maxio-plan` and `maxio-debug` agents).
 
 ## The SDK map (shipped with the SDK, read from a clone)
 
-In this variant the generated table-of-contents is **not** bundled in the plugin. It ships at the
-**root of the SDK's own source** (`sdk-map.md` plus `map/` branch pages), so the `maxio-plan` and
-`maxio-debug` agents **clone the SDK first** and read the map from the clone:
+The generated table-of-contents ships at the **root of the SDK's own source** (`sdk-map.md` plus `map/`
+branch pages), so the `maxio-plan` and `maxio-debug` agents **clone the SDK first** and read the map from
+the clone:
 
 - **`map/operations/`** — one page per controller (33 pages, 247 operations): exact C# signature,
   must-pass-explicitly params, return type, error case (typed vs `RawError`) with its `TryGet…`
@@ -28,9 +26,9 @@ error accessors, enum values — and only when the map can't settle a fact does 
 file the map names, in the same clone. Grepping / globbing / `find`-ing the 600+-file tree to locate
 something is a defect — the map is the locator.
 
-During the experiment the agents clone the fork/branch that carries the map
-(`mohammadali2549/advanced-billing-sample-sdk` @ `docs/sdk-map`); once the map is merged upstream this
-becomes the canonical `asadali214/advanced-billing-sample-sdk` at the released tag.
+While the map is under review upstream, the agents clone the fork/branch that carries it
+(`mohammadali2549/advanced-billing-sample-sdk` @ `docs/sdk-map`); once it is merged, this becomes the
+canonical `asadali214/advanced-billing-sample-sdk` at the released tag.
 
 ## Two layers
 

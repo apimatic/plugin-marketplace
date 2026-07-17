@@ -126,13 +126,12 @@ Everything the main agent must NOT do is collected here, in one place:
   installed/NuGet package to find implementation.
 - **Don't handle the clone.** The SDK clone and its filesystem path belong to the plan and
   debug agents; you never read the clone and never need or receive its path.
-- **Never open the SDK map or the clone yourself.** In this variant the map lives in the
-  helpers' SDK clone, not in the plugin — you have no map to read and must not touch the
-  clone; you work from the contract sheet.
+- **Never open the SDK map or the clone yourself.** The map lives in the helpers' SDK clone —
+  you work from the contract sheet, not the map or the clone.
 - **Don't bulk-load reference material.** Don't load `maxio-getting-started` or the `dotnet-*`
   skills, and don't carry reference dumps — the contract sheet is your working reference. When
-  a fact is missing, ask the warm `maxio-plan` agent (there is no map in the plugin for you to
-  read).
+  a fact is missing, ask the warm `maxio-plan` agent (the helpers hold the map; you don't read it
+  directly).
 - **Don't open the SDK's `api-reference.md`, and don't web-search Maxio topics.**
 - **Never write a Maxio/SDK fact from memory** — every signature, field name, enum value,
   and error type in your code must come from the contract sheet or a lookup. And **never

@@ -1,6 +1,6 @@
 ---
 name: maxio-getting-started
-description: Identify and orient in the Maxio Advanced Billing (formerly Chargify) .NET SDK — its NuGet package id and root namespace, the namespace layout, US/EU environments and the Basic-auth pattern, and how the SDK map points you to the exact source file when one is needed. In this variant the map is NOT bundled in the plugin — it ships inside the SDK's own source, at the root of the clone. You clone the SDK first and read the map from the clone (`<clone>/sdk-map.md` + `<clone>/map/`) — a table of contents over every operation signature, error type, model, enum, and union — so you look facts up in the map and open exactly the source file the map names, in the same clone, instead of grepping. This is the helper-facing reference layer, preloaded for the maxio-plan and maxio-debug subagents; the main agent routes Maxio work through integrate-maxio and works from its contract sheet instead of loading this skill or touching the clone. It also routes you to the companion dotnet-* skills (client-setup, auth, calling endpoints, models, error handling, configuration/resilience, testing) and gates loading each at its step — load them even after you've read the SDK source, since the source shows signatures but not the usage gotchas these skills carry.
+description: Identify and orient in the Maxio Advanced Billing (formerly Chargify) .NET SDK — its NuGet package id and root namespace, the namespace layout, US/EU environments and the Basic-auth pattern, and how the SDK map points you to the exact source file when one is needed. The SDK map ships inside the SDK's own source, at the root of the clone, so you clone the SDK first and read the map from the clone (`<clone>/sdk-map.md` + `<clone>/map/`) — a table of contents over every operation signature, error type, model, enum, and union — so you look facts up in the map and open exactly the source file the map names, in the same clone, instead of grepping. This is the helper-facing reference layer, preloaded for the maxio-plan and maxio-debug subagents; the main agent routes Maxio work through integrate-maxio and works from its contract sheet instead of loading this skill or touching the clone. It also routes you to the companion dotnet-* skills (client-setup, auth, calling endpoints, models, error handling, configuration/resilience, testing) and gates loading each at its step — load them even after you've read the SDK source, since the source shows signatures but not the usage gotchas these skills carry.
 ---
 
 # Getting started with the Maxio Advanced Billing .NET SDK
@@ -29,8 +29,7 @@ map or source doesn't remove the need to load the skill for that step, so at eac
 companion *and* confirm names against the map.
 
 > **Ground every signature, model, enum, and error type in the SDK map that ships inside the SDK's own
-> source.** In this variant the map is **not** bundled in the plugin — it lives at the root of the SDK source
-> clone (`<clone>/sdk-map.md` + `<clone>/map/`). Clone the SDK first (see the *SDK source & map* section
+> source.** The map lives at the root of the SDK source clone (`<clone>/sdk-map.md` + `<clone>/map/`). Clone the SDK first (see the *SDK source & map* section
 > below), then read the map: it carries every operation signature, error type, enum value list, field list
 > with JSON wire names, and union accessor by lookup, so most questions are answered by the map without
 > reading source. When the map can't answer something — a full method/model body, a fact that is absent or
@@ -136,10 +135,9 @@ the compiler and re-read the source file the map's row names, in the same clone.
 
 ## SDK source & map — clone first, then map-first
 
-Unlike the bundled-map plugin, this variant keeps the map **with the SDK source**: the map is generated
-alongside the SDK and shipped at the root of its repo, so cloning the SDK gets you both the map and the
-source it describes, always in lockstep. Cloning is therefore **step 0**, not a last resort — you cannot
-read the map without it. Both `maxio-plan` and `maxio-debug` use the clone.
+The map is generated alongside the SDK and shipped at the root of its repo, so cloning the SDK gets you
+both the map and the source it describes, always in lockstep. Cloning is therefore **step 0**, not a last
+resort — you cannot read the map without it. Both `maxio-plan` and `maxio-debug` use the clone.
 
 **Clone once per session; reuse it.** `maxio-plan` runs first and normally clones; `maxio-debug` reuses that
 clone. Before cloning, check the shared session file `<temp>/maxio-sdk-src/.maxio-session.md` for a clone
@@ -161,10 +159,10 @@ git clone --depth 1 --branch docs/sdk-map https://github.com/mohammadali2549/adv
 # Record $dir under a `## Session artifacts` section in $env:TEMP\maxio-sdk-src\.maxio-session.md — it is your clone path for the session.
 ```
 
-> **Experimental clone source.** This variant clones the SDK **fork/branch that carries the map**
-> (`mohammadali2549/advanced-billing-sample-sdk` @ `docs/sdk-map`) while the map is in review upstream. Once
-> the map is merged into the canonical SDK, this becomes `asadali214/advanced-billing-sample-sdk` at the
-> released tag. Either way the map and the source in that clone are the same version by construction.
+> **Clone source.** Clone the SDK **fork/branch that carries the map**
+> (`mohammadali2549/advanced-billing-sample-sdk` @ `docs/sdk-map`) while the map is in review upstream; once
+> it is merged into the canonical SDK, clone `asadali214/advanced-billing-sample-sdk` at the released tag.
+> Either way the map and the source in that clone are the same version by construction.
 
 The session file lives in `<temp>/maxio-sdk-src/`, **never** in the project repo, and the clone path never
 goes into `maxio-plan.md` — the main agent must never see the clone or its path.

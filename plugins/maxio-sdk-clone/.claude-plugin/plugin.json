@@ -2,7 +2,7 @@
   "name": "maxio-sdk-clone",
   "displayName": "Maxio SDK Assistant (map-in-clone)",
   "version": "0.1.0",
-  "description": "EXPERIMENTAL variant of maxio-sdk (descends from maxio-sdk v0.2.0). The generated SDK map is NOT bundled in the plugin — it ships inside the SDK source, so the maxio-plan and maxio-debug agents clone the SDK first, look facts up in the map that travels with it, and open the exact source file the map names only when the map cannot settle a fact. Includes the integrate-maxio router, a map-grounded maxio-plan contract-sheet agent, and a map-first maxio-debug agent. No MCP server.",
+  "description": "Install and consume the Maxio Advanced Billing .NET SDK, grounded in an SDK map that ships inside the SDK's own source. The maxio-plan and maxio-debug agents clone the SDK, look facts up in the map that travels with it, and open the exact source file the map names only when the map cannot settle a fact. Includes the integrate-maxio router, a map-grounded maxio-plan contract-sheet agent, and a map-first maxio-debug agent. No MCP server.",
   "author": {
     "name": "APIMatic",
     "email": "developer@apimatic.io"

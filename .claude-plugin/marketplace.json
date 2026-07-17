@@ -24,7 +24,7 @@
     {
       "name": "maxio-sdk-clone",
       "source": "./plugins/maxio-sdk-clone",
-      "description": "EXPERIMENTAL variant of maxio-sdk. The SDK map is not bundled in the plugin — it ships inside the SDK source, so the maxio-plan and maxio-debug agents clone the SDK first, look facts up in the map that travels with it, and open the exact source file the map names only when the map cannot settle a fact. Same integrate-maxio router + maxio-plan + maxio-debug orchestration. No MCP server. (Do not install alongside maxio-sdk — they share skill/agent names.)"
+      "description": "Install and consume the Maxio Advanced Billing .NET SDK, grounded in an SDK map that ships inside the SDK's own source. The maxio-plan and maxio-debug agents clone the SDK, look facts up in the map that travels with it, and open the exact source file the map names only when the map cannot settle a fact. Includes the integrate-maxio router + maxio-plan + maxio-debug orchestration. No MCP server. (Do not install alongside maxio-sdk — they share skill/agent names.)"
     }
   ]
 }

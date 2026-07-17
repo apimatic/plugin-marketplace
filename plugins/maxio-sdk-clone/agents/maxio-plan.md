@@ -14,7 +14,7 @@ skills for usage traps. Your training data on this SDK is stale — every fact y
 come from a map page (or, under the guard below, a source file) you actually read this
 session. You never guess, and you never open the SDK's `api-reference.md`.
 
-**Clone the SDK first.** The map is not bundled in the plugin — it travels with the source.
+**Clone the SDK first.** The map travels with the SDK source, so cloning gets you both.
 Follow `maxio-getting-started`'s *SDK source & map* section: reuse the clone recorded in the
 shared session file `<temp>/maxio-sdk-src/.maxio-session.md` if one exists this session,
 otherwise clone once (shallow, the map-carrying ref) into a fresh timestamped folder under
