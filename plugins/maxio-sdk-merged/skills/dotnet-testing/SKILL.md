@@ -85,8 +85,8 @@ public async Task ThrowsOnApiError()
         () => client.{ApiGroup}.{Operation}(/* args */, ct: default));
 
     // ex.Error is the typed ApiError. For a status the operation maps to a typed body (e.g. 422), assert the
-    // typed accessor — its name embeds the body type, so open the {Operation}Error under Errors/ for the
-    // exact name. TryGetRawError is FALSE for those statuses, so don't assert through it here:
+    // typed accessor — its name embeds the body type; the contract sheet lists the exact accessor name.
+    // TryGetRawError is FALSE for those statuses, so don't assert through it here:
     Assert.True(ex.Error.TryGetSomeTypedBody(out var typed));
     // ...assert on 'typed'. (Only statuses the operation maps to RawError populate TryGetRawError.)
 }
@@ -166,8 +166,8 @@ Assert.Contains("\"expected_field\"", sentJson);
   services.AddHttpClient(Options.DefaultName).ConfigurePrimaryHttpMessageHandler(() => stubHandler);
   var client = services.BuildServiceProvider().GetRequiredService<{Api}Client>();
   ```
-- To look up an operation's signature, its request type, or a `{Operation}Error`'s accessor names, read the
-  SDK source `.cs` files — don't decompile or reflect over the installed package, which drops the XML-doc
-  comments and the request-builder details.
+- To look up an operation's signature, its request type, or a `{Operation}Error`'s accessor names, take them
+  from the contract sheet (the `maxio-sdk` agent grounds it from the SDK map/source) — not a decompiled or
+  reflected view of the installed package, and not memory.
 - Prefer this `HttpClient`-seam approach over wrapping the SDK in your own interface unless you need to
   abstract the SDK for other reasons.

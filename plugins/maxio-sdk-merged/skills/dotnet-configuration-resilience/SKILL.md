@@ -32,8 +32,8 @@ options.Server.{ServerName}.{Environment}.{ServerParam} = "...";
 options.Server.{ServerName}.{Environment}.BaseUrl = "https://my-host.example.com";
 ```
 
-Open `Servers/{ServerName}Options.cs` for the real server names, per-environment options, and template
-parameters. See **dotnet-client-initialization** for selecting the environment.
+The real server names, per-environment options, and template parameters come from the contract sheet
+(the `maxio-sdk` agent grounds them from the SDK map/source). See **dotnet-client-initialization** for selecting the environment.
 
 ## Retries
 

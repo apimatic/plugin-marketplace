@@ -13,8 +13,8 @@ client (see `dotnet-client-initialization`).
 > `{Api}ClientOptions`, `{BasicAuthProperty}`) — replace it with the concrete identifier from the source.
 
 To see which schemes a specific SDK accepts, read the **credentials properties on its `{Api}ClientOptions`
-class** — those are the source of truth (read the class in the SDK source, not a decompiled or reflected
-view of the installed package). The `{RootNamespace}.Core.Authentication` folder ships *every*
+class** — those are the source of truth (take them from the contract sheet the `maxio-sdk` agent grounds from the
+SDK map/source, not a decompiled or reflected view of the installed package). The `{RootNamespace}.Core.Authentication` folder ships *every*
 scheme class as shared runtime code regardless of what the API accepts, so rely on the options class rather
 than that folder. (An SDK whose API uses only Basic, for instance, exposes a single
 `options.{BasicAuthProperty}` of type `BasicAuthCredentials`.)

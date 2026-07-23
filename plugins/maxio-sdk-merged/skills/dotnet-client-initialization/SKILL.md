@@ -25,9 +25,9 @@ public {Api}Client(HttpClient httpClient, {Api}ClientOptions options)
 Operations are exposed on the client. Most are grouped under **controller properties** (one per API resource
 group) and called `client.{ApiGroup}.{Operation}(...)` — for example, a `Widgets` controller's
 `ListWidgets` operation is `client.Widgets.ListWidgets(...)`. An operation that belongs to no group sits
-**directly on the client**, called `client.{Operation}(...)`. Open the client class **in the SDK source**
-(not a decompiled or reflected view of the installed package) to see the available controller properties
-(and any direct operations). See `dotnet-calling-endpoints`.
+**directly on the client**, called `client.{Operation}(...)`. The available controller properties (and any
+direct operations) come from the contract sheet (the `maxio-sdk` agent grounds it from the SDK map/source),
+not a decompiled or reflected view of the installed package. See `dotnet-calling-endpoints`.
 
 The options class always carries these knobs (auth properties vary per API — see
 `dotnet-authentication`):
@@ -79,8 +79,8 @@ defines (e.g. `ServerEnvironment.Production`, or region constants). Select one o
 Overriding a templated parameter or the base URL is nested **per server AND per environment** —
 `options.Server.{ServerName}.{Environment}.BaseUrl` (with any templated params at the same level), NOT
 directly on `ServerOptions`. **dotnet-configuration-resilience** documents this in full and owns
-server / base-URL configuration. Inspect `Servers/ServerEnvironment.cs` and `Servers/{ServerName}Options.cs`
-for the exact constants and template parameters of your API.
+server / base-URL configuration. The exact constants and template parameters for your API come from the
+contract sheet (the `maxio-sdk` agent grounds them from the SDK map/source).
 
 ## Dependency injection (ASP.NET Core / generic host)
 

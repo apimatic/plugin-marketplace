@@ -7,13 +7,16 @@ description: Identify and orient in the Maxio Advanced Billing (formerly Chargif
 
 > **Who this skill is for.** This is the helper-facing reference layer, preloaded for the
 > `maxio-sdk` subagent — if you are it, this skill is yours to follow
-> directly and fully. If you are the **main agent**, do not load this skill, the map pages,
-> or the companion `dotnet-*` skills wholesale: route the task through `integrate-maxio`
-> and implement from the contract sheet it produces (the router allows it one targeted
-> map-page read when a fact is missing mid-implementation). The "load the companion skill" steps below address whoever
-> is doing the grounding — in this plugin's flow, the helpers; the main agent receives
-> those traps as one-line notes on the contract sheet. This skill never calls back into
-> the router, so there is no loop.
+> directly and fully. If you are the **main agent**, do not load this skill or the map pages:
+> route the task through `integrate-maxio` and implement from the contract sheet it produces
+> (ask the warm `maxio-sdk` agent for any fact missing mid-implementation — main never reads the map).
+> The main agent must load `dotnet-error-handling` before writing the error/exception boundary,
+> and may load the other companion `dotnet-*` skills for implementation guidance (see the
+> router) — but still takes contract facts (signatures, wire names, error accessors, enum values)
+> from the sheet, not from this skill or the map. The "load the companion skill" steps below
+> address whoever is doing the grounding — in this plugin's flow, the helpers; the main agent
+> also gets the key traps as one-line notes on the contract sheet. This skill never calls back
+> into the router, so there is no loop.
 
 This is the **SDK-specific** entry point. For general patterns that apply to any APIMatic-generated
 .NET SDK (auth, calling endpoints, models, error handling, retries, testing), see the companion

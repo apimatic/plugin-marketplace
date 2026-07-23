@@ -87,7 +87,14 @@ ask the warm `maxio-sdk` agent, never guess.
 1. Read `maxio-plan.md` once. Treat its contracts as authoritative — do not re-derive or
    "double-check" them from memory. When the agent later revises the sheet, it replies with
    the changed rows verbatim: work from that reply, not a re-read of the file.
-2. Implement sequentially, following the repo's own conventions and layering.
+2. Implement sequentially, following the repo's own conventions and layering. For *usage*
+   guidance (not contract facts), load the `dotnet-*` companion skills: you **must** load
+   `dotnet-error-handling` before you write the integration's error/exception boundary, and
+   load the others (`dotnet-authentication`, `dotnet-models`, `dotnet-calling-endpoints`,
+   `dotnet-client-initialization`, `dotnet-configuration-resilience`, `dotnet-testing`) as the code you are
+   writing needs them.
+   Take every contract *fact* (signatures, wire names, error accessors, enum values) from the
+   contract sheet or the warm `maxio-sdk` agent — never re-derive one from a companion.
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
 4. **Any compile or runtime error involving an SDK type or member** (`CS1061`, `CS0117`,
    `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `MaxioAdvancedBilling.*`, or a provider error
@@ -122,9 +129,12 @@ agent is still running, wait.
   SDK, don't fetch its source files, and don't web-search Maxio topics to find an
   implementation detail — that is the agent's job. (You have no SDK source or clone locally;
   the agent holds the bundled map and clones on a real gap.)
-- **Don't bulk-load reference material.** Don't load `maxio-getting-started`, the `dotnet-*`
-  skills, or the SDK map pages, and don't carry reference dumps — the contract sheet is your
-  working reference. When a fact is missing, ask the warm `maxio-sdk` agent.
+- **Don't load `maxio-getting-started` or the SDK map pages** — the map is the agent's, and
+  loading it just bloats your context. (Load the `dotnet-*` companions per Step 2 for *usage*
+  guidance.) Don't re-derive a contract *fact* from a companion: exact signatures, wire names,
+  error accessors, and enum values come from the contract sheet (or you ask the warm `maxio-sdk`
+  agent). Where a companion points at the SDK source or a clone, that path is the agent's, not
+  yours — you have no local clone.
 - **Never write a Maxio/SDK fact from memory** — every signature, field name, enum value, and
   error type in your code must come from the contract sheet or a lookup. And **never write a
   call from memory "to fix later".**

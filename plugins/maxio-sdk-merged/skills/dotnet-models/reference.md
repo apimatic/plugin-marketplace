@@ -47,7 +47,8 @@ int n = {EnumType}.On;   // implicit conversion to int
 
 ## Union types — finding the exact members
 
-For a `OneOf`/`AnyOf` type, open its file under `Models/OneOf/` or `Models/AnyOf/`. Each variant `{V}`
+For a `OneOf`/`AnyOf` type, the contract sheet lists the exact members (the `maxio-sdk` agent grounds
+them from the SDK map/source). Each variant `{V}`
 produces:
 
 - a factory `static {Union} {V}({V} value)` (the parameter type usually equals the variant type name), and

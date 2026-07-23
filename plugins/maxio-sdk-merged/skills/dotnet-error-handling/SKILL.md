@@ -49,9 +49,10 @@ the concrete type is already known, so no runtime discovery is needed. Catch the
 
 ### Which `TError` does an endpoint throw?
 
-Answer this from the SDK map by lookup: each operation row names the error case (typed `{Operation}Error`
-vs `RawError`) and, for Case A, lists the exact `TryGet…` accessors with the HTTP status each maps to — no
-need to grep the clone or open the error class at all.
+Answer this from the contract sheet (the `maxio-sdk` agent grounds it from the SDK map/source): the
+operation's row names the error case (typed `{Operation}Error` vs `RawError`) and, for Case A, lists the
+exact `TryGet…` accessors with the HTTP status each maps to — no need to grep a clone or open the error
+class at all.
 
 In the source itself the same fact lives in the method's XML doc `<exception>` line — on hover / in
 IntelliSense, and visible when you open the file:
@@ -67,11 +68,11 @@ placeholder, **not** the type you catch). The type named after **`of <see cref="
 - `… of <see cref="{Operation}Error"/> …` → catch `SdkException<{Operation}Error>` (Case A).
 - `… of <see cref="RawError"/> …` → catch `SdkException<RawError>` (Case B).
 
-Equivalently, read the source — open the `.cs` files rather than decompiling or reflecting over the installed
-package: a `{Operation}Error` type exists under `Errors/` **only** for Case-A
-operations; if there is no `{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong
-is a **compile-time** error (`SdkException<ListWidgetsError>` won't compile — no such type), not a silent
-bug — so the compiler keeps you honest.
+Equivalently, when grounding from source (the `maxio-sdk` agent's path — not the main agent's): a
+`{Operation}Error` type exists under `Errors/` **only** for Case-A operations; if there is no
+`{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is a **compile-time** error
+(`SdkException<ListWidgetsError>` won't compile — no such type), not a silent bug — so the compiler keeps you
+honest.
 
 ### Case A — operation has a typed `{Operation}Error` model
 
@@ -79,9 +80,9 @@ Handling a Case-A error is a **two-step, source-driven** process — you cannot 
 memory:
 
 1. **List *every* `TryGet...` accessor the operation's `{Operation}Error` declares.** The operation's map
-   row already lists them (with the HTTP status each maps to) — take them from there; they are the
-   `public bool TryGet...(out ...)` methods on the `{Operation}Error` type under `Errors/` if you open the
-   source to confirm. These accessors are generated per operation — one per response the operation maps —
+   row already lists them (with the HTTP status each maps to); main takes them from the contract sheet.
+   They are the `public bool TryGet...(out ...)` methods on the `{Operation}Error` type (the `maxio-sdk`
+   agent confirms them from the SDK map/source). These accessors are generated per operation — one per response the operation maps —
    and their names embed the body type. Expect a mix of:
    - **typed-body accessors** named after a model or scalar — `TryGetValidationErrors`, `TryGetProblemDetails`,
      `TryGetString`, `TryGetLong`, …;
@@ -166,7 +167,7 @@ catch (SdkException<RawError> ex)
 ```
 
 Case B needs no `.Errors` using — `RawError` lives under `{RootNamespace}.Core.ErrorResponse`. Its public
-members (`StatusCode`, `ReadAsBytes`/`ReadAsString`/`ReadAsJson<T>`) are visible in the SDK source; note
+members are `StatusCode`, `ReadAsBytes`/`ReadAsString`/`ReadAsJson<T>`; note
 `ReadAsJson<T>()` **throws `JsonException`** when the body isn't valid JSON — and a `RawError` body often
 isn't (this is the no-typed-error-model case), so prefer `ReadAsString()` unless you know it's JSON.
 
@@ -251,6 +252,44 @@ connection failure during a read fails just as hard as one during a write. Where
 your wrapper) is called, the caller must catch the failure and degrade in a way that fits — a
 fallback, a retry, a clear message — rather than letting it escape. A call left unguarded next to
 one that is guarded is the one that breaks.
+
+## Presenting failures at your boundary — coherent, distinct, leak-free
+
+The catches above decide what you catch; this decides what the caller (an HTTP response, a UI
+layer, another service) sees. Get this wrong and every failure looks the same, or an internal
+type name ends up on the wire. Three rules, applied at the one boundary where you convert SDK
+failures into your own error type:
+
+**Handle each failure kind the same way everywhere.** Pick one mapping from failure kind →
+outcome and apply the identical catch ladder at every call site — same order, same conversion.
+When the same kind of failure (a validation rejection, say) becomes a different result on a
+different operation, callers can't reason about it. One shared ladder, not per-call improvisation.
+
+**Keep distinct failures distinct — carry the provider's status.** When you convert a provider
+error, carry its HTTP status on your own error type and map it back deliberately: a provider
+**4xx** (validation, conflict, not-found — the caller can act on it) should surface as that same
+client **4xx**; a transport failure, an unreadable body, or an unknown error has no meaningful
+client status and should surface as **5xx**. Collapsing every failure into one blanket status
+(e.g. 502 for everything) throws away the one signal that separates "you sent something invalid"
+from "the provider is down."
+
+**A success status with a broken body is a third failure kind — catch it and sanitize.** The
+server can return a 2xx whose body no longer matches the model, so the SDK throws
+`System.Text.Json.JsonException` while deserializing it. This matches **neither** a
+`catch (SdkException<...>)` (no error status was returned) **nor** a transport catch — so it
+escapes unhandled, and if it reaches a generic handler that writes `exception.Message` the
+response leaks `System.Text.Json.*` type and JSON-path detail. Catch it at the same boundary and
+convert it to your own error type with a caller-safe message:
+
+    catch (System.Text.Json.JsonException ex)
+    {
+        throw new {ProviderException}("The provider returned a response that could not be processed.", ex);
+    }
+
+The rule generalizes: whatever converts SDK failures into your own type must carry only a
+caller-safe message — never surface `ex.ToString()` or `exception.Message` from an SDK or
+framework exception on the wire (the same leak the `ApiError.ToString()` bare-type-name trap
+above produces).
 
 ## Notes
 
