@@ -20,6 +20,11 @@
       "name": "maxio-sdk",
       "source": "./plugins/maxio-sdk",
       "description": "Install and consume the Maxio Advanced Billing .NET SDK with skill-only guidance, a bundled SDK map, and subagent orchestration (integrate-maxio router + maxio-plan contract-sheet agent + maxio-debug escalation-first agent). The agent looks up signatures, errors, enums, and unions in the map and opens only the exact source file it needs in the cloned SDK, instead of grepping. No MCP server."
+    },
+    {
+      "name": "maxio-sdk-merged",
+      "source": "./plugins/maxio-sdk-merged",
+      "description": "Install and consume the Maxio Advanced Billing .NET SDK, grounded in a bundled SDK map. A single maxio-sdk agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-maxio router + the maxio-sdk agent. No MCP server. (Do not install alongside maxio-sdk or maxio-sdk-clone — they share skill/agent names.)"
     }
   ]
 }
