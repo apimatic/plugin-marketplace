@@ -1,6 +1,6 @@
 ---
 name: dotnet-testing
-description: Testing code that calls an APIMatic-generated C#/.NET SDK — which seam to fake, covering error and edge paths, asserting real behaviour rather than execution, and keeping tests independent of SDK internals. Load before writing tests for an SDK-backed integration layer.
+description: Testing code that calls Maxio Advanced Billing in C# — which seam to fake, covering error and edge paths, asserting real behaviour rather than execution, and keeping tests independent of SDK internals. Load before writing tests for the integration layer.
 ---
 
 # Testing code that uses an APIMatic .NET SDK

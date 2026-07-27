@@ -1,6 +1,6 @@
 ---
 name: dotnet-models
-description: Working with models from an APIMatic-generated C#/.NET SDK — building request models, required members and nullability, enums, union/AnyOf accessors, and JSON wire names versus C# property names. Load before constructing request payloads or mapping SDK models onto your own domain types.
+description: Working with models for Maxio Advanced Billing in C# — building request models, required members and nullability, enums, union/AnyOf accessors, and JSON wire names versus C# property names. Load before constructing request payloads or mapping SDK models onto your own domain types.
 ---
 
 # Working with models in an APIMatic .NET SDK

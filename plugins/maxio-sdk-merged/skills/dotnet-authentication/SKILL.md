@@ -1,6 +1,6 @@
 ---
 name: dotnet-authentication
-description: Authentication for an APIMatic-generated C#/.NET SDK — supplying credentials, the auth scheme and manager shape, per-environment configuration, and rotating or refreshing credentials. Load before wiring credentials or an auth scheme into the SDK client, or when an SDK call fails with 401/403.
+description: Authentication for Maxio Advanced Billing in C# — supplying credentials, the auth scheme and manager shape, per-environment configuration, and rotating or refreshing credentials. Load before wiring credentials or an auth scheme into the client, or when a call fails with 401/403.
 ---
 
 # Authenticating an APIMatic .NET SDK client

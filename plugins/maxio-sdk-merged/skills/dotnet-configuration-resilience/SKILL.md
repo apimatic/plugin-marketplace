@@ -1,6 +1,6 @@
 ---
 name: dotnet-configuration-resilience
-description: Client configuration and resilience for an APIMatic-generated C#/.NET SDK — retries and backoff, timeouts and cancellation, base-URL/server selection, list pagination, SSE streaming, and request/response logging. Load before you register or tune the SDK client — the option names alone do not reveal which calls retry, what a timeout actually bounds, or what you must still set yourself.
+description: Client configuration and resilience for Maxio Advanced Billing in C# — retries and backoff, timeouts and cancellation, base-URL/server selection, list pagination, SSE streaming, and request/response logging. Load before you register or tune the client — the option names alone do not reveal which calls retry, what a timeout actually bounds, or what you must still set yourself.
 ---
 
 # Configuration & resilience for an APIMatic .NET SDK

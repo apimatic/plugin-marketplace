@@ -1,6 +1,6 @@
 ---
 name: dotnet-error-handling
-description: Error and exception handling for an APIMatic-generated C#/.NET SDK (e.g. Maxio Advanced Billing). Load before writing any try/catch around an SDK call, an exception-translation layer, or error middleware. Covers which exception types actually reach your catch blocks, how to read status codes and error bodies safely, and the traps that make an otherwise reasonable catch ladder silently wrong.
+description: Error and exception handling for Maxio Advanced Billing in C# — load before writing any try/catch around an SDK call, an exception-translation layer, or error middleware. Covers which exception types actually reach your catch blocks, how to read status codes and error bodies safely, and the traps that make an otherwise reasonable catch ladder silently wrong.
 ---
 
 # Error handling for an APIMatic .NET SDK

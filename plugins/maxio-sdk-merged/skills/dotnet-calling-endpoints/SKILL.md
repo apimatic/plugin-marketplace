@@ -1,6 +1,6 @@
 ---
 name: dotnet-calling-endpoints
-description: Calling operations on an APIMatic-generated C#/.NET SDK — finding the controller that owns an operation, required vs optional parameters, request and response envelope shapes, async usage, and cancellation. Load before writing the first call to an SDK operation, or when an operation's shape or return type is unclear.
+description: Calling operations for Maxio Advanced Billing in C# — finding the controller that owns an operation, required vs optional parameters, request and response envelope shapes, async usage, and cancellation. Load before writing the first call to an SDK operation, or when an operation's shape or return type is unclear.
 ---
 
 # Calling endpoints on an APIMatic .NET SDK

@@ -1,6 +1,6 @@
 ---
 name: dotnet-client-initialization
-description: Creating and registering the client for an APIMatic-generated C#/.NET SDK — construction, the builder/options shape, HttpClient ownership and lifetime, and dependency-injection registration in ASP.NET Core. Load before wiring the SDK client into an application's service container or writing the factory that builds it.
+description: Creating and registering the Maxio Advanced Billing client in C# — construction, the builder/options shape, HttpClient ownership and lifetime, and dependency-injection registration in ASP.NET Core. Load before wiring the client into an application's service container or writing the factory that builds it.
 ---
 
 # Initializing an APIMatic .NET SDK client
