@@ -1,13 +1,15 @@
 ---
 name: integrate-maxio
-description: 'Entry point and router for all Maxio Advanced Billing .NET SDK work — routes planning, contract questions, and SDK errors to the single maxio-sdk subagent, which returns a map-grounded contract sheet and fixes SDK errors in place. Use when the user asks to integrate Maxio (formerly Chargify) billing, implement subscriptions/customers/usage/invoices with the Maxio .NET SDK, or reports a Maxio error or unexpected SDK behaviour in a C#/.NET project. Main agent: route every SDK need to the maxio-sdk agent and work from the contract sheet it returns; spawn it once and reuse it (follow-up messages) rather than spawning a second; never create or edit a project file while it is running, because it edits files in place and its edits collide with yours.'
+description: Entry point for Maxio Advanced Billing (formerly Chargify) .NET SDK work in a C#/.NET project. Load this first when asked to integrate Maxio billing — subscriptions, customers, usage, invoices, plan changes — or when a Maxio SDK call errors or behaves unexpectedly. Defines the delegation contract, the agent reuse rules, and which companion skills are required reading before you write code.
 ---
 
 # Maxio Advanced Billing .NET SDK — Router (map + one agent)
 
 You (the main agent) orchestrate; the `maxio-sdk` agent carries the SDK knowledge. The
-division of labour keeps YOUR context small and YOUR code grounded — you work from the
-contract sheet it returns, never from the SDK map or source yourself.
+division of labour keeps YOUR code grounded and keeps the **SDK map and source** off your
+context entirely — you work from the contract sheet it returns, never from the map or source
+yourself. The `dotnet-*` companion skills are a different thing: they are API-agnostic *usage*
+guidance, they are yours to load, and Step 1c below makes loading them mandatory.
 
 ## The subagent
 
@@ -73,6 +75,19 @@ EXISTS at the path you dictated (check it — helpers have misreported save loca
 have read it. The gate bars coding "meanwhile"; it does not bar the read-only prerequisite
 work above. Starting to code before the sheet exists defeats the entire plan-first design.
 
+### Step 1c — Required reading (do this before you write any code)
+
+The contract sheet ends with a **REQUIRED READING** block, and its rows carry inline
+`MUST load <skill>` pointers. **Load every `dotnet-*` skill the sheet names, now, before you
+start implementing** — not lazily at the step that needs it. The sheet deliberately does *not*
+carry the how-to: it names the hazard and hands you the skill that resolves it, so an unloaded
+pointer is a gap in what you know, not a formality. If the sheet names none, load
+`dotnet-error-handling` anyway — every integration writes an error boundary.
+
+These are API-agnostic usage skills; loading them is not the same as reading the map, and it
+does not breach the map boundary. Contract *facts* still come only from the sheet or the warm
+agent.
+
 Before implementing, check the plan's **Assumptions & Blockers** section:
 - Blocker or major assumption → surface it to the user in plain language, get their answer,
   send the clarification to the EXISTING `maxio-sdk` agent (re-spawn only if it is gone). It
@@ -87,12 +102,9 @@ ask the warm `maxio-sdk` agent, never guess.
 1. Read `maxio-plan.md` once. Treat its contracts as authoritative — do not re-derive or
    "double-check" them from memory. When the agent later revises the sheet, it replies with
    the changed rows verbatim: work from that reply, not a re-read of the file.
-2. Implement sequentially, following the repo's own conventions and layering. For *usage*
-   guidance (not contract facts), load the `dotnet-*` companion skills: you **must** load
-   `dotnet-error-handling` before you write the integration's error/exception boundary, and
-   load the others (`dotnet-authentication`, `dotnet-models`, `dotnet-calling-endpoints`,
-   `dotnet-client-initialization`, `dotnet-configuration-resilience`, `dotnet-testing`) as the code you are
-   writing needs them.
+2. Implement sequentially, following the repo's own conventions and layering. You loaded the
+   companion skills the sheet named in Step 1c — implement each step in line with the one that
+   governs it, and re-check the sheet's `MUST load` pointer for a step if you skipped ahead.
    Take every contract *fact* (signatures, wire names, error accessors, enum values) from the
    contract sheet or the warm `maxio-sdk` agent — never re-derive one from a companion.
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
@@ -130,8 +142,8 @@ agent is still running, wait.
   implementation detail — that is the agent's job. (You have no SDK source or clone locally;
   the agent holds the bundled map and clones on a real gap.)
 - **Don't load `maxio-getting-started` or the SDK map pages** — the map is the agent's, and
-  loading it just bloats your context. (Load the `dotnet-*` companions per Step 2 for *usage*
-  guidance.) Don't re-derive a contract *fact* from a companion: exact signatures, wire names,
+  loading it just bloats your context. (The `dotnet-*` companions are the opposite case: load
+  them, per Step 1c.) Don't re-derive a contract *fact* from a companion: exact signatures, wire names,
   error accessors, and enum values come from the contract sheet (or you ask the warm `maxio-sdk`
   agent). Where a companion points at the SDK source or a clone, that path is the agent's, not
   yours — you have no local clone.

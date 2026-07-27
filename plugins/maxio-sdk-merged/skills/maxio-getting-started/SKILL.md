@@ -1,22 +1,16 @@
 ---
 name: maxio-getting-started
-description: Identify and orient in the Maxio Advanced Billing (formerly Chargify) .NET SDK — its NuGet package id and root namespace, the namespace layout, US/EU environments and the Basic-auth pattern, and how the map points you to the exact source file when one is needed (the maxio-sdk agent clones it, at the pinned ref, only when the map falls short). Bundles a generated SDK map (sdk-map.md + map/) — a table of contents over every operation signature, error type, model, enum, and union — so you look facts up in the map and open exactly the source file you need instead of grepping the clone. This is the helper-facing reference layer, preloaded for the maxio-sdk subagent; the main agent routes Maxio work through integrate-maxio and works from its contract sheet instead of loading this skill or the map wholesale. It also routes you to the companion dotnet-* skills (client-setup, auth, calling endpoints, models, error handling, configuration/resilience, testing) and gates loading each at its step — load them even after you've read the SDK source, since the source shows signatures but not the usage gotchas these skills carry.
+description: Maxio Advanced Billing (formerly Chargify) .NET SDK identity and lookup layer for the maxio-sdk helper agent — package id, root namespace, environments, auth pattern, and the bundled SDK map of every operation signature, model, enum, union and error type. The helper agent loads this to answer contract questions; other agents work from the contract sheet it produces.
 ---
 
 # Getting started with the Maxio Advanced Billing .NET SDK
 
-> **Who this skill is for.** This is the helper-facing reference layer, preloaded for the
-> `maxio-sdk` subagent — if you are it, this skill is yours to follow
-> directly and fully. If you are the **main agent**, do not load this skill or the map pages:
-> route the task through `integrate-maxio` and implement from the contract sheet it produces
-> (ask the warm `maxio-sdk` agent for any fact missing mid-implementation — main never reads the map).
-> The main agent must load `dotnet-error-handling` before writing the error/exception boundary,
-> and may load the other companion `dotnet-*` skills for implementation guidance (see the
-> router) — but still takes contract facts (signatures, wire names, error accessors, enum values)
-> from the sheet, not from this skill or the map. The "load the companion skill" steps below
-> address whoever is doing the grounding — in this plugin's flow, the helpers; the main agent
-> also gets the key traps as one-line notes on the contract sheet. This skill never calls back
-> into the router, so there is no loop.
+> **Who this skill is for.** This is the **map layer**, preloaded for the `maxio-sdk` helper
+> agent — if you are it, this skill is yours to follow directly and fully. It is the only place
+> the bundled SDK map is opened, and the map stays here: an implementer works from the contract
+> sheet this agent produces, and asks the warm agent for any fact the sheet is missing. The
+> "load the companion skill" steps below address whoever is doing the grounding. This skill
+> never calls back into the router, so there is no loop.
 
 This is the **SDK-specific** entry point. For general patterns that apply to any APIMatic-generated
 .NET SDK (auth, calling endpoints, models, error handling, retries, testing), see the companion
