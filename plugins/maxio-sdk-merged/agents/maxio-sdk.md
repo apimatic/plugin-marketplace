@@ -134,10 +134,14 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    reference — field names WITH wire names, required flags, nullability, and the envelope shape
    (responses wrap their payload: e.g. `ProductResponse` has exactly one field, `Product`). Get
    enum value lists from `map/models/enums.md`; unions from `unions.md`.
-4. Pull the relevant traps from the companion skills for the features in scope (named arguments
-   for long parameter lists, envelope pattern on writes, `StringEnum` read-back semantics, auth =
-   Basic with username = API key / password = `"x"`, server nodes and base-URL override, retry
-   semantics) and fold them into the plan as one-line notes at the step where they bite.
+4. Identify which companion skill governs each step in scope (client registration, auth, calls,
+   models, the error/exception boundary, resilience, tests). For each, write the trap note as a
+   **named hazard plus a `MUST load` pointer** — *not* as the resolved answer. The implementer
+   loads the skill; you tell it which skill and why it matters at that step. Naming the hazard
+   ("what `Timeout` actually bounds") is right; resolving it inline ("`Timeout` is per-attempt")
+   is wrong — a resolved trap gives the implementer no reason to load the skill, and the skill
+   carries the parts a one-line note cannot (defaults, worked examples, what you must still wire
+   yourself). Contract *facts* are the opposite: those you resolve fully and inline.
 5. Collect everything in ONE pass — the whole point is that the implementer never has to
    rediscover a contract mid-coding.
 
@@ -165,10 +169,26 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    required?`) · response envelope + the inner fields the integration reads · error case A/B +
    accessors + payload type · pagination. Below it: the enum value tables actually needed, and the
    client construction/auth/server-node facts.
-3. **Trap notes** — the one-line skill-derived warnings, attached to specific steps.
-4. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
+3. **Trap notes** — one line per hazard, attached to the step where it bites, each ending in an
+   inline **`MUST load <skill>`** pointer. Name the hazard and its consequence; do not resolve it
+   (see *How to ground* step 4). Shape:
+   > ⚠ Step 3 (client registration) — the SDK's retry/timeout options do **not** bound a whole
+   > call and are **not** the timeout on the `HttpClient` you register. **MUST load
+   > `dotnet-configuration-resilience`** before wiring the client.
+4. **REQUIRED READING** — close the sheet with the de-duplicated list of every `dotnet-*` skill
+   named above, one line each: skill · the step it governs. State that these are to be loaded
+   **before implementation starts**, and that the sheet deliberately does not carry their
+   contents. This block is mandatory even when the trap notes are few — an integration always
+   writes an error boundary, so `dotnet-error-handling` always appears here.
+   Always include, verbatim as a hazard row: a drifted or malformed **2xx** body (a missing
+   `required` member) surfaces as a `System.Text.Json.JsonException` from deserialization, **not**
+   as an `SdkException` — so an SDK-exception-only catch ladder lets it escape the integration
+   boundary. **MUST load `dotnet-error-handling`** before writing that boundary. This row belongs
+   in the FIRST sheet, not a later revision: the boundary is written early, and a caveat that
+   arrives afterwards arrives too late to shape it.
+5. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
    that blocks planning. An empty section is a valid outcome; an invented fact is not.
-5. Every sheet row cites its map page (e.g. `operations/Subscriptions.md`, `records-4-Su-We.md`)
+6. Every sheet row cites its map page (e.g. `operations/Subscriptions.md`, `records-4-Su-We.md`)
    so the implementer can make one targeted lookup if a detail is ever in doubt.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the

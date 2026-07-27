@@ -1,6 +1,6 @@
 ---
 name: dotnet-client-initialization
-description: Initialize an APIMatic-generated C#/.NET API client — you construct it from an HttpClient you supply (the SDK doesn't own it; reuse one long-lived instance or an IHttpClientFactory, not one per request) plus an options object, choose a server environment/base URL, and DI-register via the generated Add{Api}Client extension. Use the moment you write `new {Api}Client(...)`, build its options, pick an environment, set up the HttpClient/client lifetime, or register the client in dependency injection — load it even after reading the constructor in the SDK source, since the signature shows the arguments but not the lifetime/reuse rules or DI wiring.
+description: Creating and registering the client for an APIMatic-generated C#/.NET SDK — construction, the builder/options shape, HttpClient ownership and lifetime, and dependency-injection registration in ASP.NET Core. Load before wiring the SDK client into an application's service container or writing the factory that builds it.
 ---
 
 # Initializing an APIMatic .NET SDK client

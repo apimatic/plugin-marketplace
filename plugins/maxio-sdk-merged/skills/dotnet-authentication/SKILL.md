@@ -1,6 +1,6 @@
 ---
 name: dotnet-authentication
-description: Configure authentication on an APIMatic-generated C#/.NET API client — each scheme is a nullable credentials property on the options class (set it before constructing the client, or inside the Add{Api}Client DI callback) — Basic (BasicAuthCredentials), Bearer token, API key (header/query/cookie), and OAuth 2.0 (client-credentials, authorization-code+PKCE, password) plus combined AND/OR schemes and no-auth. Use the moment you set credentials, an API key, a token, or OAuth on any APIMatic .NET SDK, or need to know which schemes its options class exposes — load it even after reading the options class in the source, since the property type doesn't tell you when to set it or that secrets belong in configuration.
+description: Authentication for an APIMatic-generated C#/.NET SDK — supplying credentials, the auth scheme and manager shape, per-environment configuration, and rotating or refreshing credentials. Load before wiring credentials or an auth scheme into the SDK client, or when an SDK call fails with 401/403.
 ---
 
 # Authenticating an APIMatic .NET SDK client

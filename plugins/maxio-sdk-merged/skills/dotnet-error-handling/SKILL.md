@@ -1,6 +1,6 @@
 ---
 name: dotnet-error-handling
-description: Handle errors from an APIMatic-generated C#/.NET SDK — calls throw the generic SdkException<TError>, where TError is either a typed per-operation {Operation}Error or RawError directly (RawError — common for read/list/find/delete ops — has no TryGet accessors; read status/body straight off it), or use the optional non-throwing ApiResult variant to get the status code and response headers without catching. Use the moment you write a try/catch around a call, handle a non-2xx/error response, read a status code or rate-limit/Link headers, or want a no-throw result-style call on any APIMatic .NET SDK (e.g. Maxio Advanced Billing) — load it even after reading the thrown type in the source, since the type alone won't warn you about the RawError/TryGetRawError traps that make catch blocks subtly wrong.
+description: Error and exception handling for an APIMatic-generated C#/.NET SDK (e.g. Maxio Advanced Billing). Load before writing any try/catch around an SDK call, an exception-translation layer, or error middleware. Covers which exception types actually reach your catch blocks, how to read status codes and error bodies safely, and the traps that make an otherwise reasonable catch ladder silently wrong.
 ---
 
 # Error handling for an APIMatic .NET SDK
@@ -68,7 +68,8 @@ placeholder, **not** the type you catch). The type named after **`of <see cref="
 - `… of <see cref="{Operation}Error"/> …` → catch `SdkException<{Operation}Error>` (Case A).
 - `… of <see cref="RawError"/> …` → catch `SdkException<RawError>` (Case B).
 
-Equivalently, when grounding from source (the `maxio-sdk` agent's path — not the main agent's): a
+Equivalently, when grounding from the SDK source (whoever holds it — in this plugin's flow the
+`maxio-sdk` agent): a
 `{Operation}Error` type exists under `Errors/` **only** for Case-A operations; if there is no
 `{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is a **compile-time** error
 (`SdkException<ListWidgetsError>` won't compile — no such type), not a silent bug — so the compiler keeps you

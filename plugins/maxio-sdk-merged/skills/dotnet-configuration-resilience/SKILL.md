@@ -1,6 +1,6 @@
 ---
 name: dotnet-configuration-resilience
-description: Tune an APIMatic-generated C#/.NET SDK client — RetryOptions retries/backoff (retries cover idempotent GET/HEAD/PUT/OPTIONS only by default, and Timeout is per-attempt, not total), per-request timeout/cancellation, auto-paginate list operations via IAsyncEnumerable, consume Server-Sent Events (SSE) streams with idle-timeout handling, override the base URL/server, and add request/response logging by attaching a DelegatingHandler (there's no built-in logging hook). Use whenever adjusting retry policy, timeouts, the base URL, paging through results, streaming/SSE, or adding logging to any APIMatic .NET SDK — load it even after reading the options in the source, since the fields don't reveal that POST/DELETE aren't retried, Timeout is per-attempt, or that only marked operations auto-paginate.
+description: Client configuration and resilience for an APIMatic-generated C#/.NET SDK — retries and backoff, timeouts and cancellation, base-URL/server selection, list pagination, SSE streaming, and request/response logging. Load before you register or tune the SDK client — the option names alone do not reveal which calls retry, what a timeout actually bounds, or what you must still set yourself.
 ---
 
 # Configuration & resilience for an APIMatic .NET SDK
