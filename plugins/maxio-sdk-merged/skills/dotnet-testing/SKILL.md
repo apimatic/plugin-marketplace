@@ -1,6 +1,6 @@
 ---
 name: dotnet-testing
-description: Unit-test code that uses an APIMatic-generated C#/.NET SDK by injecting a fake HttpClient — the client's HttpClient constructor argument is the test seam (no SDK mocking helpers) — stub success and error responses with a custom HttpMessageHandler, assert the outgoing request, assert SdkException<TError> on error paths, and register a stub client in DI. Use when writing, mocking, or stubbing tests for calls made through an APIMatic .NET SDK client — load it even after reading the constructor in the source, since the seam alone won't tell you to match the project's test stack or assert the right exception per operation.
+description: Testing code that calls Maxio Advanced Billing in C# — which seam to fake, covering error and edge paths, asserting real behaviour rather than execution, and keeping tests independent of SDK internals. Load before writing tests for the integration layer.
 ---
 
 # Testing code that uses an APIMatic .NET SDK

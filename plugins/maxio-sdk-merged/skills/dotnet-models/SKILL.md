@@ -1,6 +1,6 @@
 ---
 name: dotnet-models
-description: Construct and read the non-obvious model shapes of an APIMatic-generated C#/.NET SDK — polymorphic OneOf/AnyOf unions (built with static factory methods, read via TryGet…, no object-initializer), string-/int-enums (StringEnum<T>/IntEnum<T> via static constants or FromValue, not C# enums), collections (IReadOnlyList/IReadOnlyDictionary), DateTimeOffset dates, and unknown-field behavior. Use when building a request body or reading a response field that is a union, enum, list/map, or date — anything that isn't a plain string/number — or when an unmodeled JSON field is dropped on deserialization. Load it even after reading the field's type in the source, since the type name alone won't tell you a union needs factory methods (not `new`) or that an enum isn't a C# enum.
+description: Working with models for Maxio Advanced Billing in C# — building request models, required members and nullability, enums, union/AnyOf accessors, and JSON wire names versus C# property names. Load before constructing request payloads or mapping SDK models onto your own domain types.
 ---
 
 # Working with models in an APIMatic .NET SDK

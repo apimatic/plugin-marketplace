@@ -1,6 +1,6 @@
 ---
 name: dotnet-calling-endpoints
-description: Call API operations on an APIMatic-generated C#/.NET SDK — method signature and parameter-order conventions, building request-model records, string-enums, passing path/query/body params + a CancellationToken, reading the varied response shapes, and the optional non-throwing result-style call. Use whenever invoking an endpoint, building a request body, working out parameter order or named arguments, or consuming a response from any APIMatic .NET SDK — load it even after reading the method signature in the source, since the signature doesn't warn you that list/search ops mis-bind positionally and need named arguments.
+description: Calling operations for Maxio Advanced Billing in C# — finding the controller that owns an operation, required vs optional parameters, request and response envelope shapes, async usage, and cancellation. Load before writing the first call to an SDK operation, or when an operation's shape or return type is unclear.
 ---
 
 # Calling endpoints on an APIMatic .NET SDK
