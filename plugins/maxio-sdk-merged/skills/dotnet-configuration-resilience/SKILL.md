@@ -42,7 +42,7 @@ The real server names, per-environment options, and template parameters come fro
 | Setting | Default |
 | --- | --- |
 | `StatusCodesToRetry` | `408, 429, 500, 502, 503, 504` |
-| `HttpMethodsToRetry` | `GET, HEAD, PUT, OPTIONS` (idempotent only) |
+| `HttpMethodsToRetry` | `GET, HEAD, PUT, OPTIONS` (idempotent only — **status trigger only**, see notes) |
 | `MaxRetries` | `3` |
 | `Delay` | `1s` |
 | `BackOffFactor` | `2` |
@@ -69,13 +69,54 @@ Notes:
 - The *n*th retry waits `Delay * BackOffFactor^(n-1) + random(0, MaxJitter)` — so the 1st retry waits
   `Delay` (1s), the 2nd `Delay * BackOffFactor` (2s), and so on. Set `UseExponentialBackoff = false` for a
   constant `Delay` between attempts.
-- Anything not in `HttpMethodsToRetry` — i.e. `POST`, `PATCH`, `DELETE` — is **not** retried by default;
-  add a verb only if the operation is idempotent.
-- Multipart/form-data requests are never retried.
+- **`HttpMethodsToRetry` gates the status trigger only — transport failures are retried on every verb.**
+  The pipeline's `ShouldHandle` is a bare `.Handle<HttpRequestException>()` *or* a `.HandleResult(...)`
+  that ANDs the status check with the method check. So `POST`/`PATCH`/`DELETE` are correctly excluded
+  from *status* retries — a `503` on a `POST` is not resent — but an `HttpRequestException` (connection
+  reset, DNS failure, dropped socket) resends the request on **any** verb, up to `MaxRetries` extra
+  times. A reset thrown *after* the bytes reached the server is indistinguishable from one thrown
+  before, so a non-idempotent write can be executed more than once. Add a verb to `HttpMethodsToRetry`
+  only if the operation is idempotent — and note that leaving it out does **not** protect a write from
+  the transport path. See *Making a write safe under transport retries* below.
+- Only `HttpRequestException` (and types derived from it) triggers the exception path. A
+  `TaskCanceledException` from your own `CancellationToken`, and the SDK's own per-attempt
+  timeout rejection, are **not** retried.
+- **Multipart is not blanket-excluded.** Retry eligibility is decided per request type *before* the
+  pipeline runs: a binary-body request never retries; a multipart/form-data request retries **unless it
+  carries a binary part**; JSON, form-url-encoded and empty-body requests always retry. When a request
+  is ineligible the whole pipeline is swapped for an empty one — which also removes the per-attempt
+  `Timeout`, so binary uploads are bounded only by `HttpClient.Timeout`.
 - `Timeout` is **per attempt**, not total — to cap a whole call, use a `CancellationToken` (below). It is
   nullable: set `Timeout = null` to disable the per-attempt timeout entirely.
 - `OnRetry`'s `RetryAttempt` also carries `Reason` — `RetryReason.Status(HttpStatusCode)` or
   `RetryReason.Failure(Exception)` — log it to record *why* each retry fired.
+
+### Making a write safe under transport retries
+
+**Retries cannot be turned off.** The exception predicate consults no `RetryOptions` member, so there is
+no setting that disables the transport trigger while keeping status retries — and `MaxRetries = 0` is
+rejected by Polly when the client is constructed:
+
+```
+ValidationException: The 'RetryStrategyOptions<HttpResponseMessage>' are invalid.
+The field MaxRetryAttempts must be between 1 and 2147483647.
+```
+
+The floor is therefore `MaxRetries = 1` — still up to two attempts. The pipeline is built once in the
+client constructor, so it cannot be varied per call either. Options, in the order worth reaching for:
+
+1. **Make the write idempotent at the provider** — a client-supplied unique reference or idempotency key,
+   where the API offers one. The only remedy that makes a resend *harmless* rather than merely rarer.
+2. **Reconcile after a failure** — on a transport failure on a write, re-read provider state to establish
+   what actually happened instead of assuming nothing did. (Same reflex as an unreadable write response —
+   see `dotnet-error-handling`.)
+3. **A separate client for writes**, built with `Retry = RetryOptions.Default() with { MaxRetries = 1 }`.
+   Halves the exposure; does not remove it.
+4. **A `DelegatingHandler` that refuses a resend it did not authorise** — the handler runs on every
+   attempt, so it can record that a request has already gone out (e.g. on `HttpRequestMessage.Options`)
+   and fail fast the second time.
+
+Do not reach for `HttpMethodsToRetry` here — it does not gate this path.
 
 ## Per-request timeout / cancellation
 

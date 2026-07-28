@@ -156,9 +156,27 @@ Assert.Contains("\"expected_field\"", sentJson);
 - Mocking libraries (Moq, NSubstitute) work too — mock `HttpMessageHandler.SendAsync` (it's `protected`,
   so use `Protected()` with Moq). The hand-written stub above avoids that friction.
 - A stubbed retryable response (`408/429/5xx`) on a retryable method will be retried by the SDK before the
-  call returns — retries apply to `GET/HEAD/PUT/OPTIONS` only by default, so a `POST` won't retry unless you
-  add its method to `HttpMethodsToRetry` (see `dotnet-configuration-resilience`). To observe retries firing,
-  have the stub return `503` then `200` and count invocations.
+  call returns — *status* retries apply to `GET/HEAD/PUT/OPTIONS` only by default, so a `POST` won't retry
+  on a `503` unless you add its method to `HttpMethodsToRetry`. A stub that **throws**
+  (`HttpRequestException`) is a different trigger and *is* retried on every verb, `POST` included (see
+  `dotnet-configuration-resilience`). To observe status retries firing, have the stub return `503` then
+  `200` and count invocations.
+- **Status faults and transport faults are separate retry triggers** — the SDK distinguishes them itself
+  (`RetryAttempt.Reason` is `RetryReason.Status(...)` *or* `RetryReason.Failure(Exception)`). A test that
+  stubs a `503` therefore proves nothing about what happens when the *connection* fails. If a duplicated
+  write would be unacceptable in your domain (a charge, an enrollment, an order), assert write-once under
+  **both** triggers explicitly rather than inferring one from the other:
+  ```csharp
+  // Transport fault: the stub throws instead of answering, then we count what the server actually received.
+  var handler = new StubHandler(_ => throw new HttpRequestException("connection reset"));
+  var client = new {Api}Client(new HttpClient(handler), new {Api}ClientOptions());
+
+  await Assert.ThrowsAnyAsync<Exception>(() => client.{ApiGroup}.{WriteOperation}(body, ct: default));
+
+  Assert.Equal(1, handler.Requests.Count(r => r.Method == HttpMethod.Post));   // no resend
+  ```
+  (`StubHandler` above records every request; the version at the top of this skill keeps only `LastRequest`,
+  so collect them into a list when you need a count.)
 - For DI-based code, the SDK's `Add{Api}Client` resolves the **default (unnamed)** `IHttpClientFactory`
   client, so register your stub on that one, then resolve `{Api}Client` from the provider:
   ```csharp

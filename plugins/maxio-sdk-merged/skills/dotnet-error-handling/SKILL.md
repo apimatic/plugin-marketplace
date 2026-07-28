@@ -269,10 +269,20 @@ different operation, callers can't reason about it. One shared ladder, not per-c
 **Keep distinct failures distinct — carry the provider's status.** When you convert a provider
 error, carry its HTTP status on your own error type and map it back deliberately: a provider
 **4xx** (validation, conflict, not-found — the caller can act on it) should surface as that same
-client **4xx**; a transport failure, an unreadable body, or an unknown error has no meaningful
-client status and should surface as **5xx**. Collapsing every failure into one blanket status
-(e.g. 502 for everything) throws away the one signal that separates "you sent something invalid"
-from "the provider is down."
+client **4xx**; a transport failure or an unknown error has no meaningful client status and should
+surface as **5xx**. Collapsing every failure into one blanket status (e.g. 502 for everything)
+throws away the one signal that separates "you sent something invalid" from "the provider is down."
+
+**An unreadable body is not one case but two — decide which before you map it.** An unreadable
+**success** body is genuinely unknown: 5xx. An unreadable **error** body is not — the provider
+rejected the request and only the *detail* was lost, so answering 5xx tells a retrying caller to
+keep retrying something that can never succeed. The distinction matters most where a generated
+error model does not match the body its own operation really returns (see the trap below): there,
+the parse failure destroys the status along with the detail, and defaulting to 5xx silently
+reclassifies a deterministic rejection as an outage. Either treat that operation's parse failure as
+the rejection it is, or capture the status before the SDK discards it (a `DelegatingHandler` sees
+it — at the cost of carrying HTTP state to your boundary out of band, which across a retry pipeline
+is ambiguous about *which* attempt you recorded).
 
 **A success status with a broken body is a third failure kind — catch it and sanitize.** The
 server can return a 2xx whose body no longer matches the model, so the SDK throws
@@ -287,6 +297,21 @@ convert it to your own error type with a caller-safe message:
         throw new {ProviderException}("The provider returned a response that could not be processed.", ex);
     }
 
+**The same exception also arrives from the *error* path, and means the opposite.** `{Operation}Error`
+models are generated per operation and can disagree with the body the API really sends on that
+status. When they do, the deserialization runs *while the error object is being constructed*, so the
+`JsonException` **replaces** the `SdkException` — your typed `catch` never fires, and the HTTP status
+is gone with it. Identical exception type, opposite meaning: the 2xx case is "outcome unknown", this
+case is "you were rejected and I lost the reason". A single `catch (JsonException)` that maps both to
+a 5xx is wrong half the time — see *Keep distinct failures distinct* above.
+
+**Never map a parse failure onto a domain *absence*.** "I could not read the answer" is not "the
+provider said no." It is tempting on a lookup — an unreadable body and a genuine miss both leave you
+without a record — but they are different facts and only one of them is a *fact*. Where a lookup
+gates a create, that conversion turns a corrupt response into a spurious create; more generally it
+produces a confident wrong answer, which is worse than an error. If the operation's miss really is
+signalled by an empty body, match on *empty*, not on *unparseable*.
+
 The rule generalizes: whatever converts SDK failures into your own type must carry only a
 caller-safe message — never surface `ex.ToString()` or `exception.Message` from an SDK or
 framework exception on the wire (the same leak the `ApiError.ToString()` bare-type-name trap
@@ -299,6 +324,9 @@ above produces).
   configured schemes can't be satisfied; it carries `IReadOnlyList<Exception> SchemeFailures` and is **not**
   an `SdkException<T>`, so a `catch (SdkException<...>)` won't match it — catch it separately. (A
   single-scheme SDK like Maxio's Basic-only client won't hit this.)
-- Retries for transient statuses happen automatically before an exception is thrown — but only for
-  idempotent methods (`GET/HEAD/PUT/OPTIONS`) by default, so `POST`/`PATCH`/`DELETE` errors surface without
-  retry. See **dotnet-configuration-resilience**.
+- Retries for transient **statuses** happen automatically before an exception is thrown — and only for
+  idempotent methods (`GET/HEAD/PUT/OPTIONS`) by default, so a `POST`/`PATCH`/`DELETE` *status* error
+  surfaces without retry. **Transport failures are the exception to that rule:** an `HttpRequestException`
+  is retried on every verb regardless of `HttpMethodsToRetry`, so a write may have reached the provider
+  more than once before the failure you finally catch is thrown — which matters when you decide what to
+  tell the caller and whether it is safe for them to retry. See **dotnet-configuration-resilience**.
