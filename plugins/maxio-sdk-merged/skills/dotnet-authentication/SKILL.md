@@ -1,6 +1,6 @@
 ---
 name: dotnet-authentication
-description: Authentication for Maxio Advanced Billing in C# — supplying credentials, the auth scheme and manager shape, per-environment configuration, and rotating or refreshing credentials. Load before wiring credentials or an auth scheme into the client, or when a call fails with 401/403.
+description: Authentication for an APIMatic-generated .NET SDK in C# — supplying credentials, the auth scheme and manager shape, per-environment configuration, and rotating or refreshing credentials. Load before wiring credentials or an auth scheme into the client, or when a call fails with 401/403.
 ---
 
 # Authenticating an APIMatic .NET SDK client
@@ -13,7 +13,7 @@ client (see `dotnet-client-initialization`).
 > `{Api}ClientOptions`, `{BasicAuthProperty}`) — replace it with the concrete identifier from the source.
 
 To see which schemes a specific SDK accepts, read the **credentials properties on its `{Api}ClientOptions`
-class** — those are the source of truth (take them from the contract sheet the `maxio-sdk` agent grounds from the
+class** — those are the source of truth (take them from the contract sheet the SDK helper agent grounds from the
 SDK map/source, not a decompiled or reflected view of the installed package). The `{RootNamespace}.Core.Authentication` folder ships *every*
 scheme class as shared runtime code regardless of what the API accepts, so rely on the options class rather
 than that folder. (An SDK whose API uses only Basic, for instance, exposes a single

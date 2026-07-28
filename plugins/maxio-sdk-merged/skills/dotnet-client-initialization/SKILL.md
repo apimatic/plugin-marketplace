@@ -1,6 +1,6 @@
 ---
 name: dotnet-client-initialization
-description: Creating and registering the Maxio Advanced Billing client in C# — construction, the builder/options shape, HttpClient ownership and lifetime, and dependency-injection registration in ASP.NET Core. Load before wiring the client into an application's service container or writing the factory that builds it.
+description: Creating and registering an APIMatic-generated .NET SDK client in C# — construction, the builder/options shape, HttpClient ownership and lifetime, and dependency-injection registration in ASP.NET Core. Load before wiring the client into an application's service container or writing the factory that builds it.
 ---
 
 # Initializing an APIMatic .NET SDK client
@@ -26,7 +26,7 @@ Operations are exposed on the client. Most are grouped under **controller proper
 group) and called `client.{ApiGroup}.{Operation}(...)` — for example, a `Widgets` controller's
 `ListWidgets` operation is `client.Widgets.ListWidgets(...)`. An operation that belongs to no group sits
 **directly on the client**, called `client.{Operation}(...)`. The available controller properties (and any
-direct operations) come from the contract sheet (the `maxio-sdk` agent grounds it from the SDK map/source),
+direct operations) come from the contract sheet (the SDK helper agent grounds it from the SDK map/source),
 not a decompiled or reflected view of the installed package. See `dotnet-calling-endpoints`.
 
 The options class always carries these knobs (auth properties vary per API — see
@@ -80,14 +80,14 @@ Overriding a templated parameter or the base URL is nested **per server AND per 
 `options.Server.{ServerName}.{Environment}.BaseUrl` (with any templated params at the same level), NOT
 directly on `ServerOptions`. **dotnet-configuration-resilience** documents this in full and owns
 server / base-URL configuration. The exact constants and template parameters for your API come from the
-contract sheet (the `maxio-sdk` agent grounds them from the SDK map/source).
+contract sheet (the SDK helper agent grounds them from the SDK map/source).
 
 ## Dependency injection (ASP.NET Core / generic host)
 
-Every APIMatic .NET SDK ships a `ServiceCollection` extension named `Add{Api}Client`, which registers the
-client (transient — fine, because the expensive `HttpClient`/handler pipeline it wraps stays long-lived
-and shared via the factory) and wires an `IHttpClientFactory`-managed `HttpClient` (it resolves the **default,
-unnamed** factory client, and the `options` you configure are captured once at registration):
+Every APIMatic .NET SDK ships a `ServiceCollection` extension named `Add{Api}Client`. It wires an
+`IHttpClientFactory`-managed `HttpClient` — resolving the **default, unnamed** factory client — and captures
+the `options` you configure **once, at registration** (so the callback may read `IConfiguration` or
+environment variables, but **not** scoped services):
 
 ```csharp
 using {RootNamespace};
@@ -99,9 +99,21 @@ builder.Services.Add{Api}Client(options =>
 });
 ```
 
+**Check which lifetime it registers — that decides whether handler rotation ever reaches you.** Generated
+extensions differ here, and the two are not equivalent. A **transient** client is harmless: each resolution
+takes a fresh `HttpClient` from the factory, so the pooled handler pipeline stays shared and rotated. A
+**singleton** client calls `CreateClient()` *once* and holds that `HttpClient` for the process lifetime — so
+`IHttpClientFactory`'s handler rotation never applies to it and a DNS change is cached indefinitely. Read
+the extension (or take it from the contract sheet) rather than assuming; if it is a singleton and the
+process is long-lived, set `PooledConnectionLifetime` on the primary handler, or register the client
+yourself instead of using the extension.
+
 To attach custom `DelegatingHandler`s (logging, proxies, custom TLS) under this DI registration, configure
 the **default, unnamed** factory client it resolves — e.g.
-`services.AddHttpClient(Options.DefaultName).AddHttpMessageHandler(() => new MyHandler());`. See
+`services.AddHttpClient(Options.DefaultName).AddHttpMessageHandler(() => new MyHandler());`. Note what that
+means: the default client is shared with **every other unnamed `CreateClient()` consumer in the app**, so a
+timeout or handler you set for this SDK changes their behaviour too. To avoid that, register the client
+yourself over a **named** `HttpClient` — the same shape the extension uses, minus the shared surface. See
 **dotnet-configuration-resilience**.
 
 Then inject it:

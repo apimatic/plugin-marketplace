@@ -1,6 +1,6 @@
 ---
 name: dotnet-error-handling
-description: Error and exception handling for Maxio Advanced Billing in C# — load before writing any try/catch around an SDK call, an exception-translation layer, or error middleware. Covers which exception types actually reach your catch blocks, how to read status codes and error bodies safely, and the traps that make an otherwise reasonable catch ladder silently wrong.
+description: Error and exception handling for an APIMatic-generated .NET SDK in C# — load before writing any try/catch around an SDK call, an exception-translation layer, or error middleware. Covers which exception types actually reach your catch blocks, how to read status codes and error bodies safely, and the traps that make an otherwise reasonable catch ladder silently wrong.
 ---
 
 # Error handling for an APIMatic .NET SDK
@@ -49,7 +49,7 @@ the concrete type is already known, so no runtime discovery is needed. Catch the
 
 ### Which `TError` does an endpoint throw?
 
-Answer this from the contract sheet (the `maxio-sdk` agent grounds it from the SDK map/source): the
+Answer this from the contract sheet (the SDK helper agent grounds it from the SDK map/source): the
 operation's row names the error case (typed `{Operation}Error` vs `RawError`) and, for Case A, lists the
 exact `TryGet…` accessors with the HTTP status each maps to — no need to grep a clone or open the error
 class at all.
@@ -69,7 +69,7 @@ placeholder, **not** the type you catch). The type named after **`of <see cref="
 - `… of <see cref="RawError"/> …` → catch `SdkException<RawError>` (Case B).
 
 Equivalently, when grounding from the SDK source (whoever holds it — in this plugin's flow the
-`maxio-sdk` agent): a
+SDK helper agent): a
 `{Operation}Error` type exists under `Errors/` **only** for Case-A operations; if there is no
 `{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is a **compile-time** error
 (`SdkException<ListWidgetsError>` won't compile — no such type), not a silent bug — so the compiler keeps you
@@ -82,7 +82,7 @@ memory:
 
 1. **List *every* `TryGet...` accessor the operation's `{Operation}Error` declares.** The operation's map
    row already lists them (with the HTTP status each maps to); main takes them from the contract sheet.
-   They are the `public bool TryGet...(out ...)` methods on the `{Operation}Error` type (the `maxio-sdk`
+   They are the `public bool TryGet...(out ...)` methods on the `{Operation}Error` type (the SDK helper
    agent confirms them from the SDK map/source). These accessors are generated per operation — one per response the operation maps —
    and their names embed the body type. Expect a mix of:
    - **typed-body accessors** named after a model or scalar — `TryGetValidationErrors`, `TryGetProblemDetails`,
@@ -276,13 +276,8 @@ throws away the one signal that separates "you sent something invalid" from "the
 **An unreadable body is not one case but two — decide which before you map it.** An unreadable
 **success** body is genuinely unknown: 5xx. An unreadable **error** body is not — the provider
 rejected the request and only the *detail* was lost, so answering 5xx tells a retrying caller to
-keep retrying something that can never succeed. The distinction matters most where a generated
-error model does not match the body its own operation really returns (see the trap below): there,
-the parse failure destroys the status along with the detail, and defaulting to 5xx silently
-reclassifies a deterministic rejection as an outage. Either treat that operation's parse failure as
-the rejection it is, or capture the status before the SDK discards it (a `DelegatingHandler` sees
-it — at the cost of carrying HTTP state to your boundary out of band, which across a retry pipeline
-is ambiguous about *which* attempt you recorded).
+keep retrying something that can never succeed. The trap below shows how the second case arises and
+what it costs you.
 
 **A success status with a broken body is a third failure kind — catch it and sanitize.** The
 server can return a 2xx whose body no longer matches the model, so the SDK throws
@@ -303,7 +298,10 @@ status. When they do, the deserialization runs *while the error object is being 
 `JsonException` **replaces** the `SdkException` — your typed `catch` never fires, and the HTTP status
 is gone with it. Identical exception type, opposite meaning: the 2xx case is "outcome unknown", this
 case is "you were rejected and I lost the reason". A single `catch (JsonException)` that maps both to
-a 5xx is wrong half the time — see *Keep distinct failures distinct* above.
+a 5xx is wrong half the time — see *Keep distinct failures distinct* above. Either treat that
+operation's parse failure as the rejection it is, or capture the status before the SDK discards it (a
+`DelegatingHandler` sees it, at the cost of carrying HTTP state to your boundary out of band — and
+across a retry pipeline, of being ambiguous about *which* attempt you recorded).
 
 **Never map a parse failure onto a domain *absence*.** "I could not read the answer" is not "the
 provider said no." It is tempting on a lookup — an unreadable body and a genuine miss both leave you
@@ -322,8 +320,8 @@ above produces).
 - On an SDK with **multiple/composite auth schemes**, a call can also throw `AuthSchemeException`
   (under `{RootNamespace}.Core.Exceptions`) — an auth *application* failure, not an API error — when the
   configured schemes can't be satisfied; it carries `IReadOnlyList<Exception> SchemeFailures` and is **not**
-  an `SdkException<T>`, so a `catch (SdkException<...>)` won't match it — catch it separately. (A
-  single-scheme SDK like Maxio's Basic-only client won't hit this.)
+  an `SdkException<T>`, so a `catch (SdkException<...>)` won't match it — catch it separately. (An SDK
+  whose API declares a single scheme never hits this.)
 - Retries for transient **statuses** happen automatically before an exception is thrown — and only for
   idempotent methods (`GET/HEAD/PUT/OPTIONS`) by default, so a `POST`/`PATCH`/`DELETE` *status* error
   surfaces without retry. **Transport failures are the exception to that rule:** an `HttpRequestException`

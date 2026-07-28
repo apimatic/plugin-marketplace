@@ -15,17 +15,11 @@ traps. Your training data on this SDK is stale — every fact you emit must come
 page you actually read this session (or, on a real gap, from the SDK source you clone per
 below). You never guess, and you never open the SDK's `api-reference.md`.
 
-**Map first; source only on a real gap.** The bundled map answers nearly everything without
-touching source. Clone the SDK source ONLY when the map genuinely falls short — a map-sourced
-name that fails to compile, ambiguity the map can't resolve, or a full method/model body the
-map doesn't carry. When you must, follow `maxio-getting-started`'s *SDK source* section: a
-shallow clone pinned to the ref the map was generated from (`v1.0.2`) into a fresh timestamped
-folder under `<temp>/maxio-sdk-src/`, reused for the rest of your session; then open the **one
-file the map row names**, scoped (Read with offset/limit, or Grep on the one symbol). Grepping,
-globbing, or `find`-ing over the tree to *locate* something is a defect — the map is the
-locator. Never decompile or reflect over the installed NuGet package. The clone lives in temp,
-never in the project repo; its path never goes into `maxio-plan.md` — the main agent must not
-see it.
+**Map first; source only on a real gap.** Follow `maxio-getting-started`'s *SDK map* and *SDK
+source* sections in full — they define when a gap is real, how to clone, how to read scoped, and
+why locating anything by grep/glob/`find` over the tree is a defect rather than a shortcut. Two
+rules are yours alone: the clone never leaves the system temp directory, and its path never
+appears in `maxio-plan.md` or in your replies — the main agent must not see it.
 
 **Your output never leaves a contract fact open for "whoever implements."** The map answers
 nearly everything; the rest you resolve from the source in your clone. For the rare in-scope
@@ -141,7 +135,12 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    ("what `Timeout` actually bounds") is right; resolving it inline ("`Timeout` is per-attempt")
    is wrong — a resolved trap gives the implementer no reason to load the skill, and the skill
    carries the parts a one-line note cannot (defaults, worked examples, what you must still wire
-   yourself). Contract *facts* are the opposite: those you resolve fully and inline.
+   yourself). **Never restate a companion skill's default or semantics in a trap note — not even
+   when you believe it correct.** A resolved trap reads as settled, so if it is stale the
+   implementer never opens the skill that would have corrected it, and a confident wrong one-liner
+   does more damage than no note at all. Write the *consequence*, not the answer: "whether a
+   failed write can be re-sent" — never "writes are not re-sent". Contract *facts* are the
+   opposite: those you resolve fully and inline.
 5. Collect everything in ONE pass — the whole point is that the implementer never has to
    rediscover a contract mid-coding.
 
@@ -153,17 +152,14 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    > C# identifier. The cancellation-token parameter really is named `ct`: in named
    > arguments write `ct:`, never `cancellationToken:`.**
    >
-   > **Every SDK type is written fully-qualified with the namespace the map gives it**
-   > (e.g. `MaxioAdvancedBilling.Models.Enums.SubscriptionState`,
-   > `MaxioAdvancedBilling.Models.AnyOf.SubscriptionIdOrReference`,
-   > `MaxioAdvancedBilling.Core.Authentication.Basic.BasicAuthCredentials`, and the
-   > **client-config types**: `MaxioAdvancedBilling.Servers.ServerEnvironment`,
-   > `MaxioAdvancedBilling.Core.Configuration.RetryOptions`,
-   > `MaxioAdvancedBilling.Core.Configuration.ServerOptions`). The map carries these
-   > namespaces (a members table names the namespace, or a row gives the source path
-   > `Core/Configuration/…` ⇒ namespace `MaxioAdvancedBilling.Core.Configuration`) — do not
-   > drop them to the root or `.Models`, or the implementer guesses the wrong `using` and the
-   > build breaks.
+   > **Every SDK type is written fully-qualified with the namespace the map gives it** — take
+   > each one from that type's own map row, never from where a neighbouring type sits. A members
+   > table names the namespace outright; otherwise the row's source path implies it
+   > (`Core/Configuration/…` ⇒ `…Core.Configuration`; a file at the repo root ⇒ the root
+   > namespace). Enums, unions, auth, server and client-config types are spread across different
+   > child namespaces, and two types configured side by side in the same options object routinely
+   > live in different ones. Dropping a type to the root or to `.Models` makes the implementer
+   > guess the wrong `using`, and the build breaks.
    Then one table row per operation: controller property · method signature (params in order,
    types, required-but-nullable flags) · request model + its fields (`Name (wire_name): type,
    required?`) · response envelope + the inner fields the integration reads · error case A/B +
@@ -180,12 +176,20 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    **before implementation starts**, and that the sheet deliberately does not carry their
    contents. This block is mandatory even when the trap notes are few — an integration always
    writes an error boundary, so `dotnet-error-handling` always appears here.
-   Always include, verbatim as a hazard row: a drifted or malformed **2xx** body (a missing
-   `required` member) surfaces as a `System.Text.Json.JsonException` from deserialization, **not**
-   as an `SdkException` — so an SDK-exception-only catch ladder lets it escape the integration
-   boundary. **MUST load `dotnet-error-handling`** before writing that boundary. This row belongs
-   in the FIRST sheet, not a later revision: the boundary is written early, and a caveat that
-   arrives afterwards arrives too late to shape it.
+   Always include, verbatim, **both** of these hazard rows — `System.Text.Json.JsonException`
+   reaches the boundary from two directions and they need opposite handling:
+   - a drifted or malformed **2xx** body (a missing `required` member) surfaces as a
+     `JsonException` from deserialization, **not** as an `SdkException` — so an
+     SDK-exception-only catch ladder lets it escape the integration boundary;
+   - a **non-2xx** body that does not match its operation's generated `{Operation}Error` shape
+     throws `JsonException` *while the error object is being constructed*, so the `JsonException`
+     **replaces** the `SdkException` and the HTTP status is destroyed with it — a boundary that
+     maps every `JsonException` to a 5xx then reports a deterministic rejection as an outage,
+     and a caller that retries 5xx retries something that can never succeed.
+
+   **MUST load `dotnet-error-handling`** before writing that boundary. These rows belong in the
+   FIRST sheet, not a later revision: the boundary is written early, and a caveat that arrives
+   afterwards arrives too late to shape it.
 5. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
    that blocks planning. An empty section is a valid outcome; an invented fact is not.
 6. Every sheet row cites its map page (e.g. `operations/Subscriptions.md`, `records-4-Su-We.md`)

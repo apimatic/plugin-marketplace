@@ -1,6 +1,6 @@
 ---
 name: dotnet-testing
-description: Testing code that calls Maxio Advanced Billing in C# — which seam to fake, covering error and edge paths, asserting real behaviour rather than execution, and keeping tests independent of SDK internals. Load before writing tests for the integration layer.
+description: Testing code that calls an APIMatic-generated .NET SDK in C# — which seam to fake, covering error and edge paths, asserting real behaviour rather than execution, and keeping tests independent of SDK internals. Load before writing tests for the integration layer.
 ---
 
 # Testing code that uses an APIMatic .NET SDK
@@ -28,14 +28,17 @@ using System.Net;
 public sealed class StubHandler : HttpMessageHandler
 {
     private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
-    public HttpRequestMessage? LastRequest { get; private set; }
+
+    // Every request, in order — retries append, so this is what you count.
+    public List<HttpRequestMessage> Requests { get; } = new();
+    public HttpRequestMessage? LastRequest => Requests.Count == 0 ? null : Requests[^1];
 
     public StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) => _responder = responder;
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
     {
-        LastRequest = request;
+        Requests.Add(request);
         return Task.FromResult(_responder(request));
     }
 }
@@ -171,12 +174,10 @@ Assert.Contains("\"expected_field\"", sentJson);
   var handler = new StubHandler(_ => throw new HttpRequestException("connection reset"));
   var client = new {Api}Client(new HttpClient(handler), new {Api}ClientOptions());
 
-  await Assert.ThrowsAnyAsync<Exception>(() => client.{ApiGroup}.{WriteOperation}(body, ct: default));
+  await Assert.ThrowsAnyAsync<Exception>(() => client.{ApiGroup}.{Operation}(body, ct: default));
 
   Assert.Equal(1, handler.Requests.Count(r => r.Method == HttpMethod.Post));   // no resend
   ```
-  (`StubHandler` above records every request; the version at the top of this skill keeps only `LastRequest`,
-  so collect them into a list when you need a count.)
 - For DI-based code, the SDK's `Add{Api}Client` resolves the **default (unnamed)** `IHttpClientFactory`
   client, so register your stub on that one, then resolve `{Api}Client` from the provider:
   ```csharp
@@ -185,7 +186,7 @@ Assert.Contains("\"expected_field\"", sentJson);
   var client = services.BuildServiceProvider().GetRequiredService<{Api}Client>();
   ```
 - To look up an operation's signature, its request type, or a `{Operation}Error`'s accessor names, take them
-  from the contract sheet (the `maxio-sdk` agent grounds it from the SDK map/source) — not a decompiled or
+  from the contract sheet (the SDK helper agent grounds it from the SDK map/source) — not a decompiled or
   reflected view of the installed package, and not memory.
 - Prefer this `HttpClient`-seam approach over wrapping the SDK in your own interface unless you need to
   abstract the SDK for other reasons.

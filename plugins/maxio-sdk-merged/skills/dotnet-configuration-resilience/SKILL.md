@@ -1,6 +1,6 @@
 ---
 name: dotnet-configuration-resilience
-description: Client configuration and resilience for Maxio Advanced Billing in C# — retries and backoff, timeouts and cancellation, base-URL/server selection, list pagination, SSE streaming, and request/response logging. Load before you register or tune the client — the option names alone do not reveal which calls retry, what a timeout actually bounds, or what you must still set yourself.
+description: Client configuration and resilience for an APIMatic-generated .NET SDK in C# — retries and backoff, timeouts and cancellation, base-URL/server selection, list pagination, SSE streaming, and request/response logging. Load before you register or tune the client — the option names alone do not reveal which calls retry, what a timeout actually bounds, or what you must still set yourself.
 ---
 
 # Configuration & resilience for an APIMatic .NET SDK
@@ -33,7 +33,18 @@ options.Server.{ServerName}.{Environment}.BaseUrl = "https://my-host.example.com
 ```
 
 The real server names, per-environment options, and template parameters come from the contract sheet
-(the `maxio-sdk` agent grounds them from the SDK map/source). See **dotnet-client-initialization** for selecting the environment.
+(the SDK helper agent grounds them from the SDK map/source). See **dotnet-client-initialization** for selecting the environment.
+
+**`Environment` and `Server` are not read at the same time, which makes one of them look inert.** The client
+captures `options.Environment` **once, when it is constructed**, but keeps a live reference to the
+`ServerOptions` object and re-resolves the URL on **every request**. So editing
+`options.Server.{ServerName}.{Environment}.BaseUrl` after construction does take effect, while assigning
+`options.Environment` — or replacing the whole `options.Server` object — silently does not. Two consequences
+worth internalising: the environment you select at construction decides which per-environment options are
+ever read (set `BaseUrl` on the wrong one and your value is ignored in favour of that environment's
+default), and mutating server options on a live client is an unsynchronised race against in-flight calls,
+not a supported "switch hosts" operation. Configure the server before you construct, and construct a new
+client to change environment.
 
 ## Retries
 
@@ -93,17 +104,11 @@ Notes:
 
 ### Making a write safe under transport retries
 
-**Retries cannot be turned off.** The exception predicate consults no `RetryOptions` member, so there is
-no setting that disables the transport trigger while keeping status retries — and `MaxRetries = 0` is
-rejected by Polly when the client is constructed:
-
-```
-ValidationException: The 'RetryStrategyOptions<HttpResponseMessage>' are invalid.
-The field MaxRetryAttempts must be between 1 and 2147483647.
-```
-
-The floor is therefore `MaxRetries = 1` — still up to two attempts. The pipeline is built once in the
-client constructor, so it cannot be varied per call either. Options, in the order worth reaching for:
+**Retries cannot be turned off.** The exception predicate consults no `RetryOptions` member, so no setting
+disables the transport trigger while keeping status retries — and `MaxRetries = 0` does not work either:
+Polly validates `MaxRetryAttempts` as **≥ 1** and throws at client construction. The floor is therefore
+`MaxRetries = 1`, still two attempts. The pipeline is built once in the client constructor, so it cannot be
+varied per call. Options, in the order worth reaching for:
 
 1. **Make the write idempotent at the provider** — a client-supplied unique reference or idempotency key,
    where the API offers one. The only remedy that makes a resend *harmless* rather than merely rarer.
@@ -112,9 +117,23 @@ client constructor, so it cannot be varied per call either. Options, in the orde
    see `dotnet-error-handling`.)
 3. **A separate client for writes**, built with `Retry = RetryOptions.Default() with { MaxRetries = 1 }`.
    Halves the exposure; does not remove it.
-4. **A `DelegatingHandler` that refuses a resend it did not authorise** — the handler runs on every
-   attempt, so it can record that a request has already gone out (e.g. on `HttpRequestMessage.Options`)
-   and fail fast the second time.
+4. **A `DelegatingHandler` that refuses a re-send it did not authorise** — the only option that actually
+   holds the count at one, because a blocked attempt never reaches the network.
+
+   Two details decide whether it works, and both are easy to get wrong:
+
+   - **Do not keep the "already sent" marker on the `HttpRequestMessage`.** A fresh request object is built
+     for each attempt, so a marker set via `HttpRequestOptionsKey` is gone by the retry and the guard never
+     fires — measured: 4 sends, i.e. no protection at all. Keep the count in state that outlives the
+     request, such as an `AsyncLocal` scope the caller opens around the write; retries run inside the
+     caller's async context, so the scope flows into the handler on every attempt (measured: 1 send).
+   - **Do not throw an `HttpRequestException` to refuse.** That is the very type the pipeline retries, so
+     the refusal itself becomes retryable. Throw a private sentinel type that derives from `Exception`; it
+     propagates out unwrapped, and your integration boundary translates it.
+
+   Count the send *before* it goes out. A request that failed on the way out may still have been received,
+   so "this may already have taken effect" is the only safe reading — surface it as an **unknown outcome**
+   to be settled by re-reading provider state (option 2), not as a definite failure.
 
 Do not reach for `HttpMethodsToRetry` here — it does not gate this path.
 
@@ -248,8 +267,14 @@ services.AddHttpClient(Options.DefaultName).AddHttpMessageHandler<LoggingHandler
 services.Add{Api}Client(options => { /* ... */ });   // resolves CreateClient() → the default client
 ```
 
-The handler then runs on every SDK call. The `OnRetry` callback above is also a convenient place to observe
-retry activity.
+The handler then runs on every SDK call — but so does everything else you configure on the default client,
+for **every other unnamed `CreateClient()` consumer in the app**. If that blast radius is unwelcome, skip the
+extension and register the client over a **named** `HttpClient` instead
+(`services.AddHttpClient("my-api").AddHttpMessageHandler<LoggingHandler>()`, then construct
+`new {Api}Client(factory.CreateClient("my-api"), options)`), which keeps the handler, timeout and primary
+handler scoped to this SDK. See **dotnet-client-initialization**.
+
+The `OnRetry` callback above is also a convenient place to observe retry activity.
 
 ### Verify on the wire (first run of any new integration)
 

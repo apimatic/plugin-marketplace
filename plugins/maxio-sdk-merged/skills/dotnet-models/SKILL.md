@@ -1,6 +1,6 @@
 ---
 name: dotnet-models
-description: Working with models for Maxio Advanced Billing in C# — building request models, required members and nullability, enums, union/AnyOf accessors, and JSON wire names versus C# property names. Load before constructing request payloads or mapping SDK models onto your own domain types.
+description: Working with models in an APIMatic-generated .NET SDK in C# — building request models, required members and nullability, enums, union/AnyOf accessors, and JSON wire names versus C# property names. Load before constructing request payloads or mapping SDK models onto your own domain types.
 ---
 
 # Working with models in an APIMatic .NET SDK
@@ -8,7 +8,7 @@ description: Working with models for Maxio Advanced Billing in C# — building r
 Most request/response data are immutable `record`s built with object-initializers (covered in
 `dotnet-calling-endpoints`). This skill covers the **non-obvious model shapes** that trip integrations up.
 The patterns are generic across APIMatic .NET SDKs; take the real type names from the contract sheet (the
-`maxio-sdk` agent grounds it from the SDK map/source) — never a decompiled or reflected view of the
+SDK helper agent grounds it from the SDK map/source) — never a decompiled or reflected view of the
 installed package.
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{Union}`,
@@ -59,7 +59,7 @@ The factory and `TryGet` names are built mechanically from the **variant's CLR t
 | a list of `{Variant}` | `.ListOf{Variant}(IReadOnlyList<{Variant}>)` | `TryGetListOf{Variant}(out IReadOnlyList<{Variant}>)` |
 
 The exact CLR type varies per union — a numeric variant may be `double`, `decimal`, or `long` — so take the
-real method name from the contract sheet (the `maxio-sdk` agent grounds it from the SDK map/source). (Unions use the per-variant
+real method name from the contract sheet (the SDK helper agent grounds it from the SDK map/source). (Unions use the per-variant
 factories and `TryGet…` readers shown above; `FromValue` belongs to enums.) The `Optional<T>` backing a
 union is internal — interact only through the
 factories and `TryGet…`.
@@ -96,6 +96,12 @@ or `FromValue(...)` for a value not known at compile time; they convert implicit
 value. Reading back: `.Value` (equivalently `ToString()` or the implicit conversion) yields the raw wire
 value, and the enum types are `record`s, so `==` compares by value — `{EnumType}.FromValue("x")` equals the
 `x` constant. Guard unknown values with `TryGetKnownValue(...)` or `instance.IsKnownValue()`.
+
+⚠ **`FromValue` is emitted per enum, not guaranteed on all of them.** Some generated enums — server /
+environment selectors are the ones to watch — expose only their static constants and keep the conversion
+helper `protected`, so `{EnumType}.FromValue(someString)` does not compile. Check the type before you plan
+to map a configuration string through it; where it is absent, write the string→constant mapping yourself
+and default deliberately rather than reaching for a helper that isn't there.
 
 ```csharp
 {request}.{EnumProp} = {EnumType}.SomeConstant;

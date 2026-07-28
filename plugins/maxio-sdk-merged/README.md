@@ -34,11 +34,18 @@ the same cross-cutting shape for every .NET SDK it produces. The plugin reflects
 | Layer | Skill(s) | Names used |
 | --- | --- | --- |
 | **SDK-specific** (entry point) | `maxio-getting-started` (+ the bundled SDK map) | Concrete Maxio names (`MaxioAdvancedBillingClient`, etc.) |
-| **API-agnostic usage** | `dotnet-client-initialization`, `dotnet-authentication`, `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`, `dotnet-configuration-resilience`, `dotnet-testing` | Placeholders (`<Api>Client`, `<Api>ClientOptions`, …) so they apply to *any* APIMatic .NET SDK |
+| **API-agnostic usage** | `dotnet-client-initialization`, `dotnet-authentication`, `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`, `dotnet-configuration-resilience`, `dotnet-testing` | Placeholders (`{Api}Client`, `{Api}ClientOptions`, `{RootNamespace}`, …) so they apply to *any* APIMatic .NET SDK |
 
-The agnostic skills never name Maxio directly — they describe the generator's patterns so they apply
-to whatever APIMatic .NET SDK your project consumes as a published NuGet package. Where an SDK map
-ships (as it does here, bundled), they defer to it for lookup before touching the SDK source.
+The agnostic skills never name Maxio — not in their bodies and not in their `description` frontmatter,
+which says "an APIMatic-generated .NET SDK". They describe the generator's patterns so they apply to
+whatever APIMatic .NET SDK your project consumes as a published NuGet package, **and so they can be
+copied into another APIMatic plugin unedited**. Where an SDK map ships (as it does here, bundled), they
+defer to it for lookup before touching the SDK source.
+
+> **Adding these skills to another APIMatic .NET plugin:** copy the seven `dotnet-*` directories as they
+> are. Everything SDK-specific — package id, root namespace, environments, auth pattern, the map, and any
+> "this SDK doesn't generate X" caveats — belongs in that plugin's own getting-started skill, the way
+> `maxio-getting-started` carries it here.
 
 ## Skills
 
@@ -48,7 +55,7 @@ ships (as it does here, bundled), they defer to it for lookup before touching th
   the map directly.
 - **maxio-getting-started** — NuGet install, US/EU environments, Basic-auth quickstart, the bundled SDK
   map, and how to clone the SDK source only on a map gap. The helper-facing entry point.
-- **dotnet-client-initialization** — construct `<Api>Client` + `<Api>ClientOptions`, supply an `HttpClient`,
+- **dotnet-client-initialization** — construct `{Api}Client` + `{Api}ClientOptions`, supply an `HttpClient`,
   pick a server environment, register in DI.
 - **dotnet-authentication** — wire up Basic / Bearer / API-key / OAuth2 / composite auth.
 - **dotnet-calling-endpoints** — method-signature conventions, building request `record`s, enums, reading

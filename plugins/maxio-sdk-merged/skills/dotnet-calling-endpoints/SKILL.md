@@ -1,6 +1,6 @@
 ---
 name: dotnet-calling-endpoints
-description: Calling operations for Maxio Advanced Billing in C# — finding the controller that owns an operation, required vs optional parameters, request and response envelope shapes, async usage, and cancellation. Load before writing the first call to an SDK operation, or when an operation's shape or return type is unclear.
+description: Calling operations on an APIMatic-generated .NET SDK in C# — finding the controller that owns an operation, required vs optional parameters, request and response envelope shapes, async usage, and cancellation. Load before writing the first call to an SDK operation, or when an operation's shape or return type is unclear.
 ---
 
 # Calling endpoints on an APIMatic .NET SDK
@@ -8,7 +8,7 @@ description: Calling operations for Maxio Advanced Billing in C# — finding the
 Operations are **async methods** on the client. Most are **grouped under a controller property** and called
 `client.{ApiGroup}.{Operation}(...)`; an operation that belongs to no group sits **directly on the
 client**, called `client.{Operation}(...)`. The controller property, the exact operation name, and its
-signature come from the contract sheet (the `maxio-sdk` agent grounds it from the SDK map/source) — operation
+signature come from the contract sheet (the SDK helper agent grounds it from the SDK map/source) — operation
 names follow no fixed verb/resource pattern, so take the real name from the sheet, never from memory.
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{ApiGroup}`,
@@ -34,7 +34,7 @@ public Task<{ReturnType}> {Operation}(
 - **The contract sheet is the source of truth for the signature.** Whether a parameter is nullable,
   required, or defaulted — and whether the operation takes a body — varies per operation. Path params are
   typically non-nullable primitives listed first; query and body params may be required or optional. Take
-  each operation's exact signature from the contract sheet (the `maxio-sdk` agent grounds it from the SDK
+  each operation's exact signature from the contract sheet (the SDK helper agent grounds it from the SDK
   map/source), not from memory.
 - **Return type** varies by operation — see [Reading the response](#making-the-call-and-reading-the-response).
 - Methods are **async-only** (no sync overloads) and **throw `SdkException<TError>`** on API errors — see
@@ -71,7 +71,7 @@ var response = await client.{ApiGroup}.{Operation}(
 Request bodies are immutable `record`s built with object-initializer syntax (no builders). `required`
 members must be set; optional ones are nullable and are omitted from the JSON when left null. The request
 type is the type of the operation's `body` parameter — take its exact name from the contract sheet (the
-`maxio-sdk` agent grounds it from the SDK map/source):
+SDK helper agent grounds it from the SDK map/source):
 
 ```csharp
 var body = new {RequestType}
@@ -99,7 +99,8 @@ var body = new {RequestType}
 ## Enums
 
 Enums are type-safe string- **or int-**enums (`StringEnum<T>` / `IntEnum<T>`), not C# enums — use the
-static constants, or `FromValue(...)` for a value not known at compile time. See **dotnet-models** for
+static constants, or `FromValue(...)` for a value not known at compile time — where the enum exposes it;
+some do not, and `dotnet-models` says which to check. See **dotnet-models** for
 read-back semantics (they convert to their underlying value; `==` compares by value; guard unknowns).
 
 ```csharp
@@ -126,7 +127,7 @@ var response = await client.{ApiGroup}.{Operation}(pathArg, queryArg: null, body
 > which `TError` to catch per operation — or use the non-throwing `{Operation}Result` variant (below).
 
 **Each operation's return type varies** — the shape, and even the type's name, differ by operation. The
-contract sheet's response-envelope column names the return type and the inner fields to read (the `maxio-sdk`
+contract sheet's response-envelope column names the return type and the inner fields to read (the SDK helper
 agent grounds it from the SDK map/source); handle it accordingly. The cases you'll meet:
 
 - **An object that nests the resource** under a property (a record whose member holds the inner resource).
