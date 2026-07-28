@@ -59,8 +59,21 @@ client to change environment.
 | `BackOffFactor` | `2` |
 | `UseExponentialBackoff` | `true` |
 | `MaxJitter` | `500ms` |
-| `Timeout` | `100s` (**per attempt**) |
+| `Timeout` | `100s` (**per attempt**) — **too long for any interactive path; set it explicitly** |
 | `OnRetry` | `null` |
+
+**Do the arithmetic on those defaults before you accept them.** `MaxRetries = 3` means up to 4 attempts, each
+bounded at `100s`, with `1s + 2s + 4s` of backoff between them. What that actually costs depends on *how* each
+attempt fails, and the two cases are far apart:
+
+| Provider behaviour | Cost with defaults |
+| --- | --- |
+| **Hangs** (no response at all) | ≈ **100s** — the per-attempt timeout fires, and a timeout rejection is **not** retried (see Notes), so the call ends on the first attempt |
+| **Stalls, then fails retryably** (slow reset, or a slow `503` on a retryable verb) | up to **4 × 100s + 7s ≈ 407s** — each attempt burns nearly the full timeout and is then retried |
+
+Either way, a hung or stalling provider pins a request-handling thread, a pooled connection and the caller's
+browser for a window measured in minutes. Treat every default in this table as a value you have chosen only
+once you have written it down; `Timeout` in particular has no defensible default for a request-path call.
 
 Customize:
 
@@ -108,17 +121,34 @@ Notes:
 disables the transport trigger while keeping status retries — and `MaxRetries = 0` does not work either:
 Polly validates `MaxRetryAttempts` as **≥ 1** and throws at client construction. The floor is therefore
 `MaxRetries = 1`, still two attempts. The pipeline is built once in the client constructor, so it cannot be
-varied per call. Options, in the order worth reaching for:
+varied per call.
+
+**Decide which requirement you are meeting before you pick a remedy — they are not interchangeable:**
+
+- *"A duplicate must be harmless"* → options 1–2. **The provider still receives more than one write.** If
+  anything counts sends — a side effect the provider records per call, an audit trail, a test asserting
+  exactly one upstream write — these do not satisfy it, and nothing about the code will look wrong.
+- *"At most one write may reach the provider"* → option 4. It is the only one that holds the count at one.
+
+Option 3 is a mitigation, not an answer. The four, **weakest guarantee first** — so do not read the numbering
+as a recommendation order:
 
 1. **Make the write idempotent at the provider** — a client-supplied unique reference or idempotency key,
-   where the API offers one. The only remedy that makes a resend *harmless* rather than merely rarer.
+   where the API offers one. Makes a resend *harmless* rather than rarer; the send count stays above one.
+   Check the write's request model for a client-supplied unique field (the contract sheet lists the fields) —
+   but note that **whether the provider actually rejects a duplicate value is not visible in the model**. Such
+   a field is typically just a nullable string, equally consistent with a uniqueness-enforced key and with a
+   free-text label. Verify against live traffic before relying on it; if it is not enforced, this gives you
+   nothing.
 2. **Reconcile after a failure** — on a transport failure on a write, re-read provider state to establish
    what actually happened instead of assuming nothing did. (Same reflex as an unreadable write response —
-   see `dotnet-error-handling`.)
+   see `dotnet-error-handling`.) Detects a duplicate; does not prevent one.
 3. **A separate client for writes**, built with `Retry = RetryOptions.Default() with { MaxRetries = 1 }`.
    Halves the exposure; does not remove it.
 4. **A `DelegatingHandler` that refuses a re-send it did not authorise** — the only option that actually
-   holds the count at one, because a blocked attempt never reaches the network.
+   holds the count at one, because a blocked attempt never reaches the network. Reach for this whenever a
+   duplicate would be externally visible or costly to undo, and combine it with option 2 to settle the
+   outcome of the one send you allowed.
 
    Two details decide whether it works, and both are easy to get wrong:
 
@@ -137,14 +167,62 @@ varied per call. Options, in the order worth reaching for:
 
 Do not reach for `HttpMethodsToRetry` here — it does not gate this path.
 
-## Per-request timeout / cancellation
+## Bounding a call — the three layers, and which one is a total
 
-Pass a `CancellationToken` to bound an individual call regardless of retry policy:
+There are three places a bound can live, and **two of the three are per-attempt**: the two knobs named
+"Timeout" are neither of them a call budget — though one comes closer than it looks (below):
+
+| Layer | Scope | Default | Bounds a whole call? |
+| --- | --- | --- | --- |
+| `options.Retry.Timeout` | one attempt | `100s` | **No** — a retryable failure just under it repeats the cost |
+| `HttpClient.Timeout` | one attempt | `100s` | **No** — same; see below |
+| `CancellationToken` you pass to the call | the whole call | none | **Yes** — the only one |
+
+**`HttpClient.Timeout` is applied per attempt here, which is not obvious.** It is enforced by a CTS created
+inside each `SendAsync`, and the retry pipeline sits *above* `SendAsync` — so every retry gets a fresh full
+`Timeout`.
+
+It is still the highest-value single knob, for a reason worth understanding: its expiry throws
+`TaskCanceledException`, which the pipeline does **not** retry (see Notes), so **the first time it fires the
+call ends**. A `10s` value therefore does bound a *hang* at ≈10s. What it does not bound is a provider that
+fails *retryably* just under the limit on every attempt — that still costs ≈ `4 × 10s + 7s ≈ 47s`. It also
+covers requests the pipeline declares retry-ineligible, which run with no per-attempt timeout at all. A good
+backstop and the cheapest fix for a hang; still not a call budget.
+
+Set all three — they catch different failures. The per-attempt bounds cap a single stalled socket; the token
+caps the sum, which is the only thing your caller experiences:
 
 ```csharp
-using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-var response = await client.{ApiGroup}.{Operation}(/* ... */, ct: cts.Token);
+using {RootNamespace}.Core.Configuration;
+
+options.Retry = RetryOptions.Default() with { Timeout = TimeSpan.FromSeconds(10) };  // per attempt
+// httpClient.Timeout = TimeSpan.FromSeconds(10);   // per attempt, backstop — see dotnet-client-initialization
+
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));  // the whole call — the mechanism;
+var response = await client.{ApiGroup}.{Operation}(/* ... */, ct: cts.Token);  // for WHERE it belongs, see below
 ```
+
+**Give the total bound one home, not one per call site.** A `CancellationTokenSource` written out at each
+call is the layer that gets skipped — it is per-call-site work, so any operation added later silently has no
+ceiling. Put it at your integration boundary instead, where it applies to every operation by construction.
+In ASP.NET Core, link the request's own cancellation so a disconnected client also stops the outbound work:
+
+```csharp
+// In the one service class that fronts the SDK:
+async Task<T> Bounded<T>(Func<CancellationToken, Task<T>> call, CancellationToken ct)
+{
+    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);   // ct = HttpContext.RequestAborted
+    cts.CancelAfter(_budget);                                             // e.g. 30s, from config
+    return await call(cts.Token);
+}
+```
+
+Then every operation goes through `Bounded(...)`, and the budget is one value in one place.
+
+**The invariant to check:** your worst case — `attempts × per-attempt timeout + total backoff` — must sit
+below the deadline your own caller is working to. If it does not, the caller times out first and your retries
+are burning provider capacity for a response nobody is still waiting for. A `TaskCanceledException` from your
+own token is **not** retried (see Notes above), so the token cuts the call cleanly.
 
 ## Pagination
 

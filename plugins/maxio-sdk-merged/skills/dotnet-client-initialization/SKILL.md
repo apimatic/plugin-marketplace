@@ -116,6 +116,41 @@ timeout or handler you set for this SDK changes their behaviour too. To avoid th
 yourself over a **named** `HttpClient` — the same shape the extension uses, minus the shared surface. See
 **dotnet-configuration-resilience**.
 
+### Registering over a named `HttpClient`
+
+The full shape. **`Timeout` is not optional to think about** — the default is `100s`, which matches the SDK's
+own per-attempt retry timeout, so on defaults a hung provider costs you ~100s before anything gives way. That
+is an outage, not a timeout:
+
+```csharp
+using {RootNamespace};
+
+const string ClientName = "{Api}";   // your own constant — keeps this pipeline off the shared default client
+
+services.AddHttpClient(ClientName, c =>
+    {
+        // SET THIS. Default 100s. Bounds one ATTEMPT, not the whole call.
+        // See dotnet-configuration-resilience > Bounding a call.
+        c.Timeout = TimeSpan.FromSeconds(10);
+    })
+    // .AddHttpMessageHandler<MyHandler>()          // logging / custom policy, scoped to this SDK
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5)   // needed if the client below is a singleton
+    });
+
+services.AddSingleton(sp =>
+{
+    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
+    var options = new {Api}ClientOptions { /* environment, server, credentials */ };
+    return new {Api}Client(httpClient, options);   // configure options BEFORE constructing
+});
+```
+
+Both knobs above are load-bearing and they answer different failures: `PooledConnectionLifetime` keeps DNS
+fresh behind a long-lived client, and `Timeout` stops a hung provider from pinning a request thread. Setting
+only the first is the common mistake — it looks like the resilience box is ticked.
+
 Then inject it:
 
 ```csharp
