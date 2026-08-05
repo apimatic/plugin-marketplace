@@ -32,6 +32,11 @@
       "description": "Install and consume the PayPal .NET SDK, grounded in a bundled SDK map. A single paypal-sdk agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-paypal router + the paypal-sdk agent. No MCP server. (Do not install alongside acp-paypal — the integrate-paypal skill name collides.)"
     },
     {
+      "name": "twilio-sdk",
+      "source": "./plugins/twilio-sdk",
+      "description": "Install and consume the Twilio .NET SDK, grounded in a bundled SDK map. A single twilio-sdk agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-twilio router + the twilio-sdk agent. No MCP server."
+    },
+    {
       "name": "maxio-sdk-lean",
       "source": "./plugins/maxio-sdk-lean",
       "description": "Install and consume the Maxio Advanced Billing .NET SDK, grounded in a lean SDK map that ships inside the SDK's own source — a single maxio-sdk agent clones the SDK and reads the map from the root of that clone. Each operation row states what is specific to that operation; the SDK-wide defaults (throw-only, no pagination, the fixed Case B accessors, the Production server group) are stated once in the index, and the HTTP route and endpoint prose sit on the operation in Api/{Controller}.cs, in that same clone. One maxio-sdk agent plus the integrate-maxio router. No MCP server. (Do not install alongside maxio-sdk, maxio-sdk-clone or maxio-sdk-merged — they share skill/agent names.)"
