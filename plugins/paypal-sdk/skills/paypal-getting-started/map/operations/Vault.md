@@ -12,7 +12,7 @@ Accessor: `client.Vault` · Source: `Api/Vault.cs` · 6 operations
   - defaults: `requestOptions` = null
 - **Returns**: `PaymentTokenResponse`
 - **Error**: `SdkException<CreatePaymentTokenError>` — **Case A (typed)**
-- **Error accessors**: `TryGetError(out Error)` [400, 403, 404, 422, 500] · `TryGetRawError(out RawError)` [fallback]
+- **Error accessors**: `TryGetError1(out Error1)` [400, 403, 404, 422, 500] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -24,7 +24,7 @@ Accessor: `client.Vault` · Source: `Api/Vault.cs` · 6 operations
   - defaults: `requestOptions` = null
 - **Returns**: `SetupTokenResponse`
 - **Error**: `SdkException<CreateSetupTokenError>` — **Case A (typed)**
-- **Error accessors**: `TryGetError(out Error)` [400, 403, 422, 500] · `TryGetRawError(out RawError)` [fallback]
+- **Error accessors**: `TryGetError1(out Error1)` [400, 403, 422, 500] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -35,7 +35,7 @@ Accessor: `client.Vault` · Source: `Api/Vault.cs` · 6 operations
   - defaults: `requestOptions` = null
 - **Returns**: `void` (Task)
 - **Error**: `SdkException<DeletePaymentTokenError>` — **Case A (typed)**
-- **Error accessors**: `TryGetError(out Error)` [400, 403, 500] · `TryGetRawError(out RawError)` [fallback]
+- **Error accessors**: `TryGetError1(out Error1)` [400, 403, 500] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -46,7 +46,7 @@ Accessor: `client.Vault` · Source: `Api/Vault.cs` · 6 operations
   - defaults: `requestOptions` = null
 - **Returns**: `PaymentTokenResponse`
 - **Error**: `SdkException<GetPaymentTokenError>` — **Case A (typed)**
-- **Error accessors**: `TryGetError(out Error)` [403, 404, 422, 500] · `TryGetRawError(out RawError)` [fallback]
+- **Error accessors**: `TryGetError1(out Error1)` [403, 404, 422, 500] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -57,7 +57,7 @@ Accessor: `client.Vault` · Source: `Api/Vault.cs` · 6 operations
   - defaults: `requestOptions` = null
 - **Returns**: `SetupTokenResponse`
 - **Error**: `SdkException<GetSetupTokenError>` — **Case A (typed)**
-- **Error accessors**: `TryGetError(out Error)` [403, 404, 422, 500] · `TryGetRawError(out RawError)` [fallback]
+- **Error accessors**: `TryGetError1(out Error1)` [403, 404, 422, 500] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
 - **Pagination**: none
 
@@ -69,6 +69,6 @@ Accessor: `client.Vault` · Source: `Api/Vault.cs` · 6 operations
 - **Query params (wire ← C#)**: `customer_id` ← `customerId`, `page_size` ← `pageSize`, `page` ← `page`, `total_required` ← `totalRequired`
 - **Returns**: `CustomerVaultPaymentTokensResponse`
 - **Error**: `SdkException<ListCustomerPaymentTokensError>` — **Case A (typed)**
-- **Error accessors**: `TryGetError(out Error)` [400, 403, 500] · `TryGetRawError(out RawError)` [fallback]
+- **Error accessors**: `TryGetError1(out Error1)` [400, 403, 500] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
 - **Pagination**: none (only `page`, no `perPage`)

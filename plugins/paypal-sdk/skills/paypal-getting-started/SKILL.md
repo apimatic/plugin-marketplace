@@ -38,16 +38,17 @@ confirm names against the map.
 | | |
 | --- | --- |
 | API | PayPal |
-| Source repo | https://github.com/context-plugins/paypal-csharp-sdk (branch `main`) |
-| Root namespace | `Paypal` (the `using` namespace) |
-| Client class | `PaypalClient` |
-| Options class | `PaypalClientOptions` |
-<!-- crawler:auth -->
-| Auth | Credentials properties on `PaypalClientOptions`: `Oauth2: OAuth2ClientCredentials?`, `Oauth2TokenStrategy: IOAuth2TokenStrategy<OAuth2ClientCredentials>?` — see the SDK map's *Servers & auth* section |
-<!-- /crawler:auth -->
-<!-- crawler:environments -->
-| Environments | `options.Environment` — `ServerEnvironment` members: `Production`, `Sandbox` (see the SDK map's *Servers & auth* section) |
-<!-- /crawler:environments -->
+| NuGet package | `AsadAli.Checkout.Sdk` (install version-less — see *Install* below) |
+| Source repo | https://github.com/asadali214/checkout-sample-sdk (tag `v1.0.1` — the release this map documents) |
+| Root namespace | `PayPalServerSdk` (the `using` namespace) |
+| Client class | `PayPalServerSdkClient` |
+| Options class | `PayPalServerSdkClientOptions` |
+<!-- gen:auth -->
+| Auth | Credentials properties on `PayPalServerSdkClientOptions`: `Oauth2: OAuth2ClientCredentials?`, `Oauth2TokenStrategy: IOAuth2TokenStrategy<OAuth2ClientCredentials>?` — see the SDK map's *Servers & auth* section |
+<!-- /gen:auth -->
+<!-- gen:environments -->
+| Environments | `options.Environment` — `ServerEnvironment` members: `Sandbox` (see the SDK map's *Servers & auth* section) |
+<!-- /gen:environments -->
 
 The table above is **orientation, not a copy-paste recipe** — it gives you the names and facts (install,
 namespaces, the auth *pattern*, the environments), while the actual integration code comes from the companion
@@ -59,26 +60,25 @@ on.
 ## Namespaces (using-directives)
 
 The SDK splits its public types across **separate child namespaces**. C# does **not** import child
-namespaces transitively, so `using Paypal.Models;` alone does **not** make enums, union
+namespaces transitively, so `using PayPalServerSdk.Models;` alone does **not** make enums, union
 types, or error types visible — you get `CS0103`/`CS0246` ("name/type does not exist") on build. Add a
 separate `using` for each kind of type you reference — the map lists each type's namespace, so take it from
 the map row; only if the map is silent do you open the file in the clone and copy the `namespace`
 declaration at its top.
 
-## Install — clone the SDK and add a project reference
+## Install — add the NuGet package
 
-This SDK is consumed from its source repo (it is not published to NuGet):
+This SDK is published to NuGet; install it into the project that will call PayPal:
 
 ```bash
-# Clone the SDK and add a project reference to its .csproj:
-git clone --branch main https://github.com/context-plugins/paypal-csharp-sdk
-dotnet add reference paypal-csharp-sdk/Paypal.csproj
+dotnet add package AsadAli.Checkout.Sdk
 ```
 
-> The project reference pulls the SDK's runtime dependencies in transitively. This **install clone**
-> lives inside your solution and is a build dependency; it is a different thing from the read-only
-> **reference clone** the *SDK source* section below describes, which stays in the system temp
-> directory and is never referenced by the build.
+> Install **version-less** so it floats to the latest release — do not pin a version from memory.
+> The package pulls the SDK's runtime dependencies in transitively. There is **no SDK source in
+> your solution**: the only local copy that ever exists is the read-only **reference clone** the
+> *SDK source* section below describes, which lives in the system temp directory, is never
+> referenced by the build, and is cloned only when the map genuinely falls short.
 
 ## SDK map — look up first, open second, never grep
 
@@ -114,9 +114,10 @@ Keep lookups cheap — the rules that keep a session's context small:
   on the one symbol — never dump a whole file into the conversation with `cat`/`sed`.
 - Never open the SDK's `api-reference.md` — the map supersedes it.
 
-Staleness check: `sdk-map.md` records the source commit it was generated from (provenance). The SDK repo
-and this plugin are regenerated together, so `main` normally matches the map; if a name from the map
-ever fails to compile, trust the compiler and re-read the source file the map's row names.
+Staleness check: `sdk-map.md` records the release tag and source commit it was generated from
+(provenance). The map documents that pinned release, while `dotnet add package` installs the latest —
+so if a name from the map ever fails to compile, trust the compiler, re-read the source file the map's
+row names, and report the drift; never patch around it from memory.
 
 ## SDK source — clone only on a map-side issue; don't reflect or fetch files
 
@@ -126,24 +127,24 @@ compile, ambiguity remains after the map lookup, or you need a full method/model
 carry. (You clone only on a real map-side issue — never "just in case".) The clone lives in the **system
 temp directory** (`<temp>/paypal-sdk-src/`), never in the project
 repo, so the clone stays invisible to the main agent — navigated via the SDK map above, a read-only
-reference, **not** a build dependency (never add a project reference to *this* clone; the build references
-the separate install clone from the *Install* section).
+reference, **not** a build dependency (never add a project reference to *this* clone; the build takes the
+SDK from the NuGet package in the *Install* section).
 
-**Clone only on a real map-side issue.** Clone once this session — shallow, from branch `main` (the
-branch the map was generated from) — into a fresh timestamped folder under `<temp>/paypal-sdk-src/`, and reuse
-that folder for the rest of your session:
+**Clone only on a real map-side issue.** Clone once this session — shallow, at tag `v1.0.1` (the exact
+release the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder
+under `<temp>/paypal-sdk-src/`, and reuse that folder for the rest of your session:
 
 ```bash
 # Linux/macOS:
 dir="${TMPDIR:-/tmp}/paypal-sdk-src/$(date +%Y%m%d-%H%M%S)"
-git clone --depth 1 --branch main https://github.com/context-plugins/paypal-csharp-sdk "$dir"
+git clone --depth 1 --branch v1.0.1 https://github.com/asadali214/checkout-sample-sdk "$dir"
 # Reuse "$dir" for the rest of your session (it is your clone path).
 ```
 
 ```powershell
 # Windows (PowerShell):
 $dir = "$env:TEMP\paypal-sdk-src\$(Get-Date -Format yyyyMMdd-HHmmss)"
-git clone --depth 1 --branch main https://github.com/context-plugins/paypal-csharp-sdk $dir
+git clone --depth 1 --branch v1.0.1 https://github.com/asadali214/checkout-sample-sdk $dir
 # Reuse $dir for the rest of your session (it is your clone path).
 ```
 
@@ -170,7 +171,7 @@ Layout — where the SDK map's file references resolve (open these directly; don
 - `Errors/` — per-operation `{Operation}Error` types (only Case-A operations have one; the map's rows say
   which case each operation is).
 - `Core/` — HTTP infrastructure (`SdkException<T>`, `RawError`, auth, retries).
-- `Servers/`, `PaypalClient.cs`, `ServiceCollectionExtensions.cs` — environments, the client, DI.
+- `Servers/`, `PayPalServerSdkClient.cs`, `ServiceCollectionExtensions.cs` — environments, the client, DI.
 
 **Leave the clone in place — don't delete it.** It's a read-only reference with nothing of yours in it, and
 keeping it is what lets every later step in this session reuse it instead of cloning again. The OS reaps the
@@ -183,12 +184,12 @@ relevant source. Each step calls out the trap the signature hides (in *parens*).
 them in this order:
 
 1. **Client & DI setup** — load **dotnet-client-initialization** before you write
-   `new PaypalClient(...)`, build its options, or DI-register via
-   `AddPaypalClient`. (*The signature won't tell you:* the `HttpClient`/handler
+   `new PayPalServerSdkClient(...)`, build its options, or DI-register via
+   `AddPayPalServerSdkClient`. (*The signature won't tell you:* the `HttpClient`/handler
    pipeline must be long-lived and reused via `IHttpClientFactory`, not rebuilt per request; the SDK client
    wrapper over it may be transient.)
 2. **Authentication** — load **dotnet-authentication** before you set credentials. The scheme(s) this SDK
-   accepts are the credentials properties on `PaypalClientOptions` — the map's *Servers & auth* section
+   accepts are the credentials properties on `PayPalServerSdkClientOptions` — the map's *Servers & auth* section
    lists them. (*The signature won't tell you:* set credentials before
    constructing the client or in the DI callback, and load secrets from configuration rather than hardcoding.)
 3. **Calling an endpoint / building a request body** — load **dotnet-calling-endpoints** before the first

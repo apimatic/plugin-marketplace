@@ -2,7 +2,7 @@
 
 A Claude Code plugin that helps developers **install and consume the PayPal .NET SDK**
 (the APIMatic-generated C# SDK at
-[context-plugins/paypal-csharp-sdk](https://github.com/context-plugins/paypal-csharp-sdk)),
+[asadali214/checkout-sample-sdk](https://github.com/asadali214/checkout-sample-sdk)),
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
 The **SDK map is bundled with the plugin**, and a single `paypal-sdk` agent grounds every fact in it —
@@ -36,7 +36,7 @@ emits the same cross-cutting shape for every .NET SDK it produces. The plugin re
 
 | Layer | Skill(s) | Names used |
 | --- | --- | --- |
-| **SDK-specific** (entry point) | `paypal-getting-started` (+ the bundled SDK map) | Concrete PayPal names (`PaypalClient`, `PaypalClientOptions`, etc.) |
+| **SDK-specific** (entry point) | `paypal-getting-started` (+ the bundled SDK map) | Concrete PayPal names (`PayPalServerSdkClient`, `PayPalServerSdkClientOptions`, etc.) |
 | **API-agnostic usage** | `dotnet-client-initialization`, `dotnet-authentication`, `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`, `dotnet-configuration-resilience`, `dotnet-testing` | Placeholders (`{Api}Client`, `{Api}ClientOptions`, `{RootNamespace}`, …) so they apply to *any* APIMatic .NET SDK |
 
 The agnostic skills never name PayPal — not in their bodies and not in their `description`

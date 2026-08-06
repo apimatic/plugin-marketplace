@@ -1,6 +1,6 @@
 # Payments — operations
 
-Accessor: `client.Payments` · Source: `Api/Payments.cs` · 9 operations
+Accessor: `client.Payments` · Source: `Api/Payments.cs` · 7 operations
 
 **Parameter names are literal.** Signatures are generated code verbatim — in named arguments use the exact parameter names shown (the cancellation-token parameter is named `ct`).
 
@@ -12,18 +12,6 @@ Accessor: `client.Payments` · Source: `Api/Payments.cs` · 9 operations
   - defaults: `prefer` = "return=minimal", `requestOptions` = null
 - **Returns**: `CapturedPayment`
 - **Error**: `SdkException<CaptureAuthorizedPaymentError>` — **Case A (typed)**
-- **Error accessors**: `TryGetError(out Error)` [400, 401, 403, 404, 409, 422] · `TryGetNoContent(out RawError)` [500] · `TryGetRawError(out RawError)` [fallback]
-- **No-throw variant**: absent
-- **Pagination**: none
-
-### CaptureAuthorizedPayment1
-- **HTTP**: `POST /v2/payments/authorizations/{authorization_id}/capture` (Default (api-m))
-- **Notes**: Captures an authorized payment, by ID.
-- **Signature**: `CaptureAuthorizedPayment1(string authorizationId, string? payPalMockResponse, string? payPalRequestId, string? payPalAuthAssertion, CaptureRequest? body, string? prefer = "return=minimal", RequestOptions? requestOptions = null, CancellationToken ct = default)`
-  - 4 params (`payPalMockResponse` … `body`) — nullable, no default → **must pass explicitly** (pass `null` to skip)
-  - defaults: `prefer` = "return=minimal", `requestOptions` = null
-- **Returns**: `CapturedPayment`
-- **Error**: `SdkException<CaptureAuthorizedPayment1Error>` — **Case A (typed)**
 - **Error accessors**: `TryGetError(out Error)` [400, 401, 403, 404, 409, 422] · `TryGetNoContent(out RawError)` [500] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
 - **Pagination**: none
@@ -49,18 +37,6 @@ Accessor: `client.Payments` · Source: `Api/Payments.cs` · 9 operations
   - defaults: `requestOptions` = null
 - **Returns**: `CapturedPayment`
 - **Error**: `SdkException<GetCapturedPaymentError>` — **Case A (typed)**
-- **Error accessors**: `TryGetError(out Error)` [401, 403, 404] · `TryGetNoContent(out RawError)` [500] · `TryGetRawError(out RawError)` [fallback]
-- **No-throw variant**: absent
-- **Pagination**: none
-
-### GetCapturedPayment1
-- **HTTP**: `GET /v2/payments/captures/{capture_id}` (Default (api-m))
-- **Notes**: Shows details for a captured payment, by ID.
-- **Signature**: `GetCapturedPayment1(string captureId, string? payPalMockResponse, RequestOptions? requestOptions = null, CancellationToken ct = default)`
-  - `payPalMockResponse` — nullable, no default → **must pass explicitly**
-  - defaults: `requestOptions` = null
-- **Returns**: `CapturedPayment`
-- **Error**: `SdkException<GetCapturedPayment1Error>` — **Case A (typed)**
 - **Error accessors**: `TryGetError(out Error)` [401, 403, 404] · `TryGetNoContent(out RawError)` [500] · `TryGetRawError(out RawError)` [fallback]
 - **No-throw variant**: absent
 - **Pagination**: none
