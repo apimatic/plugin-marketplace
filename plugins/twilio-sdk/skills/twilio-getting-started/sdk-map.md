@@ -13,7 +13,8 @@
 | Source commit (spec stamp) | `51fdf48` (`51fdf48c0d657f717642ada229682ef234db9ead`, tagged `51fdf48`) |
 <!-- /gen:stamp -->
 | Generator | APIMatic |
-| Repo | https://github.com/context-plugins/twilio-csharp-sdk (branch `main`) |
+| NuGet package | `AsadAli.TwilioSdk` (install version-less: `dotnet add package AsadAli.TwilioSdk`) |
+| Repo | https://github.com/context-plugins/twilio-csharp-sdk (branch `main`) — reference only; the build takes the SDK from the package above |
 
 Staleness check: if the SDK is regenerated, the source commit stamp above changes (the SDK repo and this
 plugin regenerate together). If a lookup here fails to compile, trust the compiler and re-read the source

@@ -57,7 +57,7 @@ it for lookup before touching the SDK source.
   questions, and SDK errors — to the single `twilio-sdk` agent, and drives the implement-and-verify
   loop. Grounds every fact in the contract sheet the agent produces — never model knowledge, and never
   the map directly.
-- **twilio-getting-started** — install (clone + project reference; the SDK is not on NuGet), the
+- **twilio-getting-started** — install (the `AsadAli.TwilioSdk` NuGet package), the
   Production environment, Basic auth (Account SID + Auth Token), the bundled SDK map, and how to
   clone the SDK source only on a map gap. The helper-facing entry point.
 - **dotnet-client-initialization** — construct `{Api}Client` + `{Api}ClientOptions`, supply an `HttpClient`,

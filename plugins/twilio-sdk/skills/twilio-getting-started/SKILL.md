@@ -38,6 +38,7 @@ confirm names against the map.
 | | |
 | --- | --- |
 | API | Twilio |
+| NuGet package | `AsadAli.TwilioSdk` (install version-less — see *Install* below) |
 | Source repo | https://github.com/context-plugins/twilio-csharp-sdk (branch `main`) |
 | Root namespace | `TwilioSdk` (the `using` namespace) |
 | Client class | `TwilioSdkClient` |
@@ -65,20 +66,19 @@ separate `using` for each kind of type you reference — the map lists each type
 the map row; only if the map is silent do you open the file in the clone and copy the `namespace`
 declaration at its top.
 
-## Install — clone the SDK and add a project reference
+## Install — add the NuGet package
 
-This SDK is consumed from its source repo (it is not published to NuGet):
+This SDK is published to NuGet; install it into the project that will call Twilio:
 
 ```bash
-# Clone the SDK and add a project reference to its .csproj:
-git clone --branch main https://github.com/context-plugins/twilio-csharp-sdk
-dotnet add reference twilio-csharp-sdk/TwilioSdk.csproj
+dotnet add package AsadAli.TwilioSdk
 ```
 
-> The project reference pulls the SDK's runtime dependencies in transitively. This **install clone**
-> lives inside your solution and is a build dependency; it is a different thing from the read-only
-> **reference clone** the *SDK source* section below describes, which stays in the system temp
-> directory and is never referenced by the build.
+> Install **version-less** so it floats to the latest release — do not pin a version from memory.
+> The package pulls the SDK's runtime dependencies in transitively. There is **no SDK source in
+> your solution**: the only local copy that ever exists is the read-only **reference clone** the
+> *SDK source* section below describes, which lives in the system temp directory, is never
+> referenced by the build, and is cloned only when the map genuinely falls short.
 
 ## SDK map — look up first, open second, never grep
 
@@ -114,9 +114,10 @@ Keep lookups cheap — the rules that keep a session's context small:
   on the one symbol — never dump a whole file into the conversation with `cat`/`sed`.
 - Never open the SDK's `api-reference.md` — the map supersedes it.
 
-Staleness check: `sdk-map.md` records the source commit it was generated from (provenance). The SDK repo
-and this plugin are regenerated together, so `main` normally matches the map; if a name from the map
-ever fails to compile, trust the compiler and re-read the source file the map's row names.
+Staleness check: `sdk-map.md` records the source commit it was generated from (provenance). The map
+documents that pinned commit, while `dotnet add package` installs the latest release — so if a name from
+the map ever fails to compile, trust the compiler, re-read the source file the map's row names, and
+report the drift; never patch around it from memory.
 
 ## SDK source — clone only on a map-side issue; don't reflect or fetch files
 
@@ -126,8 +127,8 @@ compile, ambiguity remains after the map lookup, or you need a full method/model
 carry. (You clone only on a real map-side issue — never "just in case".) The clone lives in the **system
 temp directory** (`<temp>/twilio-sdk-src/`), never in the project
 repo, so the clone stays invisible to the main agent — navigated via the SDK map above, a read-only
-reference, **not** a build dependency (never add a project reference to *this* clone; the build references
-the separate install clone from the *Install* section).
+reference, **not** a build dependency (never add a project reference to *this* clone; the build takes the
+SDK from the NuGet package in the *Install* section).
 
 **Clone only on a real map-side issue.** Clone once this session — shallow, from branch `main` (the
 branch the map was generated from) — into a fresh timestamped folder under `<temp>/twilio-sdk-src/`, and reuse
