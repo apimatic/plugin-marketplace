@@ -7,10 +7,10 @@
 | | |
 |---|---|
 | SDK display name | Twilio |
-| Root namespace/module | `Twilio` |
+| Root namespace/module | `TwilioSdk` |
 <!-- gen:stamp -->
 | Target framework(s) | `netstandard2.0` (C# `LangVersion 14`, `Nullable enable`) |
-| Source commit (spec stamp) | `4fcefc9` (`4fcefc97ba9b3feb2f1ed265e82645ebf168ceee`, tagged `4fcefc9`) |
+| Source commit (spec stamp) | `51fdf48` (`51fdf48c0d657f717642ada229682ef234db9ead`, tagged `51fdf48`) |
 <!-- /gen:stamp -->
 | Generator | APIMatic |
 | Repo | https://github.com/context-plugins/twilio-csharp-sdk (branch `main`) |
@@ -24,31 +24,31 @@ file linked in the row.
 ## Getting a client
 
 ```csharp
-using Twilio;
-using Twilio.Servers; // ServerEnvironment lives here
+using TwilioSdk;
+using TwilioSdk.Servers; // ServerEnvironment lives here
 
-var options = new TwilioClientOptions
+var options = new TwilioSdkClientOptions
 {
     // Set the credentials properties for the scheme(s) this API uses — see Servers & auth below.
     // Environment selects the server environment; see Servers & auth below.
 };
-var client = new TwilioClient(httpClient, options); // httpClient: System.Net.Http.HttpClient
+var client = new TwilioSdkClient(httpClient, options); // httpClient: System.Net.Http.HttpClient
 ```
 
 DI alternative (`ServiceCollectionExtensions.cs`):
 
 ```csharp
-services.AddTwilioClient(o =>
+services.AddTwilioSdkClient(o =>
 {
     // set credentials / environment on o here
 });
 ```
 
-Every API group is a property on the client (e.g. `client.Customers`). Source:
-`TwilioClient.cs`.
+Every API group is a property on the client (e.g. `client.Api20100401Message`). Source:
+`TwilioSdkClient.cs`.
 
-<!-- crawler:client-options -->
-All `TwilioClientOptions` properties (source: `TwilioClientOptions.cs`):
+<!-- gen:client-options -->
+All `TwilioSdkClientOptions` properties (source: `TwilioSdkClientOptions.cs`):
 
 | Property | Type |
 |---|---|
@@ -74,8 +74,8 @@ All `TwilioClientOptions` properties (source: `TwilioClientOptions.cs`):
 
 Client constructor(s):
 
-- `TwilioClient(HttpClient httpClient, TwilioClientOptions options)`
-<!-- /crawler:client-options -->
+- `TwilioSdkClient(HttpClient httpClient, TwilioSdkClientOptions options)`
+<!-- /gen:client-options -->
 
 ---
 
@@ -116,10 +116,10 @@ catch (SdkException<RawError> ex)                     // Case B
 }
 ```
 
-<!-- crawler:op-stats -->
+<!-- gen:op-stats -->
 **No-throw ("`…Result`") variants: absent across this SDK** — every operation is throw-only.
 Of **887 operations**, **29 are Case A (typed)** and **858 are Case B (raw)**.
-<!-- /crawler:op-stats -->
+<!-- /gen:op-stats -->
 
 ---
 
@@ -128,7 +128,7 @@ Of **887 operations**, **29 are Case A (typed)** and **858 are Case B (raw)**.
 Each links to a sub-page with one row per operation (HTTP, signature with must-pass-explicitly params, return
 type, error Case A/B + accessors, pagination).
 
-<!-- crawler:ops-table -->
+<!-- gen:ops-table -->
 | Controller (`client.X`) | Ops | Page |
 |---|---:|---|
 | `Api20100401Account` | 4 | [map/operations/Api20100401Account.md](map/operations/Api20100401Account.md) |
@@ -449,7 +449,7 @@ type, error Case A/B + accessors, pagination).
 | `VideoV1SubscribedTrack` | 2 | [map/operations/VideoV1SubscribedTrack.md](map/operations/VideoV1SubscribedTrack.md) |
 | `VideoV1SubscribeRules` | 2 | [map/operations/VideoV1SubscribeRules.md](map/operations/VideoV1SubscribeRules.md) |
 | `VideoV1Transcriptions` | 4 | [map/operations/VideoV1Transcriptions.md](map/operations/VideoV1Transcriptions.md) |
-<!-- /crawler:ops-table -->
+<!-- /gen:ops-table -->
 
 ---
 
@@ -458,9 +458,9 @@ type, error Case A/B + accessors, pagination).
 <!-- gen:models-table -->
 | Group | Count | Page |
 |---|---:|---|
-| Records (plain `record` data models) | 839 | [`AccountReport` … `CallStatePercentage`](map/models/records-1-Ac-Ca.md) · [`CallStatePercentage1` … `FlexV1InsightsAssessmentsComment`](map/models/records-2-Ca-Fl.md) · [`FlexV1InsightsConversations` … `ListInteractionChannelInviteResponse`](map/models/records-3-Fl-Li.md) · [`ListInteractionChannelParticipantResponse` … `MessagingV1ServiceUsAppToPersonV2`](map/models/records-4-Li-Me.md) · [`MessagingV1TollfreeVerification` … `Setup1`](map/models/records-5-Me-Se.md) · [`ShortCodeApplication` … `V2ServicesPasskeysVerifyFactorResponse`](map/models/records-6-Sh-V2.md) · [`V3InsightsDomainsConversationsMetadata400Error` … `Word`](map/models/records-7-V3-Wo.md) |
-| Unions (`OneOf` / `AnyOf`) — variant factories + `TryGet…` | 1 + 3 | [map/models/unions.md](map/models/unions.md) |
-| Enums (`StringEnum<T>` / `IntEnum<T>`) — literal C# member names + wire values | 406 | [map/models/enums.md](map/models/enums.md) |
+| Records (plain `record` data models) | 838 | [`AccountReport` … `CallStatePercentage`](map/models/records-1-Ac-Ca.md) · [`CallStatePercentage1` … `FlexV1InsightsConversations`](map/models/records-2-Ca-Fl.md) · [`FlexV1InsightsQuestionnaires` … `ListInteractionChannelResponse`](map/models/records-3-Fl-Li.md) · [`ListInteractionResponse` … `MessagingV1ServiceUsAppToPersonV2`](map/models/records-4-Li-Me.md) · [`MessagingV1TollfreeVerification` … `Setup1`](map/models/records-5-Me-Se.md) · [`ShortCodeApplication` … `V2ServicesPasskeysVerifyFactorResponse`](map/models/records-6-Sh-V2.md) · [`V3InsightsDomainsConversationsMetadata400Error` … `Word`](map/models/records-7-V3-Wo.md) |
+| Unions (`OneOf` / `AnyOf`) — variant factories + `TryGet…` | 2 + 3 | [map/models/unions.md](map/models/unions.md) |
+| Enums (`StringEnum<T>` / `IntEnum<T>`) — literal C# member names + wire values | 399 | [map/models/enums.md](map/models/enums.md) |
 <!-- /gen:models-table -->
 
 Model conventions: records are immutable with `init`-only setters; `required` properties must be set in the
@@ -476,24 +476,24 @@ Namespaces by content type (add `using` accordingly):
 
 | Contents | Namespace(s) |
 |---|---|
-| Client & options (root) | `Twilio` |
-| Operation controllers (`Api/`) | `Twilio.Api` |
-| Records (`Models/`) | `Twilio.Models` |
-| Enums (`Models/Enums/`) | `Twilio.Models.Enums` |
-| Unions (`Models/AnyOf/`, `Models/OneOf/`) | `Twilio.Models.AnyOf` · `Twilio.Models.OneOf` |
-| Error classes (`Errors/`) | `Twilio.Errors` |
+| Client & options (root) | `TwilioSdk` |
+| Operation controllers (`Api/`) | `TwilioSdk.Api` |
+| Records (`Models/`) | `TwilioSdk.Models` |
+| Enums (`Models/Enums/`) | `TwilioSdk.Models.Enums` |
+| Unions (`Models/AnyOf/`, `Models/OneOf/`) | `TwilioSdk.Models.AnyOf` · `TwilioSdk.Models.OneOf` |
+| Error classes (`Errors/`) | `TwilioSdk.Errors` |
 <!-- /gen:namespaces -->
 
 ---
 
 ## Servers & auth
 
-<!-- crawler:servers-auth -->
-**Auth.** The scheme(s) this API uses surface as credentials properties on `TwilioClientOptions` (source: `TwilioClientOptions.cs`) — set them before constructing the client; load `dotnet-authentication` for the wiring:
+<!-- gen:servers-auth -->
+**Auth.** The scheme(s) this API uses surface as credentials properties on `TwilioSdkClientOptions` (source: `TwilioSdkClientOptions.cs`) — set them before constructing the client; load `dotnet-authentication` for the wiring:
 
 | Property | Type | Notes (from the source XML docs) |
 |---|---|---|
 | `AccountSidAuthToken` | `BasicAuthCredentials?` | This API uses <see href="https://www.twilio.com/docs/glossary/what-is-basic-authentication">basic authentication</see>. Use an <see href="https://www.twilio.com/docs/iam/api-keys">API key</see> as the username and the API key secret as the password. You can also use your account SID and auth token, but limit their use to local testing. |
 
 **Environments.** `options.Environment` is a `ServerEnvironment` (`Servers/ServerEnvironment.cs`) with members: `ServerEnvironment.Production`. Base-URL templates and override points live under `Servers/` and `options.Server`.
-<!-- /crawler:servers-auth -->
+<!-- /gen:servers-auth -->

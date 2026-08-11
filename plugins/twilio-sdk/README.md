@@ -37,7 +37,7 @@ emits the same cross-cutting shape for every .NET SDK it produces. The plugin re
 
 | Layer | Skill(s) | Names used |
 | --- | --- | --- |
-| **SDK-specific** (entry point) | `twilio-getting-started` (+ the bundled SDK map) | Concrete Twilio names (`TwilioClient`, `TwilioClientOptions`, etc.) |
+| **SDK-specific** (entry point) | `twilio-getting-started` (+ the bundled SDK map) | Concrete Twilio names (`TwilioSdkClient`, `TwilioSdkClientOptions`, etc.) |
 | **API-agnostic usage** | `dotnet-client-initialization`, `dotnet-authentication`, `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`, `dotnet-configuration-resilience`, `dotnet-testing` | Placeholders (`{Api}Client`, `{Api}ClientOptions`, `{RootNamespace}`, …) so they apply to *any* APIMatic .NET SDK |
 
 The agnostic skills never name Twilio — not in their bodies and not in their `description`
