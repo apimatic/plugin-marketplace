@@ -234,16 +234,60 @@ first page with the paging arguments, then `await foreach` the pages:
 ```csharp
 // The paging args (e.g. offset/limit, cursor/limit, or page/size) seed the FIRST page;
 // the SDK advances them and stops when the API signals the end.
+// ALWAYS bound the enumeration yourself — see "Never leave a page loop unbounded" below.
+const int MaxPages = 100;
+int pages = 0;
+
 await foreach (IReadOnlyList<{Item}> pageItems in
     client.{ApiGroup}.{Operation}(/* offset: 0, limit: 100, ... */, ct))
 {
     foreach (var item in pageItems)
         Process(item);
+
+    if (++pages >= MaxPages)
+        break;          // or log + throw: silently truncating a result set is its own defect
 }
 ```
 
 Each step yields **one page** (a list of items) — nest a loop to walk items, or flatten as you prefer. A
 failed page fetch throws `SdkException<TError>` mid-enumeration (see **dotnet-error-handling**).
+
+### ⚠⚠ Never leave a page loop unbounded
+
+**"The SDK stops when the API signals the end" is a description of the happy path, not a guarantee.** The
+enumeration terminates only when the provider stops handing out a next page. Treat "the provider will tell
+me when to stop" as the *only* stop condition and you have written an unbounded loop: a provider that keeps
+returning a next-page link, a cursor that fails to advance, or a filter the provider quietly ignores will
+each spin until something else kills the request.
+
+What that failure looks like in production — the request does not return slowly, it **does not return at
+all**:
+
+```
+status=0  upstream=55909
+CLIENT_ERROR:TaskCanceledException:The request was canceled due to the configured
+HttpClient.Timeout of 75 seconds elapsing.
+```
+
+Tens of thousands of provider calls billed, the caller left holding a dead request, and no error the
+provider can be blamed for. The bug is entirely on the consuming side.
+
+**Every page loop needs at least one bound that does not depend on the provider's cooperation.** Pick the
+one that matches the use case; a page cap is the cheapest and is never wrong:
+
+| bound | use when | shape |
+|---|---|---|
+| **page cap** | always — the backstop | `if (++pages >= MaxPages) break;` |
+| **item cap** | the caller wants "the first N" | `if (results.Count >= max) break;` |
+| **deadline** | the call sits behind a request timeout | `cts.CancelAfter(TimeSpan.FromSeconds(20))` and pass its token |
+| **no-progress guard** | cursor/offset paging | stop if the cursor or offset did not change between pages |
+
+Prefer to **narrow the query before you page it**: a provider-side date range, status filter, or
+`pageSize` that matches what the caller needs turns "walk everything" into a handful of pages. Paging the
+whole collection and filtering client-side is the slow path even when it terminates.
+
+**A bound that silently truncates is a different defect from one that hangs.** When you hit the cap, either
+surface it to the caller or log it — never return a partial page set that reads like a complete one.
 
 **No-throw variant.** Where generated, a sibling `{Operation}Result` returns
 `IAsyncEnumerable<ApiResult<{PageResponse}, TError>>` — the same streaming, but each page is an `ApiResult`
@@ -266,6 +310,9 @@ await foreach (var result in client.{ApiGroup}.{Operation}Result(/* ... */, ct))
 > Not every list endpoint is paginated. An operation with no pagination metadata is a plain list call
 > (returns a list or a wrapper — see **dotnet-calling-endpoints**); to page one of those, drive its own
 > `page`/`perPage` query params yourself and stop when a page returns fewer than `perPage` items.
+> **A hand-driven loop needs the same bound as an auto-paginated one** — "fewer than `perPage`" and
+> "no next-page link" are both provider-supplied stop conditions, and neither is a bound. Carry a page
+> cap alongside it (see *Never leave a page loop unbounded* above).
 
 ## Streaming (Server-Sent Events)
 

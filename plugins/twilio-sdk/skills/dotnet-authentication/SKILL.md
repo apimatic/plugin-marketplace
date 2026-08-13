@@ -134,6 +134,51 @@ client wires the AND/OR composition for you.
 
 Some endpoints/APIs need no credentials (`NoneAuthScheme`) — leave the credentials properties unset.
 
+## ⚠ Missing credentials must stop the app from starting
+
+Every section above covers supplying a credential. This one covers its **absence** — the case a
+configuration-driven app hits in the real world, and the one most integrations get wrong.
+
+**A required credential that is not configured is a deployment fault, not a request fault.** If the app
+boots with a blank secret, the failure surfaces later as a `401` from the provider on whichever unlucky
+request arrives first: an operator sees a provider outage, retry logic hammers a call that can never
+succeed, and the actual cause — an unset environment variable — is two layers away from the symptom.
+
+**Validate at startup and refuse to boot.** Bind the credentials into an options object and make the host
+check it before the app serves anything:
+
+```csharp
+builder.Services
+    .AddOptions<{Api}Settings>()
+    .Bind(builder.Configuration.GetSection("{Api}"))
+    .ValidateDataAnnotations()      // [Required] on each credential property
+    .ValidateOnStart();             // throws during startup, not on first request
+```
+
+`ValidateOnStart()` is the load-bearing call — without it, `IOptions<T>` validation is lazy and fires on
+first resolution, which is a request, which is exactly the late failure you are trying to avoid. For a
+console app or anywhere the options pipeline is overkill, an explicit guard is equally acceptable as long
+as it runs **before** the app is ready:
+
+```csharp
+if (string.IsNullOrWhiteSpace(settings.{Credential}))
+    throw new InvalidOperationException(
+        "{Api}:{Credential} is not configured. Set it via environment variable, user-secrets, " +
+        "or your secret store before starting the app.");
+```
+
+Three rules for the message it fails with:
+
+- **Name the missing config key**, so the operator knows what to set. `"{Api}:{Credential} is not
+  configured"` — not `"authentication failed"`.
+- **Never echo the value**, present or absent — no length, no prefix, no masked form. A "configured:
+  AC1234…" line is a secret in a log.
+- **Do not fall back to a default, a placeholder, or an unauthenticated client.** Booting degraded hides
+  the fault and pushes it to the first caller.
+
+Check every credential the scheme requires. Basic auth needs both halves — a username with an empty
+password is misconfigured, not partially configured.
+
 ## Notes
 
 - A given SDK only exposes the credentials properties for the schemes its API uses; those names are
