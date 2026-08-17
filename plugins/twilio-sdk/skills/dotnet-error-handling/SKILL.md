@@ -238,11 +238,13 @@ code has a single failure type to handle instead of two unrelated ones:
 ```csharp
 catch (SdkException<RawError> ex)                // API error (non-2xx)
 {
-    throw new {ProviderException}("...", ex);
+    // Carry the status. The boundary ladder below is the only place it can be read back, and a
+    // status dropped here cannot be recovered anywhere downstream.
+    throw new {ProviderException}("...", ex.Error.StatusCode, ex);
 }
 catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)  // connection failure
 {
-    throw new {ProviderException}("provider unreachable", ex);
+    throw new {ProviderException}("provider unreachable", ex);   // no status — nothing answered
 }
 ```
 
@@ -272,6 +274,32 @@ error, carry its HTTP status on your own error type and map it back deliberately
 client **4xx**; a transport failure or an unknown error has no meaningful client status and should
 surface as **5xx**. Collapsing every failure into one blanket status (e.g. 502 for everything)
 throws away the one signal that separates "you sent something invalid" from "the provider is down."
+
+One ladder, in the single place where your error type becomes a caller-facing status. This is where
+the status you carried gets read back — a `{ProviderException}` arm with **no status branch** is
+incomplete, and is the most common way this rule is lost:
+
+```csharp
+static (int Status, string Message) Map(Exception ex) => ex switch
+{
+    // OUR credentials or OUR quota — the caller did nothing wrong and cannot fix it.
+    {ProviderException} p when (int?)p.StatusCode is 401 or 403 => (502, "Provider unavailable."),
+    {ProviderException} p when (int?)p.StatusCode is 429        => (503, "Temporarily unavailable."),
+
+    // The provider rejected THE CALLER'S request — hand back the same status so they can act on it.
+    {ProviderException} p when (int?)p.StatusCode is >= 400 and < 500 => ((int)p.StatusCode!, p.Message),
+
+    // Transport, timeout, provider 5xx — no meaningful caller status.
+    {ProviderException} p => (502, p.Message),
+
+    _ => (500, "Unexpected error."),
+};
+```
+
+**Not every provider 4xx is the caller's fault.** A `401`/`403` means *your* credentials are wrong
+and a `429` means *your* quota is spent — passing either straight through tells the caller they are
+unauthenticated or throttled when they are neither. Those two belong in the 5xx bucket; the rest of
+the 4xx range is the caller's to fix.
 
 **An unreadable body is not one case but two — decide which before you map it.** An unreadable
 **success** body is genuinely unknown: 5xx. An unreadable **error** body is not — the provider
