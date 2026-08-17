@@ -115,6 +115,24 @@ Notes:
 - `OnRetry`'s `RetryAttempt` also carries `Reason` — `RetryReason.Status(HttpStatusCode)` or
   `RetryReason.Failure(Exception)` — log it to record *why* each retry fired.
 
+⚠▶▶ **A per-attempt timeout does not bound a REQUEST.** If one handler makes more than one SDK call —
+a loop over recipients, a fan-out, a send-then-schedule pair — the per-call timeouts **add up**, and
+they add up *faster* when each failure is caught so the work can continue: every swallowed timeout
+costs its full bound and the next call still runs. Two calls at 30s is a 60s request; three is 90s.
+Put one deadline on the whole handler and pass its token to every call inside it:
+
+```csharp
+using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+cts.CancelAfter(TimeSpan.FromSeconds(20));    // the REQUEST's budget, not one call's
+var deadline = cts.Token;
+// pass `deadline` — not `ct` — to every SDK call in this handler
+```
+
+**The check, and it is arithmetic, not judgement:** `calls in this handler × per-call timeout` must
+sit under the budget you are willing to make a caller wait. If it does not, the per-call timeout is
+not a bound on anything the caller can perceive. Count the calls in the loop, not the calls in the
+snippet — a handler that messages every number on file has as many calls as there are numbers.
+
 ### Making a write safe under transport retries
 
 **Retries cannot be turned off.** The exception predicate consults no `RetryOptions` member, so no setting
