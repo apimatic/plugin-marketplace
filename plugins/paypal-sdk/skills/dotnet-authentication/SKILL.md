@@ -69,8 +69,10 @@ options.{OAuthProperty} = new OAuth2ClientCredentials
 };
 ```
 
-The SDK fetches and caches the token, acquiring a fresh one when it expires; on a `401` it invalidates the
-cached token and re-acquires.
+The SDK fetches and caches the token, acquiring a fresh one when it expires. On a `401` it invalidates the
+cached token so the NEXT call acquires a new one — it does **not** re-issue the request that failed. A
+request that 401s because the token expired mid-flight therefore surfaces to you as an error; retry it
+yourself if you need it to recover.
 
 ## OAuth 2.0 — authorization code (3-legged, with PKCE)
 
