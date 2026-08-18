@@ -15,6 +15,11 @@
       "name": "acp-paypal",
       "source": "./plugins/acp-paypal",
       "description": "Integrate and debug PayPal APIs using the acp-paypal MCP server."
+    },
+    {
+      "name": "maxio-sdk-merged",
+      "source": "./plugins/maxio-sdk-merged",
+      "description": "Install and consume the Maxio Advanced Billing .NET SDK, grounded in a bundled SDK map. A single maxio-sdk agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-maxio router + the maxio-sdk agent. No MCP server. (Do not install alongside maxio-sdk or maxio-sdk-clone — they share skill/agent names.)"
     }
   ]
 }
