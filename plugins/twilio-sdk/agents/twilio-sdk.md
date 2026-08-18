@@ -177,10 +177,10 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    most expensive mistake you can make in a sheet.** A trap note that answers its own question
    gives the main agent a usable one-liner, and a main agent holding a usable one-liner does not
    open the skill. It implements from your sentence, and everything the skill carries beyond that
-   sentence — the sibling traps, the shapes, the boundary cases — never reaches the code. Measured
-   consequence: a sheet whose error-handling trap note resolved inline produced an integration with
-   a single-status catch and no boundary at all, and the skill that prevents exactly that was named
-   in the sheet's own REQUIRED READING and never loaded.
+   sentence — the sibling traps, the shapes, the boundary cases — never reaches the code. The concrete
+   failure: a trap note that resolves its own question inline leaves the main agent with a
+   single-status catch and no error boundary, because the skill that prevents exactly that was
+   named in REQUIRED READING and never opened.
 
    So: **state the hazard, state what it costs, hand over the skill, and stop.** No fix, no
    snippet, no "use X instead", not even a partial answer. If you catch yourself writing the
