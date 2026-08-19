@@ -1,6 +1,6 @@
 ---
 name: integrate-maxio
-description: Entry point for Maxio Advanced Billing (formerly Chargify) .NET SDK work in a C#/.NET project. Load this first when asked to integrate Maxio billing — subscriptions, customers, usage, invoices, plan changes — or when a Maxio SDK call errors or behaves unexpectedly. Defines the delegation contract, the agent reuse rules, and which companion skills are required reading before you write code.
+description: MANDATORY FIRST STEP for Maxio Advanced Billing (formerly Chargify) .NET SDK work in a C#/.NET project — load this BEFORE spawning the maxio-sdk agent, not after; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate Maxio billing in C# — subscriptions, customers, usage, invoices, plan changes, components, coupons — or when a Maxio SDK call errors or behaves unexpectedly. Knowing to delegate to the maxio-sdk agent is NOT a substitute for loading this, because it carries five binding gates stated NOWHERE else and not inferable from the agent description — (1) the exact plan-file path you must dictate to the agent, (2) the no-project-file-edits window while the agent runs, (3) the hard gate that the plan file exists and has been read before any code, (4) the mandatory load of every dotnet-* companion skill the contract sheet names, and (5) the map boundary, where the SDK map and maxio-getting-started are the agent's to open and never yours.
 ---
 
 # Maxio Advanced Billing .NET SDK — Router (map + one agent)
