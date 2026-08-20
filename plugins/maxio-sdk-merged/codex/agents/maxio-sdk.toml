@@ -1,15 +1,21 @@
-# GENERATED FILE - do not edit by hand.
-# Source: plugins/maxio-sdk-merged/agents/maxio-sdk.md
-# Regenerate: python codex/agents/generate-codex-agent.py
+# Codex carrier for the maxio-sdk agent. HAND-MAINTAINED.
 #
-# Codex defines a custom subagent as a TOML file in a config-layer agents/ directory
-# (~/.codex/agents/ personal, .codex/agents/ project-scoped, or $CODEX_HOME/agents/).
-# It does NOT read a plugin agents/*.md, and .codex-plugin/plugin.json has no agents
-# key. So this file is the Codex-shaped carrier for the SAME agent brief that Claude
-# Code and Cursor load from the .md - identical instructions, different invocation.
+# Claude Code and Cursor load this agent from plugins/maxio-sdk-merged/agents/maxio-sdk.md
+# via their plugin manifests. Codex cannot: it defines a custom subagent as a TOML file in a
+# config-layer agents/ directory (~/.codex/agents/, .codex/agents/, or $CODEX_HOME/agents/),
+# keyed on `developer_instructions`. .codex-plugin/plugin.json has no agents key. So this file
+# is the Codex-shaped carrier for the SAME brief - identical instructions, different surface.
 #
-# The harness copies this into $CODEX_HOME/agents/ at provision, so benchmark runs
-# need no manual install. A human working by hand copies it to .codex/agents/.
+# >>> KEEP developer_instructions BELOW IN SYNC WITH agents/maxio-sdk.md <<<
+# It is that file's body verbatim. If the two drift, Claude/Cursor and Codex run DIFFERENT
+# briefs, and a cross-agent comparison silently becomes a cross-brief comparison with no
+# error to warn you. Edit both files in the same commit, always.
+#
+# The benchmark harness copies this into the per-run $CODEX_HOME/agents/ at provision, so runs
+# need no manual install. A human working by hand copies it to .codex/agents/ and restarts Codex.
+#
+# Verified live 2026-08-20 (codex-cli 0.147.0, gpt-5.6-sol): the agent binds by name
+# (agent_path=/root/maxio_sdk) and the brief reaches the child as a `developer` role message.
 
 name = "maxio-sdk"
 
