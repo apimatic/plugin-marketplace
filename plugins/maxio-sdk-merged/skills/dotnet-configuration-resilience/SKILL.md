@@ -133,6 +133,15 @@ varied per call.
 Option 3 is a mitigation, not an answer. The four, **weakest guarantee first** — so do not read the numbering
 as a recommendation order:
 
+**All four govern the call *you* make to the provider. None of them is a reason to change the contract
+your own callers see.** You still owe the guarantee — you owe it *without* a new precondition on the
+caller. Do not turn duplicate suppression into a new required input, a new required header, or a
+refusal of a caller whose request is well-formed: the obligation is yours to discharge, and pushing it
+outward means a correct caller is now rejected. And if you build option 4, the guard needs a release.
+A claim, lease or "already sent" marker with no expiry and no recovery path converts one transient
+failure into a permanent refusal of that operation, which is a worse outcome than the duplicate it
+prevented. Decide what releases the guard before you write it.
+
 1. **Make the write idempotent at the provider** — a client-supplied unique reference or idempotency key,
    where the API offers one. Makes a resend *harmless* rather than rarer; the send count stays above one.
    Check the write's request model for a client-supplied unique field (the contract sheet lists the fields) —

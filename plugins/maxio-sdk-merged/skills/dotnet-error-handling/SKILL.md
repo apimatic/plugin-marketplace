@@ -292,6 +292,18 @@ convert it to your own error type with a caller-safe message:
         throw new {ProviderException}("The provider returned a response that could not be processed.", ex);
     }
 
+**A field the model types as optional is not a broken body.** Two things look alike at this
+boundary and must not be conflated. The body **would not parse** — a wrong type, or a `required`
+member absent: the SDK already raises `JsonException` for that, which is the case above, and you
+*catch* it rather than detect it. Or the body parsed and an **optional** field is null: the map types
+every field it does not mark `!req` as optional, so that is the provider's documented normal.
+
+Never write a check that promotes the second case into the first. Requiring a field the model types
+optional turns a successful call into a reported provider failure that did not happen, and mapping it
+to a 5xx tells a retrying caller to retry something that will never change. If your integration
+genuinely cannot proceed without an optional value, answer that as a client error naming the field —
+never as a 5xx, and never before the call.
+
 **The same exception also arrives from the *error* path, and means the opposite.** `{Operation}Error`
 models are generated per operation and can disagree with the body the API really sends on that
 status. When they do, the deserialization runs *while the error object is being constructed*, so the

@@ -180,8 +180,15 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    Then one table row per operation: controller property · method signature (params in order,
    types, required-but-nullable flags) · request model + its fields (`Name (wire_name): type,
    required?`) · response envelope + the inner fields the integration reads · error case A/B +
-   accessors + payload type · pagination. Below it: the enum value tables actually needed, and the
-   client construction/auth/server-node facts.
+   accessors + payload type · pagination. Below it: the client construction/auth/server-node facts,
+   and **the full value table for every enum-typed field of every request model the sheet names** —
+   all of them, not the ones you judge the implementer will need. You are the only channel: a value
+   you leave out is unrecoverable downstream, because the implementer is barred from the map. Before
+   you finish, re-read your sheet against the map rows you opened and confirm every enum-typed field
+   of every named request model has its values listed. Do not write a rationale for omitting a
+   contract fact, and do not pre-excuse a failure the omission may cause — an assumption about the
+   user's intent belongs in **Assumptions & Blockers**; an argument that a field is unnecessary
+   belongs nowhere.
 3. **Trap notes** — one line per hazard, attached to the step where it bites, each ending in an
    inline **`MUST load <skill>`** pointer. Name the hazard and its consequence; do not resolve it
    (see *How to ground* step 4). Shape:
