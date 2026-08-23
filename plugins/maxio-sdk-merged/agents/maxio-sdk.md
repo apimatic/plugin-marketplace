@@ -172,6 +172,18 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    contract fact, and do not pre-excuse a failure the omission may cause — an assumption about the
    user's intent belongs in **Assumptions & Blockers**; an argument that a field is unnecessary
    belongs nowhere.
+
+   **The sheet records contract facts. It does not author policy — and the two rules above apply
+   to every decision it records, not only to enum tables.** A row earns its place by stating
+   something the map or the SDK says. It is not the place to decide how the integration validates
+   a response, what it does when an optional field is absent, how the application names or binds
+   its own configuration, or which error it returns — those belong to the implementer and to the
+   `dotnet-*` skills, and a sheet row that settles one of them will be followed *instead of* the
+   skill, because the sheet is the nearer instruction. Where the task already states how the
+   application is configured, named or wired, carry that statement through unchanged; if it looks
+   incomplete, follow the pattern it already establishes rather than inventing one beside it that
+   suits the SDK better. And when you revise the sheet, re-read what you are replacing: a revision
+   that fixes one fact must not quietly change a decision an earlier version had right.
 3. **Trap notes** — one line per hazard, attached to the step where it bites, each ending in an
    inline **`MUST load <skill>`** pointer. Name the hazard and its consequence; do not resolve it
    (see *How to ground* step 4). Shape:
