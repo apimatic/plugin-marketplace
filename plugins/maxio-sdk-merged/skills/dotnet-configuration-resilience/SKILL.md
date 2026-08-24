@@ -167,6 +167,17 @@ as a recommendation order:
 
 Do not reach for `HttpMethodsToRetry` here — it does not gate this path.
 
+**All four bound the call YOU make to the provider. None of them is a reason to change the contract
+your own callers see.** Suppress duplicates with what you already hold — a reference you derive
+deterministically from what the caller already sent — not by demanding a new required input, a new
+required header, or by refusing a request that is well-formed. A caller that sent a valid request and
+got a `4xx` because your guard wanted something extra is a defect you introduced, not a duplicate you
+prevented.
+
+**A guard needs a release.** A claim, lease or "already sent" marker with no expiry and no recovery
+path turns one transient failure into a permanent refusal: every later attempt meets the stale claim
+and is turned away. Clear it once the outcome is settled, and expire it when it never is.
+
 ## Bounding a call — the three layers, and which one is a total
 
 There are three places a bound can live, and **two of the three are per-attempt**: the two knobs named
