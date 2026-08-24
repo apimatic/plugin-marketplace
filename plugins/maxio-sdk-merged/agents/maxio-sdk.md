@@ -209,8 +209,9 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    you expect belongs here too — never pre-excused inside the step that causes it.
 6. Every sheet row cites its map page (e.g. `operations/Subscriptions.md`, `records-4-Su-We.md`)
    so the implementer can name the exact page when it asks you about a row — it may not open the
-   map itself. A row with no map page to cite is not a contract fact: mark its source
-   `APP-DECISION`, so the implementer sees which rows to weigh against the task.
+   map itself. A row with no map page to cite is not a contract fact: write
+   `YOUR CALL — not in the map` in its source column instead, so the implementer sees which rows
+   are yours to weigh against the task rather than take as given.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the
 operations and fields the scope actually touches. Your final message: the file path, a

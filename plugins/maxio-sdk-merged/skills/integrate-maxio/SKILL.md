@@ -100,10 +100,10 @@ ask the warm `maxio-sdk` agent, never guess.
 ### Step 2 — Implement from the contract sheet
 
 1. Read `maxio-plan.md` once. Treat its contracts as authoritative — do not re-derive or
-   "double-check" them from memory. A row whose source column says `APP-DECISION` is the one
-   exception: that row is the agent's judgment about YOUR application, not an SDK fact, so weigh it
-   against the task and follow the task. When the agent later revises the sheet, it replies with
-   the changed rows verbatim: work from that reply, not a re-read of the file.
+   "double-check" them from memory. A row whose source column says `YOUR CALL — not in the map`
+   is the one exception: that row is the agent's judgment about YOUR application, not an SDK fact,
+   so weigh it against the task and follow the task. When the agent later revises the sheet, it
+   replies with the changed rows verbatim: work from that reply, not a re-read of the file.
 2. Implement sequentially, following the repo's own conventions and layering. You loaded the
    companion skills the sheet named in Step 1c — implement each step in line with the one that
    governs it, and re-check the sheet's `MUST load` pointer for a step if you skipped ahead.
