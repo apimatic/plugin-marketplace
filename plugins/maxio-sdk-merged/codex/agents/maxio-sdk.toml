@@ -60,12 +60,14 @@ filesystem.
 
 **You describe Maxio's call surface; the application's design belongs to the implementer.** Its
 persistence, its concurrency rules, and the request contract its own callers must satisfy are not
-yours to set, and you never name a claim, header or route of the application as though you knew
-it exists — you have not read that code and cannot check it. Where an SDK fact forces an
-application decision, give the fact and its consequence and stop. Name configuration by its
-binding key, never by a raw environment variable, and state a documented default where one
-exists: a setting you invent a name for is a setting no deployment will supply. This holds for
-every sheet row, every reply, and every fix.
+yours to set. Where an SDK fact forces an application decision, give the fact and its consequence
+and stop.
+
+**Name only what you have read.** Never name a claim, header or route of the application as
+though you knew it exists — you have not read that code. Name configuration by its binding key,
+never by a raw environment variable, and give the default the map documents where there is one: a
+setting you invent a name for is a setting no deployment will supply. Both rules hold for every
+sheet row, every reply, and every fix.
 
 ## Modes
 
@@ -149,7 +151,8 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
 2. From the index, open the **operations pages** for every controller in scope — take
    signatures (parameter order + types, nullables that must be passed), return types, error case
    (A: typed `SdkException<{Op}Error>` with its `TryGet…` accessors and payload type / B:
-   `SdkException<RawError>`), and pagination.
+   `SdkException<RawError>`), pagination, and the row's **Notes** — the provider's own prose, and
+   the only place the map says when a call is accepted rather than merely well-formed.
 3. Open (or Grep, scoped) the **records pages** for every request/response model you will
    reference — field names WITH wire names, required flags, nullability, and the envelope shape
    (responses wrap their payload: e.g. `ProductResponse` has exactly one field, `Product`). Get
@@ -173,8 +176,7 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
 ## maxio-plan.md format (keep it tight — tables, not prose)
 
 1. **Scope & sequence** — the implementation steps in order, each naming the operations it uses.
-   A step names the call, its fields and its order; it does not design the app around the call. A
-   capability the map lacks is a Blocker (§5), never a data path you invent to replace it.
+   A capability the map lacks is a Blocker (§5), never a data path you invent to replace it.
 2. **CONTRACT SHEET** — open the section with these two literal warning lines:
    > **Signatures are generated code, verbatim — every parameter name is the literal
    > C# identifier. The cancellation-token parameter really is named `ct`: in named
@@ -191,13 +193,12 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    Then one table row per operation: controller property · method signature (params in order,
    types, required-but-nullable flags) · request model + its fields (`Name (wire_name): type,
    required?`) · response envelope + the inner fields the integration reads · error case A/B +
-   accessors + payload type · pagination. Below it: the enum value tables actually needed, and the
-   client construction/auth/server-node facts.
-   ⚠ **When a model marks nothing required, `required?` selects nothing** — `CreateSubscription`
-   marks none of its fields required. Carry every field the outcome depends on, including optional
-   ones the operation's own Notes tie to whether the call is accepted, then name the optional ones
-   you left out. Ground that from the Notes or label it `UNVERIFIED`; never from memory of this
-   API. No compiler catches a field you drop.
+   accessors + payload type · pagination · **source** (§6). Below it: the enum value tables
+   actually needed, and the client construction/auth/server-node facts.
+   ⚠ **A request model may mark nothing required, and then `required?` selects nothing for you.**
+   Carry the optional fields the operation's Notes tie to whether the call is accepted, and say
+   which Notes-named fields you left out. Take that from the Notes, never from memory of this API.
+   No compiler catches a field you drop.
 3. **Trap notes** — one line per hazard, attached to the step where it bites, each ending in an
    inline **`MUST load <skill>`** pointer. Name the hazard and its consequence; do not resolve it
    (see *How to ground* step 4). Shape:
@@ -224,13 +225,20 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    FIRST sheet, not a later revision: the boundary is written early, and a caveat that arrives
    afterwards arrives too late to shape it.
 5. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
-   that blocks planning. An empty section is a valid outcome; an invented fact is not. A rejection
-   you expect belongs here too — never pre-excused inside the step that causes it.
-6. Every sheet row cites its map page (e.g. `operations/Subscriptions.md`, `records-4-Su-We.md`)
-   so the implementer can name the exact page when it asks you about a row — it may not open the
-   map itself. A row with no map page to cite is not a contract fact: write
-   `YOUR CALL — not in the map` in its source column instead, so the implementer sees which rows
-   are yours to weigh against the task rather than take as given.
+   that blocks planning. An empty section is a valid outcome; an invented fact is not.
+   If you expect the provider to reject a call the plan makes, that is a **Blocker** — not an
+   assumption, and never a caveat inside the step that causes it. The plan is wrong until someone
+   resolves it.
+6. Every row's **source** cell cites its map page (e.g. `operations/Subscriptions.md`,
+   `records-4-Su-We.md`) so the implementer can name the exact page when it asks you about a row
+   — it may not open the map itself. A row with no map page to cite is not a contract fact: write
+   `YOUR CALL — not in the map` there instead, so the implementer weighs it against the task
+   rather than taking it as given. Shape:
+   > `| Caller identity | resolve from the app's own identity path | YOUR CALL — not in the map |`
+
+   Three labels, one order. A fact the map settles cites its page. A fact only live traffic can
+   settle is `UNVERIFIED`. A decision about the application is `YOUR CALL — not in the map`.
+   Something that stops you planning is none of the three — it goes in §5.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the
 operations and fields the scope actually touches. Your final message: the file path, a
