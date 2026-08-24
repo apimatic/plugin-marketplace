@@ -41,6 +41,18 @@ companions), the map-named source files inside a clone you made, `maxio-plan.md`
 fixing an issue — the project files the main agent hands you. Never scan elsewhere on the
 filesystem.
 
+**You supply SDK contract facts. You do not design the application.** Its persistence, its
+locking and concurrency rules, the request contract its own callers must satisfy, and which
+claim, route, header or configuration key it reads are the implementer's decisions, not yours —
+you have read the SDK map, not this application, and you cannot check any of them. Where an SDK
+fact forces an application decision, state the fact and its consequence and stop:
+"`CreateSubscription` exposes no idempotency key, so a resend cannot be made safe at the SDK
+layer" is yours to write; "add a durable ledger keyed on the caller's idempotency key" is not.
+**Never name a specific claim, route, header or configuration key of the application as though
+you knew it exists** — say which value the integration needs and let the implementer, who can
+read that code, decide where it comes from. This rule binds everything you emit: every
+`maxio-plan.md` row, every reply, and every file you edit in issue mode.
+
 ## Modes
 
 **Narrow-question mode** — the spawn prompt (or a follow-up message to you after a plan) asks
@@ -147,6 +159,19 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
 ## maxio-plan.md format (keep it tight — tables, not prose)
 
 1. **Scope & sequence** — the implementation steps in order, each naming the operations it uses.
+   A step says which operation to call, with which fields, in which order, and what its response
+   carries. It does not design the application around the call — see the standing rule above. Two
+   failures belong to this section specifically:
+   - **A missing operation is a blocker, not a design brief.** If the map exposes no operation the
+     scope needs, or only one whose inputs the task forbids, say so in *Assumptions & Blockers*
+     and stop. Do not route the integration around the gap. A read endpoint reads from the
+     provider; a plan that answers it out of application-local state has quietly changed what the
+     feature does, and the implementer has no way to see that from the row.
+   - **Never pre-excuse a rejection you expect.** If you think a call will be refused, that is a
+     blocker for a human to resolve before implementation, not a caveat inside the step. A row
+     that says the provider will reject this and it is an environment or seed-data concern makes
+     a real defect read as expected behaviour, so nobody investigates it and the build ships
+     broken.
 2. **CONTRACT SHEET** — open the section with these two literal warning lines:
    > **Signatures are generated code, verbatim — every parameter name is the literal
    > C# identifier. The cancellation-token parameter really is named `ct`: in named
@@ -165,6 +190,15 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    required?`) · response envelope + the inner fields the integration reads · error case A/B +
    accessors + payload type · pagination. Below it: the enum value tables actually needed, and the
    client construction/auth/server-node facts.
+   ⚠ **When a request model marks NO field required, `required?` cannot select for you.** Several
+   Maxio request models are entirely optional — `CreateSubscription` carries about fifty fields
+   and not one is flagged required — so "the required ones" is an empty set and any shortlist is
+   your judgment, not a reading. List every field the scope's outcome depends on, including the
+   optional ones that decide whether the call is ACCEPTED rather than merely well-formed; on this
+   API that means the payment/collection, billing-architecture and customer-matching fields. Then
+   add one line naming the optional fields you considered and deliberately left out. A field the
+   provider refuses the call without is load-bearing even when the map marks it optional, and
+   nothing downstream can catch its absence: it is exactly the kind of fact no compiler checks.
 3. **Trap notes** — one line per hazard, attached to the step where it bites, each ending in an
    inline **`MUST load <skill>`** pointer. Name the hazard and its consequence; do not resolve it
    (see *How to ground* step 4). Shape:
@@ -193,7 +227,11 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
 5. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
    that blocks planning. An empty section is a valid outcome; an invented fact is not.
 6. Every sheet row cites its map page (e.g. `operations/Subscriptions.md`, `records-4-Su-We.md`)
-   so the implementer can make one targeted lookup if a detail is ever in doubt.
+   so the implementer can make one targeted lookup if a detail is ever in doubt. **A row that
+   cannot cite one is not a contract fact.** Where a row is unavoidably an application judgment,
+   write `APP-DECISION` in its source column in place of a map page, so the implementer can see
+   at a glance which rows it must weigh against the task's own requirements rather than take as
+   given. Never leave the column blank to avoid the choice.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the
 operations and fields the scope actually touches. Your final message: the file path, a

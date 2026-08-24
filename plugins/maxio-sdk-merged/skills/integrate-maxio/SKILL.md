@@ -100,7 +100,13 @@ ask the warm `maxio-sdk` agent, never guess.
 ### Step 2 — Implement from the contract sheet
 
 1. Read `maxio-plan.md` once. Treat its contracts as authoritative — do not re-derive or
-   "double-check" them from memory. When the agent later revises the sheet, it replies with
+   "double-check" them from memory. **That authority covers SDK contract facts** — signatures,
+   wire names, envelope shapes, error accessors, enum values. It does not extend to application
+   design. A row that prescribes persistence or locking, adds a required input for your own
+   callers, or names a claim, route or config key of this repo is advice, not contract — as is
+   any row marked `APP-DECISION` or citing no map page. Check those against the task's own
+   requirements and against this repo's code, and follow the task. Send the row back to the
+   agent when the two conflict. When the agent later revises the sheet, it replies with
    the changed rows verbatim: work from that reply, not a re-read of the file.
 2. Implement sequentially, following the repo's own conventions and layering. You loaded the
    companion skills the sheet named in Step 1c — implement each step in line with the one that
