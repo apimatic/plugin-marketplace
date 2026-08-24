@@ -93,9 +93,10 @@ A null collection is omitted from the JSON; an **empty** collection is serialize
 
 Enums are type-safe string-enums (`StringEnum<T>`) or int-enums (`IntEnum<T>`): use the static constants,
 or `FromValue(...)` for a value not known at compile time; they convert implicitly to their underlying
-value. Reading back: `.Value` (equivalently `ToString()` or the implicit conversion) yields the raw wire
-value, and the enum types are `record`s, so `==` compares by value — `{EnumType}.FromValue("x")` equals the
-`x` constant. Guard unknown values with `TryGetKnownValue(...)` or `instance.IsKnownValue()`.
+value. Reading back: `.Value` (or the implicit conversion) yields the raw wire value — **never
+`ToString()`**, which on these `record` types prints `{EnumType} { Value = x }` and lands that in your
+API responses. The enum types being `record`s is also why `==` compares by value —
+`{EnumType}.FromValue("x")` equals the `x` constant. Guard unknown values with `TryGetKnownValue(...)` or `instance.IsKnownValue()`.
 
 ⚠ **`FromValue` is emitted per enum, not guaranteed on all of them.** Some generated enums — server /
 environment selectors are the ones to watch — expose only their static constants and keep the conversion
