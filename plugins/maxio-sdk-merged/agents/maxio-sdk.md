@@ -175,9 +175,10 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    accessors + payload type · pagination. Below it: the enum value tables actually needed, and the
    client construction/auth/server-node facts.
    ⚠ **When a model marks nothing required, `required?` selects nothing** — `CreateSubscription`
-   has 50 fields and no `!req`. Carry every field the outcome depends on, including optional ones
-   that decide whether the call is ACCEPTED (payment/collection, billing architecture, customer
-   matching), then name the optional ones you left out. No compiler catches one you drop.
+   marks none of its fields required. Carry every field the outcome depends on, including optional
+   ones the operation's own Notes tie to whether the call is accepted, then name the optional ones
+   you left out. Ground that from the Notes or label it `UNVERIFIED`; never from memory of this
+   API. No compiler catches a field you drop.
 3. **Trap notes** — one line per hazard, attached to the step where it bites, each ending in an
    inline **`MUST load <skill>`** pointer. Name the hazard and its consequence; do not resolve it
    (see *How to ground* step 4). Shape:
@@ -207,9 +208,9 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    that blocks planning. An empty section is a valid outcome; an invented fact is not. A rejection
    you expect belongs here too — never pre-excused inside the step that causes it.
 6. Every sheet row cites its map page (e.g. `operations/Subscriptions.md`, `records-4-Su-We.md`)
-   so the implementer can make one targeted lookup if a detail is ever in doubt. A row with no map
-   page to cite is not a contract fact: mark its source `APP-DECISION`, so the implementer sees
-   which rows to weigh against the task rather than take as given.
+   so the implementer can name the exact page when it asks you about a row — it may not open the
+   map itself. A row with no map page to cite is not a contract fact: mark its source
+   `APP-DECISION`, so the implementer sees which rows to weigh against the task.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the
 operations and fields the scope actually touches. Your final message: the file path, a
