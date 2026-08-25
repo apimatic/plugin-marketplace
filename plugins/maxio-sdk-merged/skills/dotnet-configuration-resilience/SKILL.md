@@ -3,6 +3,20 @@ name: dotnet-configuration-resilience
 description: Client configuration and resilience for an APIMatic-generated .NET SDK in C# — retries and backoff, timeouts and cancellation, base-URL/server selection, list pagination, SSE streaming, and request/response logging. Load before you register or tune the client — the option names alone do not reveal which calls retry, what a timeout actually bounds, or what you must still set yourself.
 ---
 
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: 2026-08-25 — NOT covered: the pagination section — this surface exposes
+     ExecutePagedItems / ExecutePagedPages / ExecutePagedResults and the sampled SDK generates no
+     paginated operation, so which shape an operation gets could not be settled. Covered: retry predicate, empty-pipeline behaviour and absence of LoggingOptions re-confirmed correct for this surface; the text was deliberately left unchanged.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
+
 # Configuration & resilience for an APIMatic .NET SDK
 
 All types below live under `{RootNamespace}.Core.Configuration` / `.Servers` and are generic across

@@ -3,6 +3,19 @@ name: dotnet-calling-endpoints
 description: Calling operations on an APIMatic-generated .NET SDK in C# — finding the controller that owns an operation, required vs optional parameters, request and response envelope shapes, async usage, and cancellation. Load before writing the first call to an SDK operation, or when an operation's shape or return type is unclear.
 ---
 
+<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
+     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
+     context-plugins/twilio-csharp-sdk@main: 122 Core/*.cs, byte-identical modulo the root namespace.
+     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
+     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
+     for retry-ineligible requests.
+     verified-this-file: 2026-08-25 — the operation signature shape, including RequestOptions between the last defaulted parameter and ct. Response/model shape claims are spec-derived and NOT covered.
+     Authoritative source: the generator's own StaticCode/Core template (codegen-v2), which matches this
+     surface file-for-file. The one pre-4.0.0 SDK sampled has none of the seven features above; treat any
+     other pre-4.0.0 SDK as unverified. Do NOT copy runtime claims across a core-surface boundary —
+     check this stamp in both files first. -->
+
 # Calling endpoints on an APIMatic .NET SDK
 
 Operations are **async methods** on the client. Most are **grouped under a controller property** and called
@@ -20,14 +33,22 @@ Every endpoint method is `async` (returns a `Task`) and lays its parameters out 
 
 ```csharp
 public Task<{ReturnType}> {Operation}(
-    {non-defaulted params},            // no C# default value — listed first
-    {defaulted params} = {default},    // have a C# default (e.g. = null, = 1d) — may be skipped
-    CancellationToken ct = default);   // always last
+    {non-defaulted params},                  // no C# default value — listed first
+    {defaulted params} = {default},          // have a C# default (e.g. = null, = 1d) — may be skipped
+    RequestOptions? requestOptions = null,   // on EVERY operation — see below
+    CancellationToken ct = default);         // always last
 ```
 
 - **Parameter order is fixed:** parameters **without a default value come first**, then parameters **with a
-  default value**, then `CancellationToken ct = default` last (C# requires defaulted parameters to follow
-  non-defaulted ones).
+  default value**, then `RequestOptions? requestOptions = null`, then `CancellationToken ct = default` last
+  (C# requires defaulted parameters to follow non-defaulted ones).
+- **`requestOptions` is on every generated operation**, between the last defaulted parameter and `ct`. It
+  is a `{RootNamespace}.Core.RequestOptions` whose only property is `LogLevel?` — a per-call logging
+  override (see **dotnet-configuration-resilience**). You will rarely set it, but you must **count** it: a
+  positional call written from a signature that leaves it out puts your `CancellationToken` where a
+  `RequestOptions?` is expected, and the call fails to compile with
+  `CS1503: Argument N: cannot convert from 'System.Threading.CancellationToken' to
+  '{RootNamespace}.Core.RequestOptions?'`. Pass `ct:` by name and the problem cannot arise.
 - **An optional parameter may still have no C# default.** Many nullable query params are generated without a
   `= null` default (e.g. `string? startDate`), so they sit in the leading group and must be passed
   explicitly (as `null`) in a positional call — which is why named arguments matter (see below).
@@ -61,8 +82,8 @@ var response = await client.{ApiGroup}.{Operation}(
     status: {EnumType}.SomeConstant,
     someFilterId: 12345d,
     someFlag: true,
-    page: 1d,
-    perPage: 100d,
+    page: 1,          // int? or double? per API — take the type from the contract sheet
+    perPage: 100,
     ct: ct);
 ```
 
@@ -156,9 +177,10 @@ exist. See **dotnet-error-handling**.
 
 ## Cancellation
 
-Every operation takes a `CancellationToken` as its last argument, passed as `ct:`. To bound an individual
-call with a timeout, use the per-request cancellation pattern in **dotnet-configuration-resilience** (it
-owns timeouts).
+Every operation takes a `CancellationToken` as its last argument, passed as `ct:`, with
+`RequestOptions? requestOptions = null` immediately before it — so `ct` is last, never second-to-last. To bound an individual call with a
+timeout, use the per-request cancellation pattern in **dotnet-configuration-resilience** (it owns
+timeouts).
 
 ## Worked example — a list/GET call
 
@@ -166,14 +188,15 @@ owns timeouts).
 // Signature (illustrative):
 //   Task<IReadOnlyList<{ItemType}>> {Operation}(
 //       {EnumType}? filter, string? startDate, string? q,
-//       double? page = 1d, double? perPage = 20d, CancellationToken ct = default);
+//       {Num}? page = {p}, {Num}? perPage = {n},        // {Num} is int? or double? PER API — check the sheet
+//       RequestOptions? requestOptions = null, CancellationToken ct = default);
 
 var results = await client.{ApiGroup}.{Operation}(
     filter: {EnumType}.SomeConstant,
     startDate: null,
     q: "search text",
-    page: 1d,
-    perPage: 20d,
+    page: 1,           // literal must match the parameter's type — a `1d` against an `int?` is CS1503
+    perPage: 20,
     ct: ct);
 
 foreach (var item in results)

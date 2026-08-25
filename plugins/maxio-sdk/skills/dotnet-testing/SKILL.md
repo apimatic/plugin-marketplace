@@ -3,6 +3,18 @@ name: dotnet-testing
 description: Unit-test code that uses an APIMatic-generated C#/.NET SDK by injecting a fake HttpClient — the client's HttpClient constructor argument is the test seam (no SDK mocking helpers) — stub success and error responses with a custom HttpMessageHandler, assert the outgoing request, assert SdkException<TError> on error paths, and register a stub client in DI. Use when writing, mocking, or stubbing tests for calls made through an APIMatic .NET SDK client — load it even after reading the constructor in the source, since the seam alone won't tell you to match the project's test stack or assert the right exception per operation.
 ---
 
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: 2026-08-25 — the send-count claim only.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
+
 # Testing code that uses an APIMatic .NET SDK
 
 The client takes an `HttpClient` in its constructor, which is the seam for testing: pass an `HttpClient`
@@ -36,7 +48,9 @@ public sealed class StubHandler : HttpMessageHandler
         HttpRequestMessage request, CancellationToken ct)
     {
         LastRequest = request;
-        return Task.FromResult(_responder(request));
+        var response = _responder(request);
+        response.RequestMessage = request;   // real HttpClient sets this; the retry predicate reads it
+        return Task.FromResult(response);
     }
 }
 
@@ -153,12 +167,18 @@ Assert.Contains("\"expected_field\"", sentJson);
 
 ## Notes
 
+- **Do not drop the `response.RequestMessage = request` line from the stub.** On this SDK's surface the
+  status arm of the retry predicate reads the verb off `response.RequestMessage`, so a stub that leaves
+  it null makes status retries silently never fire — a `503`-then-`200` test would see one request and
+  "prove" a retry policy that is in fact working.
 - Mocking libraries (Moq, NSubstitute) work too — mock `HttpMessageHandler.SendAsync` (it's `protected`,
   so use `Protected()` with Moq). The hand-written stub above avoids that friction.
-- A stubbed retryable response (`408/429/5xx`) on a retryable method will be retried by the SDK before the
-  call returns — retries apply to `GET/HEAD/PUT/OPTIONS` only by default, so a `POST` won't retry unless you
-  add its method to `HttpMethodsToRetry` (see `dotnet-configuration-resilience`). To observe retries firing,
-  have the stub return `503` then `200` and count invocations.
+- A stubbed retryable response — the default set is exactly `408, 429, 500, 502, 503, 504`, not all `5xx`
+  — on a retryable method will be retried by the SDK before the call returns. The verb filter applies to
+  *status* retries only: a `POST` won't retry on a `503` unless you add its method to `HttpMethodsToRetry`,
+  but a stub that **throws** `HttpRequestException` is a different trigger and *is* retried on every verb,
+  `POST` included (see `dotnet-configuration-resilience`). To observe status retries firing, have the stub
+  return `503` then `200` and count invocations.
 - For DI-based code, the SDK's `Add{Api}Client` resolves the **default (unnamed)** `IHttpClientFactory`
   client, so register your stub on that one, then resolve `{Api}Client` from the provider:
   ```csharp

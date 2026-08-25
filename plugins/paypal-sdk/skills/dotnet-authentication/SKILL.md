@@ -3,6 +3,19 @@ name: dotnet-authentication
 description: Authentication for an APIMatic-generated .NET SDK in C# — supplying credentials, the auth scheme and manager shape, per-environment configuration, and rotating or refreshing credentials. Load before wiring credentials or an auth scheme into the client, or when a call fails with 401/403.
 ---
 
+<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
+     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
+     context-plugins/twilio-csharp-sdk@main: 122 Core/*.cs, byte-identical modulo the root namespace.
+     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
+     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
+     for retry-ineligible requests.
+     verified-this-file: not yet audited against this surface.
+     Authoritative source: the generator's own StaticCode/Core template (codegen-v2), which matches this
+     surface file-for-file. The one pre-4.0.0 SDK sampled has none of the seven features above; treat any
+     other pre-4.0.0 SDK as unverified. Do NOT copy runtime claims across a core-surface boundary —
+     check this stamp in both files first. -->
+
 # Authenticating an APIMatic .NET SDK client
 
 How you authenticate depends on the security scheme(s) the API uses. APIMatic surfaces each scheme as a

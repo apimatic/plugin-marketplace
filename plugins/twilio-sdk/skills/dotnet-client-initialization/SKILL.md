@@ -3,6 +3,19 @@ name: dotnet-client-initialization
 description: Creating and registering an APIMatic-generated .NET SDK client in C# — construction, the builder/options shape, HttpClient ownership and lifetime, and dependency-injection registration in ASP.NET Core. Load before wiring the client into an application's service container or writing the factory that builds it.
 ---
 
+<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
+     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
+     context-plugins/twilio-csharp-sdk@main: 122 Core/*.cs, byte-identical modulo the root namespace.
+     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
+     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
+     for retry-ineligible requests.
+     verified-this-file: not yet audited against this surface.
+     Authoritative source: the generator's own StaticCode/Core template (codegen-v2), which matches this
+     surface file-for-file. The one pre-4.0.0 SDK sampled has none of the seven features above; treat any
+     other pre-4.0.0 SDK as unverified. Do NOT copy runtime claims across a core-surface boundary —
+     check this stamp in both files first. -->
+
 # Initializing an APIMatic .NET SDK client
 
 This applies to **any** APIMatic-generated .NET SDK. Replace placeholders with the real names from the
@@ -37,13 +50,17 @@ public class {Api}ClientOptions
 {
     public ServerEnvironment Environment { get; set; } = ServerEnvironment.Default();
     public RetryOptions Retry { get; set; } = RetryOptions.Default();
+    public LoggingOptions Logging { get; set; } = new();
     public ServerOptions Server { get; set; } = new();
     // + one nullable credentials property per auth scheme the API declares
 }
 ```
 
-Tuning these knobs — `Retry` (retries, backoff, per-attempt timeout) and `Server` / `Environment` (server
-selection and **overriding the base URL**), plus pagination and logging — is covered in
+`Logging` is a real property, not a placeholder — the SDK has a **built-in** request/response logger, and
+leaving `Logging.LoggerFactory` unset does more than silence it: it hands control to a `{APICLIENT}_LOG`
+environment variable that can switch logging (including unredacted JSON request bodies) on from outside your
+code. Set it explicitly. Tuning these knobs — `Retry` (retries, backoff, per-attempt timeout), `Logging`, and
+`Server` / `Environment` (server selection and **overriding the base URL**), plus pagination — is covered in
 **dotnet-configuration-resilience**.
 
 ## Direct instantiation
@@ -119,8 +136,9 @@ yourself over a **named** `HttpClient` — the same shape the extension uses, mi
 ### Registering over a named `HttpClient`
 
 The full shape. **`Timeout` is not optional to think about** — the default is `100s`, which matches the SDK's
-own per-attempt retry timeout, so on defaults a hung provider costs you ~100s before anything gives way. That
-is an outage, not a timeout:
+own per-attempt retry timeout. On defaults a hung provider costs you ~100s on a `POST` and **~407s on a
+`GET`**, because the SDK's per-attempt timeout is itself a retry trigger on the retryable verbs (see
+**dotnet-configuration-resilience**). Either number is an outage, not a timeout:
 
 ```csharp
 using {RootNamespace};
@@ -148,7 +166,8 @@ services.AddSingleton(sp =>
 ```
 
 Both knobs above are load-bearing and they answer different failures: `PooledConnectionLifetime` keeps DNS
-fresh behind a long-lived client, and `Timeout` stops a hung provider from pinning a request thread. Setting
+fresh behind a long-lived client, and `Timeout` stops a hung provider from holding a request, a pooled connection and the caller open (~100s,
+and ~407s on a retryable verb — see **dotnet-configuration-resilience**). Setting
 only the first is the common mistake — it looks like the resilience box is ticked.
 
 Then inject it:

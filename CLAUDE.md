@@ -112,6 +112,15 @@ Twilio **.NET SDK** plugin with the same single-agent shape, over
 `github.com/context-plugins/twilio-csharp-sdk`. Ships Claude Code, Cursor and Codex manifests; the Codex
 carrier is `codex/agents/twilio-sdk.toml`, kept in sync with `agents/twilio-sdk.md` by hand.
 
+## The `dotnet-*` companion skills are shared, but not uniform
+
+Five plugins (`maxio-sdk`, `maxio-sdk-lean`, `maxio-sdk-merged`, `paypal-sdk`, `twilio-sdk`) each carry
+their own copy of the seven `dotnet-*` skills. The copies have **drifted**, and the drift is not
+accidental: they describe the emitted `Core/`, and the SDKs behind these plugins come from **two different
+generator versions**. Before editing any `dotnet-*` skill, see the provenance stamp at the top of that
+file — it names the generator surface the text was verified against. Copying a correction from one plugin
+to another without checking that stamp will introduce a falsehood.
+
 ## Per-IDE manifest convention
 
 MCP-backed plugins carry one manifest per IDE, and each manifest points at its own MCP config file so it can send an IDE-specific `X-Apimatic-Mcp-Client` telemetry header:

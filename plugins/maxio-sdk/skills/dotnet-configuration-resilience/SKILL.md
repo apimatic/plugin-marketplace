@@ -1,7 +1,21 @@
 ---
 name: dotnet-configuration-resilience
-description: Tune an APIMatic-generated C#/.NET SDK client — RetryOptions retries/backoff (retries cover idempotent GET/HEAD/PUT/OPTIONS only by default, and Timeout is per-attempt, not total), per-request timeout/cancellation, auto-paginate list operations via IAsyncEnumerable, consume Server-Sent Events (SSE) streams with idle-timeout handling, override the base URL/server, and add request/response logging by attaching a DelegatingHandler (there's no built-in logging hook). Use whenever adjusting retry policy, timeouts, the base URL, paging through results, streaming/SSE, or adding logging to any APIMatic .NET SDK — load it even after reading the options in the source, since the fields don't reveal that POST/DELETE aren't retried, Timeout is per-attempt, or that only marked operations auto-paginate.
+description: Tune an APIMatic-generated C#/.NET SDK client — RetryOptions retries/backoff (the method filter covers STATUS retries only, so a transport fault resends even a POST, and Timeout is per-attempt, not total), per-request timeout/cancellation, auto-paginate list operations via IAsyncEnumerable, consume Server-Sent Events (SSE) streams with idle-timeout handling, override the base URL/server, and add request/response logging by attaching a DelegatingHandler (there's no built-in logging hook). Use whenever adjusting retry policy, timeouts, the base URL, paging through results, streaming/SSE, or adding logging to any APIMatic .NET SDK — load it even after reading the options in the source, since the fields don't reveal that a POST is still resent on a transport fault, Timeout is per-attempt, or that only marked operations auto-paginate.
 ---
+
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: 2026-08-25 — NOT covered: the pagination section — this surface exposes
+     ExecutePagedItems / ExecutePagedPages / ExecutePagedResults and the sampled SDK generates no
+     paginated operation, so which shape an operation gets could not be settled. Covered: retry predicate, eligibility, empty-pipeline behaviour and absence of LoggingOptions verified against this surface; the method-filter and multipart bullets were corrected to match it.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
 
 # Configuration & resilience for an APIMatic .NET SDK
 
@@ -69,9 +83,18 @@ Notes:
 - The *n*th retry waits `Delay * BackOffFactor^(n-1) + random(0, MaxJitter)` — so the 1st retry waits
   `Delay` (1s), the 2nd `Delay * BackOffFactor` (2s), and so on. Set `UseExponentialBackoff = false` for a
   constant `Delay` between attempts.
-- Anything not in `HttpMethodsToRetry` — i.e. `POST`, `PATCH`, `DELETE` — is **not** retried by default;
-  add a verb only if the operation is idempotent.
-- Multipart/form-data requests are never retried.
+- **`HttpMethodsToRetry` gates the *status* trigger only.** The predicate is a bare
+  `.Handle<HttpRequestException>()` **or** a `.HandleResult(...)` that ANDs the status check with the method
+  check. So a `503` on a `POST`/`PATCH`/`DELETE` is not resent — but an `HttpRequestException` (connection
+  reset, DNS failure, dropped socket) resends the request on **any** verb, up to `MaxRetries` extra times,
+  and a reset thrown *after* the bytes reached the server is indistinguishable from one thrown before. Add a
+  verb only if the operation is idempotent, and note that leaving one out does **not** protect a write from
+  the transport path.
+- The SDK's own per-attempt timeout is **not** a retry trigger on this surface, and neither is a
+  `TaskCanceledException` from your own token.
+- **Multipart is not blanket-excluded.** A binary-body request never retries; a multipart/form-data request
+  retries **unless it carries a binary part**; JSON, form-url-encoded and empty-body requests retry. An
+  ineligible request runs on an **empty** pipeline, which also drops the per-attempt `Timeout`.
 - `Timeout` is **per attempt**, not total — to cap a whole call, use a `CancellationToken` (below). It is
   nullable: set `Timeout = null` to disable the per-attempt timeout entirely.
 - `OnRetry`'s `RetryAttempt` also carries `Reason` — `RetryReason.Status(HttpStatusCode)` or

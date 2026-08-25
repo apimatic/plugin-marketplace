@@ -3,6 +3,18 @@ name: dotnet-error-handling
 description: Handle errors from an APIMatic-generated C#/.NET SDK — calls throw the generic SdkException<TError>, where TError is either a typed per-operation {Operation}Error or RawError directly (RawError — common for read/list/find/delete ops — has no TryGet accessors; read status/body straight off it), or use the optional non-throwing ApiResult variant to get the status code and response headers without catching. Use the moment you write a try/catch around a call, handle a non-2xx/error response, read a status code or rate-limit/Link headers, or want a no-throw result-style call on any APIMatic .NET SDK (e.g. Maxio Advanced Billing) — load it even after reading the thrown type in the source, since the type alone won't warn you about the RawError/TryGetRawError traps that make catch blocks subtly wrong.
 ---
 
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: 2026-08-25 — namespace layout and the four Case-A usings, against Errors/*.cs and Core/ErrorResponse.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
+
 # Error handling for an APIMatic .NET SDK
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{Operation}`,
@@ -30,9 +42,22 @@ These types live in **distinct** namespaces — `Core.*` is **not** a single nam
 - `ApiError` **and** `RawError` → `{RootNamespace}.Core.ErrorResponse`
 - the per-operation `{Operation}Error` models (e.g. `CreateWidgetError`) → `{RootNamespace}.Errors`
 
-So catching a typed (Case A) exception needs **three** usings — `Core.Exceptions`, `Core.ErrorResponse`,
-and `.Errors`; a Case B catch needs only the first two (`Core.Exceptions` + `Core.ErrorResponse`). These
-types are identical in shape across APIMatic .NET SDKs.
+So a typed (Case A) catch needs up to **four** namespaces, not three — how many depends on whether you
+spell the `out` types out or use `out var`:
+
+| namespace | what you need from it |
+| --- | --- |
+| `{RootNamespace}.Core.Exceptions` | `SdkException<TError>` — the exception itself |
+| `{RootNamespace}.Errors` | the `{Operation}Error` you name in the `catch` |
+| `{RootNamespace}.Core.ErrorResponse` | `RawError`, which the inherited `TryGetRawError` hands back |
+| `{RootNamespace}.Models` | the **typed body** a `TryGet…` yields |
+
+The last two only bite when you write the `out` type out. `out var` needs neither, which is why the
+template below imports three namespaces and not four — it uses `out var` for the typed bodies and names
+`RawError` explicitly. Name a typed body's type and you need `.Models` as well, and the omission surfaces as
+a compile error in the middle of an otherwise finished catch block. A Case B catch needs only
+`Core.Exceptions` and `Core.ErrorResponse`. This namespace layout is identical across the APIMatic .NET SDKs
+checked.
 
 ## Catch the exception
 
@@ -69,9 +94,13 @@ placeholder, **not** the type you catch). The type named after **`of <see cref="
 
 Equivalently, read the source — open the `.cs` files rather than decompiling or reflecting over the installed
 package: a `{Operation}Error` type exists under `Errors/` **only** for Case-A
-operations; if there is no `{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong
-is a **compile-time** error (`SdkException<ListWidgetsError>` won't compile — no such type), not a silent
-bug — so the compiler keeps you honest.
+operations; if there is no `{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is only *sometimes* a compile-time error, and the direction that looks safe is the
+dangerous one. `SdkException<ListWidgetsError>` fails to compile when no such type exists — that guess the
+compiler does catch. But every `{Operation}Error` in the SDK *is* a real type, so naming the **wrong one**
+— a neighbouring operation's error type — compiles cleanly and then **never matches at runtime**, because
+`SdkException<A>` and `SdkException<B>` are unrelated closed generics. The exception sails past your
+`catch` and surfaces somewhere else, or not at all until it is an unhandled failure. Take the case from the
+contract sheet; the compiler is not a check on this.
 
 ### Case A — operation has a typed `{Operation}Error` model
 

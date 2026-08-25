@@ -3,6 +3,19 @@ name: dotnet-error-handling
 description: Error and exception handling for an APIMatic-generated .NET SDK in C# — load before writing any try/catch around an SDK call, an exception-translation layer, or error middleware. Covers which exception types actually reach your catch blocks, how to read status codes and error bodies safely, and the traps that make an otherwise reasonable catch ladder silently wrong.
 ---
 
+<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
+     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
+     context-plugins/twilio-csharp-sdk@main: 122 Core/*.cs, byte-identical modulo the root namespace.
+     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
+     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
+     for retry-ineligible requests.
+     verified-this-file: 2026-08-25 — namespace layout and the four Case-A usings, against Errors/*.cs and Core/ErrorResponse. Per-operation accessor claims are NOT covered by this stamp (they are spec-derived, not Core).
+     Authoritative source: the generator's own StaticCode/Core template (codegen-v2), which matches this
+     surface file-for-file. The one pre-4.0.0 SDK sampled has none of the seven features above; treat any
+     other pre-4.0.0 SDK as unverified. Do NOT copy runtime claims across a core-surface boundary —
+     check this stamp in both files first. -->
+
 # Error handling for an APIMatic .NET SDK
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{Operation}`,
@@ -30,9 +43,22 @@ These types live in **distinct** namespaces — `Core.*` is **not** a single nam
 - `ApiError` **and** `RawError` → `{RootNamespace}.Core.ErrorResponse`
 - the per-operation `{Operation}Error` models (e.g. `CreateWidgetError`) → `{RootNamespace}.Errors`
 
-So catching a typed (Case A) exception needs **three** usings — `Core.Exceptions`, `Core.ErrorResponse`,
-and `.Errors`; a Case B catch needs only the first two (`Core.Exceptions` + `Core.ErrorResponse`). These
-types are identical in shape across APIMatic .NET SDKs.
+So a typed (Case A) catch needs up to **four** namespaces, not three — how many depends on whether you
+spell the `out` types out or use `out var`:
+
+| namespace | what you need from it |
+| --- | --- |
+| `{RootNamespace}.Core.Exceptions` | `SdkException<TError>` — the exception itself |
+| `{RootNamespace}.Errors` | the `{Operation}Error` you name in the `catch` |
+| `{RootNamespace}.Core.ErrorResponse` | `RawError`, which the inherited `TryGetRawError` hands back |
+| `{RootNamespace}.Models` | the **typed body** a `TryGet…` yields |
+
+The last two only bite when you write the `out` type out. `out var` needs neither, which is why the
+template below imports three namespaces and not four — it uses `out var` for the typed bodies and names
+`RawError` explicitly. Name a typed body's type and you need `.Models` as well, and the omission surfaces as
+a compile error in the middle of an otherwise finished catch block. A Case B catch needs only
+`Core.Exceptions` and `Core.ErrorResponse`. This namespace layout is identical across the APIMatic .NET SDKs
+checked.
 
 ## Catch the exception
 
@@ -71,9 +97,13 @@ placeholder, **not** the type you catch). The type named after **`of <see cref="
 Equivalently, when grounding from the SDK source (whoever holds it — in this plugin's flow the
 SDK helper agent): a
 `{Operation}Error` type exists under `Errors/` **only** for Case-A operations; if there is no
-`{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is a **compile-time** error
-(`SdkException<ListWidgetsError>` won't compile — no such type), not a silent bug — so the compiler keeps you
-honest.
+`{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is only *sometimes* a compile-time error, and the direction that looks safe is the
+dangerous one. `SdkException<ListWidgetsError>` fails to compile when no such type exists — that guess the
+compiler does catch. But every `{Operation}Error` in the SDK *is* a real type, so naming the **wrong one**
+— a neighbouring operation's error type — compiles cleanly and then **never matches at runtime**, because
+`SdkException<A>` and `SdkException<B>` are unrelated closed generics. The exception sails past your
+`catch` and surfaces somewhere else, or not at all until it is an unhandled failure. Take the case from the
+contract sheet; the compiler is not a check on this.
 
 ### Case A — operation has a typed `{Operation}Error` model
 
@@ -101,7 +131,7 @@ using {RootNamespace}.Errors;              // {Operation}Error types, e.g. Creat
 
 try
 {
-    var response = await client.{ApiGroup}.{Operation}(/* ... */, ct);
+    var response = await client.{ApiGroup}.{Operation}(/* ... */, ct: ct);
     // use response
 }
 catch (SdkException<{Operation}Error> ex)
@@ -156,7 +186,7 @@ using {RootNamespace}.Core.ErrorResponse;  // RawError
 
 try
 {
-    var response = await client.{ApiGroup}.{Operation}(/* ... */, ct);
+    var response = await client.{ApiGroup}.{Operation}(/* ... */, ct: ct);
     // use response
 }
 catch (SdkException<RawError> ex)
@@ -193,7 +223,7 @@ using {RootNamespace}.Errors;             // {Operation}Error (Case A only)
 
 // No try/catch — the *Result variant returns the outcome instead of throwing.
 ApiResult<{ReturnType}, {Operation}Error> result =
-    await client.{ApiGroup}.{Operation}Result(/* ... */, ct);
+    await client.{ApiGroup}.{Operation}Result(/* ... */, ct: ct);
 
 if (result.TryGetResponse(out var response))        // success
 {
@@ -350,9 +380,9 @@ above produces).
   configured schemes can't be satisfied; it carries `IReadOnlyList<Exception> SchemeFailures` and is **not**
   an `SdkException<T>`, so a `catch (SdkException<...>)` won't match it — catch it separately. (An SDK
   whose API declares a single scheme never hits this.)
-- Retries for transient **statuses** happen automatically before an exception is thrown — and only for
-  idempotent methods (`GET/HEAD/PUT/OPTIONS`) by default, so a `POST`/`PATCH`/`DELETE` *status* error
-  surfaces without retry. **Transport failures are the exception to that rule:** an `HttpRequestException`
-  is retried on every verb regardless of `HttpMethodsToRetry`, so a write may have reached the provider
-  more than once before the failure you finally catch is thrown — which matters when you decide what to
-  tell the caller and whether it is safe for them to retry. See **dotnet-configuration-resilience**.
+- Retries happen automatically before an exception is thrown, and `HttpMethodsToRetry`
+  (`GET/HEAD/PUT/OPTIONS` by default) gates **every** trigger — status, transport fault, and the SDK's own
+  per-attempt timeout alike. So an error on a `POST`/`PATCH`/`DELETE` surfaces on the first attempt, with no
+  resend. That is not the same as "the write did not happen": a transport failure may have been thrown after
+  the bytes reached the provider, so the outcome is *unknown* and the caller needs to be told that rather
+  than "it failed". See **dotnet-configuration-resilience**.

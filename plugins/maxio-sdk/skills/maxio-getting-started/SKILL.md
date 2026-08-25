@@ -209,9 +209,10 @@ them in this order:
    `{Operation}Result`/`ApiResult` no-throw variants — every operation is throw-only, so ignore the
    Result-style sections of the companion skills and always wrap the throwing call.)
 6. **Configuration & resilience** — load **dotnet-configuration-resilience** when you tune retries, timeouts,
-   the base URL, pagination, or logging. (*The signature won't tell you:* retries cover idempotent verbs only —
-   anything not in `GET/HEAD/PUT/OPTIONS` (`POST`, `PATCH`, `DELETE`) is not retried — `Timeout` is
-   per-attempt not total, and there's no built-in logging hook.)
+   the base URL, pagination, or logging. (*The signature won't tell you:* the `HttpMethodsToRetry` filter
+   gates **status** retries only — a **transport failure** (`HttpRequestException`) is retried on **every**
+   verb, `POST` included, so a non-idempotent write can execute more than once. `Timeout` is per-attempt not
+   total, and there's no built-in logging hook.)
 7. **Testing** — load **dotnet-testing** before you stub the SDK. (*The signature won't tell you:* the
    `HttpClient` constructor argument is the test seam; match the project's existing framework and assertion
    style.)

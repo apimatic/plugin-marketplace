@@ -3,6 +3,18 @@ name: dotnet-authentication
 description: Configure authentication on an APIMatic-generated C#/.NET API client — each scheme is a nullable credentials property on the options class (set it before constructing the client, or inside the Add{Api}Client DI callback) — Basic (BasicAuthCredentials), Bearer token, API key (header/query/cookie), and OAuth 2.0 (client-credentials, authorization-code+PKCE, password) plus combined AND/OR schemes and no-auth. Use the moment you set credentials, an API key, a token, or OAuth on any APIMatic .NET SDK, or need to know which schemes its options class exposes — load it even after reading the options class in the source, since the property type doesn't tell you when to set it or that secrets belong in configuration.
 ---
 
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: not yet audited against this surface.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
+
 # Authenticating an APIMatic .NET SDK client
 
 How you authenticate depends on the security scheme(s) the API uses. APIMatic surfaces each scheme as a

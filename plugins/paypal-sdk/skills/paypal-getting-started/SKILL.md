@@ -204,10 +204,11 @@ them in this order:
    row; and `TryGetRawError` is not a catch-all on the typed errors. Each operation's map row also says
    whether a no-throw `…Result` variant exists — never assume one does.)
 6. **Configuration & resilience** — load **dotnet-configuration-resilience** when you tune retries, timeouts,
-   the base URL, pagination, or logging. (*The signature won't tell you:* `HttpMethodsToRetry` gates only the
-   **status** trigger — but a **transport failure**
-   (`HttpRequestException`) is retried on **every** verb, `POST` included, so a non-idempotent write can
-   execute more than once. `Timeout` is per-attempt not total, and there's no built-in logging hook.)
+   the base URL, pagination, or logging. (*The signature won't tell you:* `HttpMethodsToRetry` gates **every**
+   retry trigger, so a `POST` is never resent by default — but a `GET` that hangs costs ≈407s, not the ≈100s
+   `Timeout` suggests, because the per-attempt timeout is itself retried. `Timeout` is per-attempt not total,
+   `RetryOptions.Disabled()` turns retries off, and there **is** a built-in logger on `options.Logging` —
+   whose `LogRequestBody` does not redact JSON.)
 7. **Testing** — load **dotnet-testing** before you stub the SDK. (*The signature won't tell you:* the
    `HttpClient` constructor argument is the test seam; match the project's existing framework and assertion
    style.)

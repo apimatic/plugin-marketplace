@@ -3,6 +3,19 @@ name: dotnet-models
 description: Working with models in an APIMatic-generated .NET SDK in C# — building request models, required members and nullability, enums, union/AnyOf accessors, and JSON wire names versus C# property names. Load before constructing request payloads or mapping SDK models onto your own domain types.
 ---
 
+<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
+     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
+     context-plugins/twilio-csharp-sdk@main: 122 Core/*.cs, byte-identical modulo the root namespace.
+     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
+     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
+     for retry-ineligible requests.
+     verified-this-file: not yet audited against this surface.
+     Authoritative source: the generator's own StaticCode/Core template (codegen-v2), which matches this
+     surface file-for-file. The one pre-4.0.0 SDK sampled has none of the seven features above; treat any
+     other pre-4.0.0 SDK as unverified. Do NOT copy runtime claims across a core-surface boundary —
+     check this stamp in both files first. -->
+
 # Working with models in an APIMatic .NET SDK
 
 Most request/response data are immutable `record`s built with object-initializers (covered in
