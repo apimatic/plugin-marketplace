@@ -1,0 +1,45 @@
+{
+  "note": [
+    "SDK fixtures assert-c1 runs against in CI.",
+    "",
+    "These refs must track the stamps the plugins themselves pin — sdk-map.md's source-commit",
+    "line and the clone instructions in each getting-started skill. If a plugin is regenerated",
+    "against a newer SDK, update it here in the same commit, or CI keeps checking the old one",
+    "and reports green about a surface nobody ships any more.",
+    "",
+    "surface is the value passed to --surface; it selects which assertions apply."
+  ],
+  "fixtures": [
+    {
+      "name": "paypal",
+      "repo": "https://github.com/asadali214/checkout-sample-sdk",
+      "ref": "v1.0.1",
+      "surface": "4.0.0",
+      "usedBy": ["paypal-sdk"],
+      "mutationTest": true
+    },
+    {
+      "name": "twilio",
+      "repo": "https://github.com/context-plugins/twilio-csharp-sdk",
+      "ref": "main",
+      "surface": "4.0.0",
+      "usedBy": ["twilio-sdk"],
+      "mutationTest": false
+    }
+  ],
+  "generatorTemplate": {
+    "note": [
+      "The generator's own StaticCode/ — the authority on what the NEXT generated plugin gets.",
+      "It is expected to fail: it still stamps 4.0.0 while its Core has moved ahead of both SDKs",
+      "above. generator-template-drift.txt records exactly which assertions fail, and the job goes",
+      "red only when that set CHANGES. A permanently red job teaches people to ignore it.",
+      "",
+      "Private repo, so the job needs a token and skips cleanly without one."
+    ],
+    "repo": "https://github.com/apimatic/codegen-v2",
+    "ref": "main",
+    "path": "src/CodegenV2/StaticCode",
+    "surface": "4.0.0",
+    "expectFailures": "generator-template-drift.txt"
+  }
+}

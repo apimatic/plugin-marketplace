@@ -138,9 +138,29 @@ fixture that exercises them exists:
 - **OAuth2 grants other than client-credentials** — the authorization-code and password
   paths are read from Core and from compiled probes, never from a live exchange.
 
-## Hooking it into CI
+## CI
 
-There is no workflow in `.github/` yet. The natural one runs the static tier against each
-plugin's pinned SDK on every PR that touches `plugins/*/skills/dotnet-*`, and against the
-current generator template on a schedule — the second is what catches the drift nobody
-went looking for.
+`.github/workflows/assert-c1.yml`. Three jobs:
+
+**static** — clones each SDK fixture at its pinned ref and runs the suite, plus the mutation
+test on one of them. Triggers on any PR touching `plugins/*/skills/dotnet-*` or this
+directory. Fixtures are listed in `fixtures.json`; the refs there must track what the
+plugins themselves pin, or CI reports green about a surface nobody ships any more.
+
+**behavioural** — runs the compiled checks against the published package.
+
+**generator template drift** — schedule and manual only, because nothing in a PR to *this*
+repo moves the generator, and the job is about the generator moving. It needs
+`CODEGEN_V2_TOKEN` and skips cleanly without it.
+
+That last job is expected to fail: the template still stamps `4.0.0` while its `Core/` has
+moved ahead of both shipped SDKs. `generator-template-drift.txt` records exactly which
+assertions fail, and `--expect-failures` makes the job go red only when that set **changes**
+— a new id means the generator moved again, a removed one means the gap closed and the
+skills can follow. A job that is permanently red is one everybody learns to ignore.
+
+Regenerate the baseline after reconciling:
+
+```
+python assert_c1.py <StaticCode> | grep '^FAIL' | awk '{print $2}' | sort
+```

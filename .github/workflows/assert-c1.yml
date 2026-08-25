@@ -1,0 +1,144 @@
+name: assert-c1
+
+# Executable assertions for the C1 claims the dotnet-* skills make.
+#
+# The skills state facts about the emitted Core/ — retry defaults, redaction
+# direction, parameter order, namespace layout. Those facts rot when the
+# generator moves, and the rot is silent: nothing fails, the text simply stops
+# being true. Ten false runtime claims shipped in five plugins for months before
+# anyone checked.
+#
+# See tools/assert-c1/README.md.
+
+on:
+  pull_request:
+    paths:
+      - 'plugins/*/skills/dotnet-*/**'
+      - 'tools/assert-c1/**'
+      - '.github/workflows/assert-c1.yml'
+  push:
+    branches: [main, dev]
+    paths:
+      - 'plugins/*/skills/dotnet-*/**'
+      - 'tools/assert-c1/**'
+  schedule:
+    # Weekly. The generator-drift job below is the reason this runs on a timer:
+    # it catches the generator moving, which no PR to this repo would trigger.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assert-c1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: static · ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Keep in step with tools/assert-c1/fixtures.json.
+          - name: paypal
+            repo: asadali214/checkout-sample-sdk
+            ref: v1.0.1
+            surface: '4.0.0'
+            mutation: true
+          - name: twilio
+            repo: context-plugins/twilio-csharp-sdk
+            ref: main
+            surface: '4.0.0'
+            mutation: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Clone the SDK fixture
+        run: |
+          git clone --depth 1 --branch "${{ matrix.ref }}" \
+            "https://github.com/${{ matrix.repo }}.git" "$RUNNER_TEMP/sdk"
+
+      - name: Assert
+        run: |
+          python tools/assert-c1/assert_c1.py "$RUNNER_TEMP/sdk" \
+            --surface "${{ matrix.surface }}" \
+            --json "$RUNNER_TEMP/report-${{ matrix.name }}.json"
+
+      # Proves the suite can still fail. A regex loosened during a refactor until
+      # it matches anything leaves every assertion green over a rotted claim —
+      # this is the only thing that catches that.
+      - name: Mutation test
+        if: matrix.mutation
+        run: python tools/assert-c1/mutation_test.py "$RUNNER_TEMP/sdk"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: assert-c1-report-${{ matrix.name }}
+          path: ${{ runner.temp }}/report-${{ matrix.name }}.json
+          if-no-files-found: ignore
+
+  behaviour:
+    name: behavioural
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Runs the SDK rather than reading it: how many times a stub handler is
+      # called, what ToString() returns, whether a transient client refetches a
+      # token. Against the published package — pass -p:SdkProject=<csproj> to
+      # point it at a freshly generated tree instead.
+      - name: Run the behavioural checks
+        working-directory: tools/assert-c1/behaviour
+        run: dotnet run -c Release
+
+  generator-drift:
+    name: generator template drift
+    runs-on: ubuntu-latest
+    # Only useful on a timer or by hand: nothing in a PR to this repo moves the
+    # generator, and the job is about the generator moving.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Clone the generator
+        id: clone
+        env:
+          TOKEN: ${{ secrets.CODEGEN_V2_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "No CODEGEN_V2_TOKEN — skipping. Set the secret to enable this job."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git clone --depth 1 \
+            "https://x-access-token:$TOKEN@github.com/apimatic/codegen-v2.git" \
+            "$RUNNER_TEMP/gen"
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+
+      # This fixture is EXPECTED to fail — the template still stamps 4.0.0 while
+      # its Core has moved ahead of both shipped SDKs. --expect-failures pins the
+      # known set, so the job goes red when the drift CHANGES, not while it
+      # merely exists. A permanently red job is one everybody learns to ignore.
+      - name: Assert against StaticCode
+        if: steps.clone.outputs.skipped == 'false'
+        run: |
+          python tools/assert-c1/assert_c1.py \
+            "$RUNNER_TEMP/gen/src/CodegenV2/StaticCode" \
+            --surface 4.0.0 \
+            --expect-failures tools/assert-c1/generator-template-drift.txt

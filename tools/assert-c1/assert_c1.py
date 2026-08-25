@@ -452,6 +452,12 @@ def main() -> int:
                     help="core surface the fixture is expected to be (default 4.0.0)")
     ap.add_argument("--only", help="run only assertions whose id starts with this prefix")
     ap.add_argument("--json", help="write a machine-readable report here")
+    ap.add_argument("--expect-failures", metavar="FILE",
+                    help="a file of assertion ids that are KNOWN to fail on this fixture, one per "
+                         "line (# comments allowed). Succeeds only when the failing set matches it "
+                         "exactly. Use for a fixture that is deliberately a different surface — the "
+                         "generator template, say — so the job goes red when the drift CHANGES "
+                         "rather than sitting red forever and teaching everyone to ignore it.")
     ap.add_argument("-v", "--verbose", action="store_true", help="also print passes")
     args = ap.parse_args()
 
@@ -490,6 +496,27 @@ def main() -> int:
                 "results": [r.__dict__ for r in results],
             }, fh, indent=2)
         print("report: " + args.json)
+
+    if args.expect_failures:
+        with open(args.expect_failures, encoding="utf-8") as fh:
+            expected = {ln.split("#")[0].strip() for ln in fh}
+        expected.discard("")
+        actual = {r.id for r in failed}
+        new, gone = sorted(actual - expected), sorted(expected - actual)
+        print()
+        if not new and not gone:
+            print("drift unchanged: %d known failure(s), exactly as recorded in %s"
+                  % (len(expected), os.path.basename(args.expect_failures)))
+            return 0
+        if new:
+            print("NEW drift — these were not failing before:")
+            for i in new:
+                print("   + " + i)
+        if gone:
+            print("drift RESOLVED — remove these from the baseline:")
+            for i in gone:
+                print("   - " + i)
+        return 1
 
     return 1 if failed else 0
 
