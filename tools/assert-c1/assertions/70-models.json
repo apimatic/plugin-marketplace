@@ -1,0 +1,375 @@
+{
+  "group": "models",
+  "note": "Model emission: enums, unions, collections, nullability and serialization attributes.",
+  "assertions": [
+    {
+      "id": "models.records.no-settable-properties",
+      "kind": "absent",
+      "glob": "Models/**/*.cs",
+      "pattern": "\\{\\s*get;\\s*set;\\s*\\}",
+      "claim": "Most request/response data are immutable `record`s built with object-initializers - nothing is settable after construction.",
+      "defends": "dotnet-models § opening paragraph; dotnet-calling-endpoints § request bodies",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.records.no-positional-parameter-list",
+      "kind": "absent",
+      "glob": "Models/**/*.cs",
+      "pattern": "^public\\s+(?:sealed\\s+)?record\\s+\\w+\\s*\\(",
+      "claim": "Request bodies are immutable `record`s built with object-initializer syntax (no builders) - so no model is a positional record.",
+      "defends": "dotnet-calling-endpoints § request bodies",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.props.every-property-carries-jsonpropertyname",
+      "kind": "absent",
+      "glob": "Models/**/*.cs",
+      "pattern": "^(?![ \\t]*\\[)[^\\n]*\\n(?:[ \\t]*\\[(?!JsonPropertyName)[^\\n]*\\n)*[ \\t]*public\\s+(?:required\\s+)?[\\w<>?\\[\\],\\.]+\\s+\\w+\\s*\\{\\s*get;",
+      "claim": "JSON wire names are not the C# property names: every generated model property carries an explicit [JsonPropertyName], which is why asserting on \"expected_field\" is the right test assertion.",
+      "defends": "dotnet-models § description (wire names vs C# names); dotnet-testing § asserting on the sent body",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.collections.readonly-interfaces-only",
+      "kind": "absent",
+      "glob": "Models/**/*.cs",
+      "pattern": "^\\s*public\\s+(?:required\\s+)?(?:(?:List|IList|ICollection|IEnumerable|Dictionary|IDictionary|HashSet)<|[\\w<>,\\.\\? ]+\\[\\]\\??\\s+\\w+\\s*\\{\\s*get;)",
+      "claim": "List/array properties are `IReadOnlyList<T>?`; maps are `IReadOnlyDictionary<TKey, TValue>?` - never a mutable collection type and never an array.",
+      "defends": "dotnet-models § Collections",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.required.modifier-emitted",
+      "kind": "at-least",
+      "glob": "Models/**/*.cs",
+      "pattern": "^\\s*public\\s+required\\s",
+      "expect": 1,
+      "claim": "`required` members must be set - required schema members are emitted with the C# `required` modifier.",
+      "defends": "dotnet-calling-endpoints § request bodies",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.jsonignore.never-on-a-required-member",
+      "kind": "absent",
+      "glob": "Models/**/*.cs",
+      "pattern": "JsonIgnoreCondition\\.WhenWritingNull\\)\\]\\s*(?:\\n[ \\t]*\\[[^\\n]*\\])*\\s*\\n[ \\t]*public\\s+required\\b",
+      "claim": "Only OPTIONAL properties with no default carry [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] - a required member never does, so it is always serialized.",
+      "defends": "dotnet-models/reference.md § Notes (JsonIgnore)",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.unknown.no-extension-data-property",
+      "kind": "absent",
+      "glob": "Models/**/*.cs",
+      "pattern": "JsonExtensionData",
+      "claim": "Models declare their properties explicitly; where a model has no additional-properties map - the common case - unknown fields are dropped on deserialization.",
+      "defends": "dotnet-models § Unknown / future fields",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.unknown.no-core-additional-properties-type",
+      "kind": "no-file",
+      "file": "Core/Models/AdditionalProperties.cs",
+      "claim": "Their emitted `Core/` carries no additional-properties type at all - that file exists only in a newer generator template.",
+      "defends": "dotnet-models/reference.md § Unknown fields; the core-surface CAUTION stamp"
+    },
+    {
+      "id": "validation.sdk-attributes-derive-from-validationattribute",
+      "kind": "absent",
+      "glob": "Core/Validation/Attributes/*.cs",
+      "pattern": "^public\\s+(?:sealed\\s+)?class\\s+\\w+Attribute\\s*:\\s*(?!ValidationAttribute\\b)\\w",
+      "claim": "Where you want a client-side guard, opt in explicitly with Validator.ValidateObject(body, new ValidationContext(body), validateAllProperties: true) - which only works because every validation attribute the generator ships derives from ValidationAttribute.",
+      "defends": "dotnet-models § Validation attributes are documentation, not enforcement (the opt-in snippet)"
+    },
+    {
+      "id": "dates.converters-are-internal",
+      "kind": "absent",
+      "glob": "Core/Converters/*.cs",
+      "pattern": "^\\s*public\\s+(?:sealed\\s+)?(?:class|record|struct)\\s",
+      "claim": "For your own formatting use the BCL, never the SDK's internal converters - the four date converters are internal, so caller code cannot reference them.",
+      "defends": "dotnet-models § Dates & numbers, second bullet"
+    },
+    {
+      "id": "enums.bases.string-and-int-over-typedenum",
+      "kind": "count",
+      "glob": "Core/Enum/*.cs",
+      "pattern": "public\\s+abstract\\s+record\\s+(?:String|Int)Enum<TEnum>\\s*:\\s*TypedEnum<(?:string|int),\\s*TEnum>",
+      "expect": 2,
+      "claim": "Enums are type-safe string-enums (`StringEnum<T>`) or int-enums (`IntEnum<T>`) - both bases exist, over TypedEnum<string,T> and TypedEnum<int,T> respectively.",
+      "defends": "dotnet-models § Enums, first sentence"
+    },
+    {
+      "id": "enums.value-property-is-the-underlying-value",
+      "kind": "present",
+      "file": "Core/Enum/TypedEnum.cs",
+      "pattern": "public\\s+TValue\\s+Value\\s*\\{\\s*get;\\s*init;\\s*\\}",
+      "claim": "Reading back: `.Value` (or the implicit conversion) yields the raw wire value.",
+      "defends": "dotnet-models § Enums, Reading back"
+    },
+    {
+      "id": "enums.converter-writes-dot-value",
+      "kind": "present",
+      "file": "Core/Enum/StringEnumConverter.cs",
+      "pattern": "writer\\.WriteStringValue\\(value\\.Value\\)",
+      "claim": "`.Value` is literally what goes on the wire - the generated converter writes it verbatim, which is why an unknown value is serialized verbatim.",
+      "defends": "dotnet-models § Enums, the case-insensitivity paragraph"
+    },
+    {
+      "id": "enums.isknownvalue-is-an-instance-method",
+      "kind": "present",
+      "file": "Core/Enum/TypedEnum.cs",
+      "pattern": "public\\s+bool\\s+IsKnownValue\\(\\)",
+      "claim": "Guard unknown values with `instance.IsKnownValue()`.",
+      "defends": "dotnet-models § Enums, Guard unknown values"
+    },
+    {
+      "id": "enums.trygetknownvalue-out-is-nullable",
+      "kind": "present",
+      "file": "Core/Enum/StringEnum.cs",
+      "pattern": "public\\s+static\\s+bool\\s+TryGetKnownValue\\(\\s*string\\s+value,\\s*out\\s+TEnum\\?\\s+\\w+\\s*\\)",
+      "claim": "Guard unknown values with `TryGetKnownValue(...)` - whose out parameter is `TEnum?`, so `out var known` binds to a nullable at the call site.",
+      "defends": "dotnet-models § Enums, Guard unknown values and the four-line usage snippet"
+    },
+    {
+      "id": "enums.fromvalue-known-returns-the-declared-constant",
+      "kind": "present",
+      "file": "Core/Enum/StringEnum.cs",
+      "pattern": "KnownValues\\.TryGetValue\\(value,\\s*out\\s+var\\s+(\\w+)\\)\\)\\s*return\\s+\\1;",
+      "claim": "`FromValue(\"captured\")` returns the `CAPTURED` constant itself - same instance, `IsKnownValue()` true - and the declared casing is what goes on the wire.",
+      "defends": "dotnet-models § Enums, the case-insensitivity paragraph"
+    },
+    {
+      "id": "enums.getknownvalues-returns-ireadonlycollection",
+      "kind": "present",
+      "file": "Core/Enum/TypedEnum.cs",
+      "pattern": "public\\s+static\\s+IReadOnlyCollection<TEnum>\\s+GetKnownValues\\(\\)",
+      "claim": "`var all = {EnumType}.GetKnownValues();` returns `IReadOnlyCollection<{EnumType}>`.",
+      "defends": "dotnet-models/reference.md § enum member discovery"
+    },
+    {
+      "id": "enums.constants-are-static-readonly-fields",
+      "kind": "at-least",
+      "glob": "Models/Enums/*.cs",
+      "pattern": "^\\s*public\\s+static\\s+readonly\\s+\\w+\\s+\\w+\\s*=\\s*new\\(",
+      "expect": 1,
+      "claim": "Use the static constants - each known value is exposed as a public static readonly field of the enum type, holding the wire value.",
+      "defends": "dotnet-models § Enums, use the static constants",
+      "requires": [
+        "enums"
+      ]
+    },
+    {
+      "id": "enums.constants-are-never-properties",
+      "kind": "absent",
+      "glob": "Models/Enums/*.cs",
+      "pattern": "^\\s*public\\s+static\\s+(?!readonly\\b)[\\w<>]+\\s+\\w+\\s*\\{\\s*get",
+      "claim": "Use the static constants - and they are FIELDS: the known-value table is built by reflecting over public static fields, so a constant emitted as a property would silently vanish from it, taking IsKnownValue() and GetKnownValues() with it.",
+      "defends": "dotnet-models § Enums, use the static constants / Guard unknown values",
+      "requires": [
+        "enums"
+      ]
+    },
+    {
+      "id": "enums.every-schema-enum-carries-its-converter",
+      "kind": "absent",
+      "glob": "Models/Enums/*.cs",
+      "pattern": "\\A(?!.*\\[JsonConverter\\(typeof\\((?:String|Int)EnumConverter<).*record\\s+\\w+\\s*:\\s*(?:String|Int)Enum<",
+      "dotall": true,
+      "claim": "A generated enum is declared `[JsonConverter(typeof(StringEnumConverter<{EnumType}>))] public sealed record {EnumType} : StringEnum<{EnumType}>` (the int enum the same over IntEnumConverter/IntEnum).",
+      "defends": "dotnet-models/reference.md § full string- and int-enum declarations",
+      "requires": [
+        "enums"
+      ]
+    },
+    {
+      "id": "enums.schema-enums-declare-fromvalue",
+      "kind": "absent",
+      "glob": "Models/Enums/*.cs",
+      "pattern": "\\A(?!.*FromValueCore).*:\\s*(?:String|Int)Enum<",
+      "dotall": true,
+      "claim": "`FromValue` is emitted per enum, not guaranteed on all of them - the schema enums under Models/Enums are the ones that do have it, so `FromValue(...)` is available there for a value not known at compile time.",
+      "defends": "dotnet-models § Enums, the FromValue warning",
+      "requires": [
+        "enums"
+      ]
+    },
+    {
+      "id": "enums.server-selector-keeps-fromvalue-protected",
+      "kind": "absent",
+      "file": "Servers/ServerEnvironment.cs",
+      "pattern": "\\bFromValue\\b",
+      "claim": "Some generated enums - server / environment selectors are the ones to watch - expose only their static constants and keep the conversion helper `protected`, so `{EnumType}.FromValue(someString)` does not compile.",
+      "defends": "dotnet-models § Enums, the FromValue warning",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "wire.templateparam-value-is-object",
+      "kind": "present",
+      "file": "Core/Models/TemplateParam.cs",
+      "pattern": "internal\\s+readonly\\s+record\\s+struct\\s+TemplateParam\\(\\s*string\\s+\\w+,\\s*object\\?\\s+\\w+\\s*\\)",
+      "claim": "Path/template params are not type-checked against the route (internally the value is `object?`).",
+      "defends": "dotnet-configuration-resilience § base URL / path params"
+    },
+    {
+      "id": "wire.parameter-value-normalized-through-json",
+      "kind": "present",
+      "file": "Core/Extensions/ObjectExtensions.cs",
+      "pattern": "JsonDocument\\.Parse\\(JsonSerializer\\.Serialize\\(value\\)\\)",
+      "claim": "An enum contributes its wire value and not its C# member name - because a parameter value is normalised by round-tripping it through the JSON serializer, so the enum's converter runs rather than its record ToString().",
+      "defends": "dotnet-configuration-resilience § base URL / path params"
+    },
+    {
+      "id": "unions.namespace-is-models-oneof-or-anyof",
+      "kind": "absent",
+      "glob": "Models/*Of/*.cs",
+      "pattern": "^namespace\\s+(?![\\w\\.]+\\.Models\\.(?:OneOf|AnyOf);)\\w",
+      "claim": "APIMatic generates a union `record` under `{RootNamespace}.Models.OneOf` or `.Models.AnyOf`.",
+      "defends": "dotnet-models § Polymorphic union types, first sentence",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.no-object-initializer",
+      "kind": "absent",
+      "glob": "Models/*Of/*.cs",
+      "pattern": "\\{\\s*get;\\s*(?:init|set);\\s*\\}|^\\s*(?:public|internal|protected)\\s+\\w+\\s*\\(",
+      "claim": "A union has no object-initializer - no settable or init member and no accessible constructor, so it can only be built through the generated static factory methods.",
+      "defends": "dotnet-models § Polymorphic union types",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.converter-attached-to-every-union",
+      "kind": "absent",
+      "glob": "Models/*Of/*.cs",
+      "pattern": "\\A(?!.*\\[JsonConverter\\(typeof\\().*public\\s+record\\s",
+      "dotall": true,
+      "claim": "JSON (de)serialization of a union is automatic - the union record carries a generated [JsonConverter], so no caller wiring is needed.",
+      "defends": "dotnet-models § Polymorphic union types",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.no-match-throws-jsonexception",
+      "kind": "absent",
+      "glob": "Models/*Of/*.cs",
+      "pattern": "\\A(?!.*JSON does not match).*class\\s+\\w+Converter",
+      "dotall": true,
+      "claim": "A payload matching no variant throws: both converters end in `throw new JsonException(\"JSON does not match … schemas: …\")`.",
+      "defends": "dotnet-models § Polymorphic union types, the ⚠ warning",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.expose-no-fromvalue",
+      "kind": "absent",
+      "glob": "Models/*Of/*.cs",
+      "pattern": "\\bFromValue\\b",
+      "claim": "Unions use the per-variant factories and `TryGet…` readers; `FromValue` belongs to enums.",
+      "defends": "dotnet-models § the union naming table, closing parenthetical",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.oneof.converter-reads-a-discriminator-property",
+      "kind": "absent",
+      "glob": "Models/OneOf/*.cs",
+      "pattern": "\\A(?!.*TryGetProperty\\().*class\\s+\\w+Converter",
+      "dotall": true,
+      "claim": "`OneOf` - the value is exactly one variant, selected on the wire by a discriminator property; the generated converter reads that property and switches on it.",
+      "defends": "dotnet-models § Polymorphic union types, OneOf bullet",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.anyof.converter-has-no-discriminator",
+      "kind": "absent",
+      "glob": "Models/AnyOf/*.cs",
+      "pattern": "TryGetProperty\\(",
+      "claim": "`AnyOf` - no discriminator.",
+      "defends": "dotnet-models § Polymorphic union types, AnyOf bullet",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.anyof.converter-tries-each-variant",
+      "kind": "absent",
+      "glob": "Models/AnyOf/*.cs",
+      "pattern": "\\A(?!.*TryDeserialize<).*class\\s+\\w+Converter",
+      "dotall": true,
+      "claim": "`AnyOf` - the converter tries each variant's schema in declaration order and takes the first that deserializes.",
+      "defends": "dotnet-models § Polymorphic union types, AnyOf bullet",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.oneof.variants-are-model-or-enum-references",
+      "kind": "absent",
+      "glob": "Models/OneOf/*.cs",
+      "pattern": "public\\s+bool\\s+TryGet\\w+\\(\\s*out\\s+(?:string|int|long|bool|decimal|double|float|Guid|DateTimeOffset|object|IReadOnlyList<|IReadOnlyDictionary<)",
+      "claim": "A `OneOf`'s variants are always model or enum references - a `OneOf` has no primitive, list or map variant at all.",
+      "defends": "dotnet-models § Construct, the bolded OneOf sentence",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.oneof.every-variant-has-an-implicit-conversion",
+      "kind": "absent",
+      "glob": "Models/OneOf/*.cs",
+      "pattern": "\\A(?!.*implicit\\s+operator).*public\\s+bool\\s+TryGet",
+      "dotall": true,
+      "claim": "Every variant a `OneOf` does have gets an implicit conversion to the union.",
+      "defends": "dotnet-models § Construct, the bolded OneOf sentence",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.oneof.factory-is-named-after-the-variant-type",
+      "kind": "absent",
+      "glob": "Models/OneOf/*.cs",
+      "pattern": "public\\s+static\\s+(\\w+)\\s+(\\w+)\\(\\s*(?!\\2\\b)\\w",
+      "claim": "A model `{Variant}` yields the factory `.{Variant}({Variant})`.",
+      "defends": "dotnet-models § the union naming table, first row",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "unions.oneof.tryget-out-type-matches-its-name",
+      "kind": "absent",
+      "glob": "Models/OneOf/*.cs",
+      "pattern": "public\\s+bool\\s+TryGet(\\w+)\\(\\s*out\\s+(?!\\1\\b)\\w",
+      "claim": "A model `{Variant}` yields the reader `TryGet{Variant}(out {Variant})`.",
+      "defends": "dotnet-models § the union naming table, first row",
+      "requires": [
+        "models"
+      ]
+    }
+  ]
+}

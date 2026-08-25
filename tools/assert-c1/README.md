@@ -65,6 +65,22 @@ Needed for the claims static analysis cannot reach: how many times a stub handle
 called, what `ToString()` actually returns, whether a transient client refetches a token.
 Three of the worst defects found in this codebase were only visible from a compiled probe.
 
+## Proving the suite still has teeth
+
+```
+python mutation_test.py <sdk-root>
+```
+
+A suite that passes everywhere proves nothing, and the failure mode is quiet: a regex gets
+loosened during a refactor until it matches anything, and the report stays green while the
+claim rots. `mutation_test.py` copies the fixture, breaks one documented fact at a time —
+the retry default, the method filter, the redaction direction, the expiry buffer — and
+checks that something notices. Ten mutations, ten caught, one assertion each, no
+false positives.
+
+Run it after any change that loosens a pattern. A `MISS` means either the claim has no
+assertion or the one defending it has stopped discriminating.
+
 ## Adding an assertion
 
 Assertions live in `assertions/*.json`, grouped and numbered so the surface

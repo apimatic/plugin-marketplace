@@ -1,0 +1,256 @@
+{
+  "group": "other",
+  "note": "Claims that span areas, or sit in files the other groups do not own.",
+  "assertions": [
+    {
+      "id": "other.stamp.core-file-count",
+      "kind": "count",
+      "glob": "Core/**/*.cs",
+      "pattern": "\\A",
+      "expect": 122,
+      "claim": "The pinned core surface is 122 Core/*.cs files, byte-identical across SDKs modulo the root namespace.",
+      "defends": "the core-surface stamp at the top of dotnet-authentication, -calling-endpoints, -client-initialization, -configuration-resilience and -models"
+    },
+    {
+      "id": "other.stamp.no-additional-properties-model",
+      "kind": "no-file",
+      "file": "Core/Models/AdditionalProperties.cs",
+      "claim": "This surface has no Core/Models/AdditionalProperties.cs — that file is one of the three the current codegen-v2 template adds, and its presence means the SDK in hand is a LATER surface than the skills describe.",
+      "defends": "the core-surface stamp — 'it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs'"
+    },
+    {
+      "id": "other.stamp.no-http-content-extensions",
+      "kind": "no-file",
+      "file": "Core/Extensions/HttpContentExtensions.cs",
+      "claim": "This surface has no Core/Extensions/HttpContentExtensions.cs — the third of the three codegen-v2 template additions the stamp names.",
+      "defends": "the core-surface stamp — 'it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs'"
+    },
+    {
+      "id": "other.pagination.pageable-namespace",
+      "kind": "present",
+      "file": "Core/Pagination/Pageable.cs",
+      "pattern": "namespace\\s+\\w+\\.Core\\.Pagination\\s*;",
+      "claim": "Pageable<TPage,TItem> is a public type in {RootNamespace}.Core.Pagination.",
+      "defends": "dotnet-configuration-resilience § Pagination — the type a paginated operation returns"
+    },
+    {
+      "id": "other.pagination.enumerates-items-not-pages",
+      "kind": "present",
+      "file": "Core/Pagination/Pageable.cs",
+      "pattern": "class\\s+Pageable<TPage,\\s*TItem>\\s*:\\s*IAsyncEnumerable<TItem>",
+      "claim": "Pageable<TPage, TItem> implements IAsyncEnumerable<TItem>, so a plain await foreach walks individual items, not pages.",
+      "defends": "dotnet-configuration-resilience § Pagination — 'the shape catches people out'"
+    },
+    {
+      "id": "other.pagination.aspages-yields-pages",
+      "kind": "present",
+      "file": "Core/Pagination/Pageable.cs",
+      "pattern": "public\\s+(?:async\\s+)?IAsyncEnumerable<TPage>\\s+AsPages\\(\\s*(?:\\[EnumeratorCancellation\\]\\s*)?CancellationToken\\s+\\w+\\s*=\\s*default\\s*\\)",
+      "claim": "AsPages(ct) is a public method on Pageable returning IAsyncEnumerable<TPage> — the page, not the item — and its cancellation token is optional.",
+      "defends": "dotnet-configuration-resilience § Pagination — 'When you want the page rather than the items, call .AsPages(ct)'"
+    },
+    {
+      "id": "other.pagination.page-state-count",
+      "kind": "count",
+      "glob": "Core/Pagination/States/*.cs",
+      "pattern": ":\\s*IPageState<",
+      "expect": 5,
+      "claim": "The SDK advances the paging state for you — offset, cursor, Link-header or page-number, depending on the operation. (The generator emits FIVE IPageState implementations; the fifth, keyset, is not in the skill's list.)",
+      "defends": "dotnet-configuration-resilience § Pagination — '(offset, cursor, `Link`-header, or page-number, depending on the operation)'"
+    },
+    {
+      "id": "other.sse.response-maps-to-item-stream",
+      "kind": "count",
+      "glob": "Core/Response/*SseResponse.cs",
+      "pattern": ":\\s*IResponse<IAsyncEnumerable<TResponse>>",
+      "expect": 2,
+      "claim": "A streaming operation's response mapper produces IAsyncEnumerable<{Item}> — which is what makes the generated signature Task<IAsyncEnumerable<{Item}>>: awaited once to open the stream, then enumerated frame by frame.",
+      "defends": "dotnet-configuration-resilience § Streaming (Server-Sent Events)"
+    },
+    {
+      "id": "other.sse.plaintext-item-is-string",
+      "kind": "present",
+      "file": "Core/Response/PlainTextSseResponse.cs",
+      "pattern": "public\\s+static\\s+PlainTextSseResponse<string>\\s+CreateString\\(",
+      "claim": "{Item} is `string` for a plain-text stream — the plain-text factory fixes the item type to string, while the JSON factory deserializes each frame into the typed model.",
+      "defends": "dotnet-configuration-resilience § Streaming — '{Item} is string for a plain-text stream, or a typed model for a JSON event stream'"
+    },
+    {
+      "id": "other.sse.idle-window-defaults-to-none",
+      "kind": "absent",
+      "glob": "Core/Response/*SseResponse.cs",
+      "pattern": "public\\s+static\\s+[^(]*\\([^)]*TimeSpan\\?\\s+idleTimeout(?!\\s*=\\s*null)",
+      "claim": "The idle window is a TimeSpan? carried on the SSE response itself and defaults to NONE — every generated SSE factory declares `idleTimeout = null`, so unless an operation opts in there is no idle-timeout check at all.",
+      "defends": "dotnet-configuration-resilience § Streaming, Idle timeout — 'the idle window is a TimeSpan? carried on the SSE response itself, defaulting to none'"
+    },
+    {
+      "id": "other.wire.param-normalised-through-json",
+      "kind": "present",
+      "file": "Core/Extensions/ObjectExtensions.cs",
+      "pattern": "JsonDocument\\.Parse\\(\\s*JsonSerializer\\.Serialize\\(",
+      "claim": "A path/query parameter's value is normalised *through* JSON before substitution — the scalar is serialized and re-parsed, so a DateTimeOffset or a generated enum goes on the wire in its JSON form, not whatever ToString() would give.",
+      "defends": "dotnet-configuration-resilience § Verify on the wire — 'it is normalised through JSON'"
+    },
+    {
+      "id": "other.wire.flatten-normalises-before-formatting",
+      "kind": "present",
+      "file": "Core/ParameterFlattener.cs",
+      "pattern": "Flatten\\(object\\?\\s+(\\w+)\\)[\\s\\S]{0,200}?=\\s*\\1\\.Normalize\\(\\);\\s*return\\s+\\w+\\s+switch",
+      "claim": "The path-parameter flattener switches on the JSON-normalised value, not on the raw object — which is what puts the normalisation on the path-substitution route and not just on request bodies.",
+      "defends": "dotnet-configuration-resilience § Verify on the wire — 'it is normalised through JSON'"
+    },
+    {
+      "id": "other.xmldoc.exception-line-is-emitted",
+      "kind": "at-least",
+      "glob": "Api/*.cs",
+      "pattern": "/// <exception cref=\"SdkException\\{TResult\\}\"> of <see cref=\"\\w+\"/> when the server returns an error response\\.</exception>",
+      "expect": 1,
+      "claim": "The operation's XML doc carries an <exception> line naming the TError — the fact 'lives in the method's XML doc <exception> line', so it is readable on hover without opening the error class.",
+      "defends": "dotnet-error-handling § Which TError does an endpoint throw? — 'In the source itself the same fact lives in the method's XML doc <exception> line'",
+      "requires": [
+        "api"
+      ]
+    },
+    {
+      "id": "other.xmldoc.exception-cref-is-boilerplate",
+      "kind": "absent",
+      "glob": "Api/*.cs",
+      "pattern": "exception cref=\"(?!SdkException\\{TResult\\}\")",
+      "claim": "`SdkException{TResult}` is boilerplate — identical on every method — so it is NOT the type you catch; {TResult} is the doc comment's generic placeholder.",
+      "defends": "dotnet-error-handling § Which TError does an endpoint throw?",
+      "requires": [
+        "api"
+      ]
+    },
+    {
+      "id": "other.xmldoc.exception-line-names-the-terror",
+      "kind": "absent",
+      "glob": "Api/*.cs",
+      "pattern": "exception cref=\"SdkException\\{TResult\\}\">(?! of <see cref=\"\\w+\"/> when the server returns an error response\\.</exception>)",
+      "claim": "The operation's XML doc <exception> line has a fixed shape — `<exception cref=\"SdkException{TResult}\"> of <see cref=\"…\"/> when the server returns an error response.</exception>` — so the type named after `of <see cref=` is always where the actual TError is read from.",
+      "defends": "dotnet-error-handling § Which TError does an endpoint throw? — 'The type named after of <see cref=\"…\"/> is the actual TError'",
+      "requires": [
+        "api"
+      ]
+    },
+    {
+      "id": "other.status.default-success-window-is-2xx",
+      "kind": "present",
+      "file": "Core/HttpStatusPolicy.cs",
+      "pattern": "\\.Count\\s*>\\s*0[\\s\\S]{0,80}?Contains\\([\\s\\S]{0,80}?is\\s+>=\\s*200\\s+and\\s+<=\\s*299",
+      "claim": "A non-2xx response throws: success is the spec-derived allowlist when one is configured, otherwise the 200-299 default — so 304 is NOT success.",
+      "defends": "dotnet-calling-endpoints § Making the call and reading the response; dotnet-testing § Test a success path"
+    },
+    {
+      "id": "other.status.client-passes-empty-allowlist",
+      "kind": "absent",
+      "glob": "*Client.cs",
+      "pattern": "new\\s+HttpStatusPolicy\\(\\s*(?!\\[\\s*\\]\\s*\\))",
+      "claim": "The generated client constructs the status policy with an EMPTY success allowlist — which is the condition under which 'a non-2xx response throws' is literally exact. A fixture that emits a spec-derived allowlist would need the sentence reworded to 'outside the operation's success set'.",
+      "defends": "dotnet-calling-endpoints § Making the call and reading the response — 'a non-2xx response throws, it is not signalled by the return value'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "other.retry.attempt-carries-number-delay-reason",
+      "kind": "count",
+      "glob": "Core/Configuration/RetryAttempt.cs",
+      "pattern": "public\\s+required\\s+(?:int\\s+AttemptNumber|TimeSpan\\s+Delay|RetryReason\\s+Reason)\\s*\\{\\s*get;\\s*init;\\s*\\}",
+      "expect": 3,
+      "claim": "OnRetry receives a RetryAttempt carrying AttemptNumber, Delay and Reason — the three members the skill's OnRetry sample reads.",
+      "defends": "dotnet-configuration-resilience § Retries — the OnRetry sample and 'OnRetry's RetryAttempt also carries Reason'"
+    },
+    {
+      "id": "other.retry.reason-has-status-and-failure-cases",
+      "kind": "count",
+      "glob": "Core/Configuration/RetryAttempt.cs",
+      "pattern": "public\\s+sealed\\s+record\\s+(?:Status\\(HttpStatusCode\\s+\\w+\\)|Failure\\(Exception\\s+\\w+\\))\\s*:\\s*RetryReason\\s*;",
+      "expect": 2,
+      "claim": "RetryAttempt.Reason is either RetryReason.Status(HttpStatusCode) or RetryReason.Failure(Exception) — the SDK itself distinguishes a status fault from a transport fault.",
+      "defends": "dotnet-configuration-resilience § Retries — 'RetryReason.Status(HttpStatusCode) or RetryReason.Failure(Exception)'; dotnet-testing § Notes"
+    },
+    {
+      "id": "other.retry.reason-hierarchy-is-closed",
+      "kind": "present",
+      "file": "Core/Configuration/RetryAttempt.cs",
+      "pattern": "abstract\\s+record\\s+RetryReason\\b[\\s\\S]{0,120}?private\\s+RetryReason\\s*\\(\\s*\\)",
+      "claim": "RetryReason's constructor is private, so the two cases are the whole hierarchy — nothing outside the file can add a third, and a switch over Status and Failure is exhaustive.",
+      "defends": "dotnet-configuration-resilience § Retries — 'RetryReason.Status(HttpStatusCode) or RetryReason.Failure(Exception)'"
+    },
+    {
+      "id": "other.client.controller-property-named-for-its-type",
+      "kind": "absent",
+      "glob": "*Client.cs",
+      "pattern": "public\\s+(\\w+)\\s+(?!\\1\\b)\\w+\\s*\\{\\s*get;\\s*\\}",
+      "claim": "Each controller property on the client is named exactly for its controller type, which is what makes `client.{ApiGroup}.{Operation}(...)` resolve with {ApiGroup} read straight off the Api/ class name.",
+      "defends": "dotnet-client-initialization § Shape of the client — 'grouped under controller properties (one per API resource group) and called client.{ApiGroup}.{Operation}(...)'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "other.body.json-body-parameter-is-named-body",
+      "kind": "absent",
+      "glob": "Api/*.cs",
+      "pattern": "JsonRequest\\.Create\\(\\s*(?!body\\s*[,)])",
+      "claim": "Where an operation carries a JSON request body, the parameter holding it is named `body` — so the request type is the type of the operation's `body` parameter.",
+      "defends": "dotnet-calling-endpoints § Building request models — 'The request type is the type of the operation's body parameter'",
+      "requires": [
+        "api"
+      ]
+    },
+    {
+      "id": "other.signature.async-only-no-sync-overloads",
+      "kind": "absent",
+      "glob": "Api/*.cs",
+      "pattern": "^    public\\s+(?!(?:async\\s+)?(?:Task|Pageable)\\b)\\S+\\s+\\w+\\s*\\(",
+      "claim": "Methods are async-only (no sync overloads) — every public member of a generated controller returns Task (or Pageable for a paginated operation).",
+      "defends": "dotnet-calling-endpoints § Method signature convention — 'Methods are async-only (no sync overloads)'",
+      "requires": [
+        "api"
+      ]
+    },
+    {
+      "id": "other.models.unknown-fields-are-never-rejected",
+      "kind": "absent",
+      "glob": "**/*.cs",
+      "pattern": "UnmappedMemberHandling",
+      "claim": "Where a model has no additional-properties map, unknown JSON fields are DROPPED on deserialization — nothing in the SDK sets UnmappedMemberHandling.Disallow, so a field the model does not declare can never make a response throw.",
+      "defends": "dotnet-models § Unknown / future fields — 'unknown fields are dropped on deserialization'"
+    },
+    {
+      "id": "other.models.converter-injection-is-payload-wide",
+      "kind": "present",
+      "file": "Core/Response/JsonResponse.cs",
+      "pattern": "new\\s+JsonSerializerOptions\\s*\\{\\s*Converters\\s*=\\s*\\{\\s*\\w+\\s*\\}\\s*\\}[\\s\\S]*Create<TResponse>\\(\\s*JsonConverter\\?\\s+\\w+\\s*=\\s*null",
+      "claim": "The only place a date converter can be injected is the response mapper's optional converter argument, and it is registered on the JsonSerializerOptions for the WHOLE payload — which is why the four date converters attach to whole-response payloads and never to a property inside a model.",
+      "defends": "dotnet-models § Dates & numbers — 'it attaches them to whole-response payloads … not to properties inside a model'"
+    },
+    {
+      "id": "other.auth.credentials-captured-at-construction",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuth2Scheme.cs",
+      "pattern": "Create\\(\\s*TCredentials\\?\\s+(\\w+),[\\s\\S]{0,200}?new\\s+OAuth2Scheme<TCredentials>\\(\\s*\\(\\)\\s*=>\\s*\\1\\s*,",
+      "claim": "Set credentials BEFORE constructing the client: the scheme captures the credentials value in a constant closure when the client's constructor builds AuthSchemes, so assigning the options property afterwards is never observed.",
+      "defends": "dotnet-authentication § Notes — 'Set credentials before constructing the client'"
+    },
+    {
+      "id": "other.auth.oauth2-token-request-factories-are-the-only-two",
+      "kind": "absent",
+      "glob": "Core/Authentication/OAuth2/*/*Strategy.cs",
+      "pattern": "public\\s+static\\s+\\w+\\s+(?!For(?:BasicAuth|FormBody)Request\\b)\\w+\\s*\\(",
+      "claim": "A grant strategy is built through one of exactly two token-request factories — ForBasicAuthRequest or ForFormBodyRequest — so 'check which factory your generated AuthSchemes uses' is a two-way choice, not an open set.",
+      "defends": "dotnet-authentication § OAuth 2.0 — authorization code, the ClientSecret table — 'Check which factory your generated AuthSchemes uses before treating the secret as optional'"
+    },
+    {
+      "id": "other.auth.every-grant-offers-both-factories",
+      "kind": "count",
+      "glob": "Core/Authentication/OAuth2/*/*Strategy.cs",
+      "pattern": "public\\s+static\\s+\\w+\\s+For(?:BasicAuth|FormBody)Request\\s*\\(",
+      "expect": 6,
+      "claim": "All three OAuth2 grants (client-credentials, authorization-code, resource-owner-password) expose both token-request factories — six in total — so the basic-vs-form-body choice, and the client-secret rule that hangs off it, applies to every grant.",
+      "defends": "dotnet-authentication § OAuth 2.0 — authorization code, the ClientSecret table"
+    }
+  ]
+}
