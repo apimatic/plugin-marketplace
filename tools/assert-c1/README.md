@@ -77,6 +77,12 @@ Needed for the claims static analysis cannot reach: how many times a stub handle
 called, what `ToString()` actually returns, whether a transient client refetches a token.
 Three of the worst defects found in this codebase were only visible from a compiled probe.
 
+Unlike the static tier, this one is **not SDK-agnostic**: it names `PayPalServerSdk` types
+directly, so it runs against that SDK (or a regeneration of it) and no other. Pointing it at
+a different SDK means editing `Program.cs`. That is a deliberate trade — the compile-time
+binding means a renamed member fails the build, which is a signal the static tier cannot
+produce — but it does mean the static tier is the one that generalises.
+
 ## Proving the suite still has teeth
 
 ```
@@ -159,7 +165,8 @@ test on one of them. Triggers on any PR touching `plugins/*/skills/dotnet-*` or 
 directory. Fixtures are listed in `fixtures.json`; the refs there must track what the
 plugins themselves pin, or CI reports green about a surface nobody ships any more.
 
-**behavioural** — runs the compiled checks against the published package.
+**behavioural** — runs the compiled checks against the published package. PayPal-specific by
+construction (see above), so it does not fan out over fixtures the way the static job does.
 
 **generator template drift** — schedule and manual only, because nothing in a PR to *this*
 repo moves the generator, and the job is about the generator moving. It needs
