@@ -10,11 +10,14 @@ description: Creating and registering an APIMatic-generated .NET SDK client in C
      RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
      BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
      for retry-ineligible requests.
-     verified-this-file: not yet audited against this surface.
-     Authoritative source: the generator's own StaticCode/Core template (codegen-v2), which matches this
-     surface file-for-file. The one pre-4.0.0 SDK sampled has none of the seven features above; treat any
-     other pre-4.0.0 SDK as unverified. Do NOT copy runtime claims across a core-surface boundary —
-     check this stamp in both files first. -->
+     verified-this-file: 2026-08-25 - the options-class surface (including Logging), the DI extension's singleton registration and its handler-rotation consequence, and the per-attempt timeout arithmetic.
+     CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
+     (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
+     differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
+     and RequestOptions gains a `Hooks` property (so "its single property is LogLevel?" is already stale
+     against the template). Re-verify against the EMITTED Core of the SDK in hand, not against
+     X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check this stamp in
+     both files first. -->
 
 # Initializing an APIMatic .NET SDK client
 
@@ -52,14 +55,17 @@ public class {Api}ClientOptions
     public RetryOptions Retry { get; set; } = RetryOptions.Default();
     public LoggingOptions Logging { get; set; } = new();
     public ServerOptions Server { get; set; } = new();
-    // + one nullable credentials property per auth scheme the API declares
+    // + one nullable credentials property per auth scheme the API declares, and — for an OAuth2
+    //   scheme — a nullable {Scheme}TokenStrategy hook alongside it (see dotnet-authentication)
 }
 ```
 
 `Logging` is a real property, not a placeholder — the SDK has a **built-in** request/response logger, and
-leaving `Logging.LoggerFactory` unset does more than silence it: it hands control to a `{APICLIENT}_LOG`
-environment variable that can switch logging (including unredacted JSON request bodies) on from outside your
-code. Set it explicitly. Tuning these knobs — `Retry` (retries, backoff, per-attempt timeout), `Logging`, and
+what an unset `Logging.LoggerFactory` means depends on how the client is built. Under `Add{Api}Client` the
+extension fills it from the container's `ILoggerFactory`, so logging is **already on** at your host's level.
+On a client you construct yourself it falls through to a `{APICLIENTTYPENAME}_LOG` environment variable that
+can switch logging — including unredacted JSON request bodies — on from outside your code. Set it
+explicitly either way; **dotnet-configuration-resilience** has the full table. Tuning these knobs — `Retry` (retries, backoff, per-attempt timeout), `Logging`, and
 `Server` / `Environment` (server selection and **overriding the base URL**), plus pagination — is covered in
 **dotnet-configuration-resilience**.
 
@@ -85,9 +91,22 @@ The SDK does **not** own the `HttpClient` — you provide it. Reuse one instance
 (or use `IHttpClientFactory`); do not create one per request. Attach custom `HttpMessageHandler`s here for
 logging, proxies, or custom TLS (see `dotnet-configuration-resilience`).
 
-The client itself is also meant to be **long-lived** — construct it once and reuse it for the app's
-lifetime (it's just lightweight controller wrappers over the shared HTTP pipeline). Don't build a new
-client per request or per call.
+**Keep both the `HttpClient` and the SDK client long-lived — the client is not a stateless wrapper.** The
+only thing you hand it is the HTTP pipeline; its constructor builds the rest and then owns it:
+
+- the **resilience pipelines** — two Polly pipelines are eagerly built from `options.Retry`;
+- the **logger** — constructed here, which is also where the `{APICLIENTTYPENAME}_LOG` environment variable
+  is read;
+- the **auth schemes**, and for an OAuth2 SDK the auth scheme *is* the access-token cache — an instance
+  field on the scheme object.
+
+That last one is the reason a per-request client is a real cost rather than a stylistic one: a fresh client
+starts with an empty token cache, so **every resolution pays a token request on its first call**. Three
+calls through three transient clients is three token round-trips where a shared client makes one.
+
+Reuse one `HttpClient` (or let `IHttpClientFactory` own it) *and* one SDK client for the app's lifetime.
+Construct per request only where you genuinely need different credentials per request — and then expect the
+token fetch.
 
 ## Choosing the server / base URL
 
@@ -116,14 +135,18 @@ builder.Services.Add{Api}Client(options =>
 });
 ```
 
-**Check which lifetime it registers — that decides whether handler rotation ever reaches you.** Generated
-extensions differ here, and the two are not equivalent. A **transient** client is harmless: each resolution
-takes a fresh `HttpClient` from the factory, so the pooled handler pipeline stays shared and rotated. A
-**singleton** client calls `CreateClient()` *once* and holds that `HttpClient` for the process lifetime — so
-`IHttpClientFactory`'s handler rotation never applies to it and a DNS change is cached indefinitely. Read
-the extension (or take it from the contract sheet) rather than assuming; if it is a singleton and the
-process is long-lived, set `PooledConnectionLifetime` on the primary handler, or register the client
-yourself instead of using the extension.
+⚠ **The extension registers the client as a `singleton`, and that has a consequence worth planning for.**
+A singleton calls `CreateClient()` *once* and holds that `HttpClient` for the process lifetime, so
+`IHttpClientFactory`'s handler rotation never applies to it and a DNS change is cached indefinitely — the
+classic symptom is an app that keeps calling a decommissioned IP after a provider fails over, and only a
+restart fixes it. (A transient registration avoids *this* problem — each resolution takes a fresh `HttpClient` and the
+pooled pipeline stays rotated — but it buys stale-DNS safety with a fresh, empty OAuth token cache per
+resolution, so it is a trade, not a fix. See the lifetime note above.)
+
+The actual fix is cheap: set `PooledConnectionLifetime` on the primary handler so the pool recycles
+connections on a timer, and keep the SDK client long-lived. Registering yourself over a named `HttpClient`
+(below) gives you the same control plus an unshared pipeline. Confirm the registration in the extension rather than trusting this paragraph if your SDK was
+generated by a different version — it is one line, and the contract sheet carries it.
 
 To attach custom `DelegatingHandler`s (logging, proxies, custom TLS) under this DI registration, configure
 the **default, unnamed** factory client it resolves — e.g.

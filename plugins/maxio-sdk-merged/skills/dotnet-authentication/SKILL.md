@@ -10,7 +10,9 @@ description: Authentication for an APIMatic-generated .NET SDK in C# — supplyi
      on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
      a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
      Retry-After handling and no delay clamp.
-     verified-this-file: not yet audited against this surface.
+     verified-this-file: not audited, and not scheduled - this plugin wraps a pre-4.0.0 test
+     SDK and is not a generation target. Production plugins are generated at 4.0.0 or later; see
+     the paypal-sdk / twilio-sdk copy of this file for the audited text.
      Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
      this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
      here. Do NOT copy runtime claims across a core-surface boundary. -->

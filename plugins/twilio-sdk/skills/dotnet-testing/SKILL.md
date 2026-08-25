@@ -11,10 +11,13 @@ description: Testing code that calls an APIMatic-generated .NET SDK in C# — wh
      BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
      for retry-ineligible requests.
      verified-this-file: 2026-08-25 — the retry-trigger and send-count claims only.
-     Authoritative source: the generator's own StaticCode/Core template (codegen-v2), which matches this
-     surface file-for-file. The one pre-4.0.0 SDK sampled has none of the seven features above; treat any
-     other pre-4.0.0 SDK as unverified. Do NOT copy runtime claims across a core-surface boundary —
-     check this stamp in both files first. -->
+     CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
+     (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
+     differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
+     and RequestOptions gains a `Hooks` property (so "its single property is LogLevel?" is already stale
+     against the template). Re-verify against the EMITTED Core of the SDK in hand, not against
+     X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check this stamp in
+     both files first. -->
 
 # Testing code that uses an APIMatic .NET SDK
 
