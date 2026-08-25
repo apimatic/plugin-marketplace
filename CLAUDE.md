@@ -4,7 +4,19 @@ General-purpose AI models are trained on public code and documentation, much of 
 
 APIMatic gives coding assistants deterministic, version-aware API context, generated directly from your API definition and SDKs. Instead of scraping public documentation or guessing from memory, the AI is grounded in the exact OpenAPI definition, current SDK versions, executable, idiomatic code samples, and recommended integration workflows.
 
-This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Claude Code, Cursor, and VS Code**. It ships three plugins under `plugins/`: `context-matic`, `acp-paypal`, and `maxio-sdk`.
+This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Claude Code, Cursor, VS Code and Codex**. It ships seven plugins under `plugins/`, all registered in `.claude-plugin/marketplace.json`:
+
+| Plugin | Kind | Harness manifests |
+| --- | --- | --- |
+| `context-matic` | MCP, multi-API | Claude Code, Cursor, VS Code |
+| `acp-paypal` | MCP, PayPal | Claude Code, Cursor, VS Code |
+| `maxio-sdk` | skills + map, .NET | Claude Code |
+| `maxio-sdk-merged` | skills + map, .NET | Claude Code, Cursor, Codex |
+| `maxio-sdk-lean` | skills + map-in-SDK, .NET | Claude Code |
+| `paypal-sdk` | skills + map, .NET | Claude Code, Cursor |
+| `twilio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
+
+No plugin currently ships to all four harnesses.
 
 ## Plugins
 
@@ -68,6 +80,38 @@ The map's generated pages are never hand-edited — they are produced by the
 `sdk-map-generator` repo and verified field-exact against the SDK source
 (github.com/asadali214/advanced-billing-sample-sdk, pinned per map stamp).
 
+### maxio-sdk-merged
+
+Same SDK and same bundled map as `maxio-sdk`, but the two agents are collapsed into **one** `maxio-sdk`
+agent that plans, answers narrow contract questions, and fixes build errors in place. Ships Claude Code,
+Cursor and Codex manifests; the Codex carrier is `codex/agents/maxio-sdk.toml`, whose
+`developer_instructions` is a verbatim copy of `agents/maxio-sdk.md` and must be kept in sync by hand.
+
+> `skills/dotnet/` in this plugin is a nested second copy of the skill set and is **not** referenced by any
+> manifest. Treat the top-level `skills/*` directories as the live ones.
+
+### maxio-sdk-lean
+
+Same SDK, same single-agent shape, but the map is **not bundled** — it ships inside the SDK's own source
+(branch `docs/sdk-map` of `mohammadali2549/advanced-billing-sample-sdk`) and the agent reads it from the
+root of the clone. Claude Code manifest only.
+
+### paypal-sdk
+
+PayPal **.NET SDK** plugin — no MCP server, Claude Code + Cursor, C#/.NET only. Bundled SDK map
+(`skills/paypal-getting-started/sdk-map.md` + `map/`) over
+`github.com/asadali214/checkout-sample-sdk` at tag `v1.0.1` (40 operations, 5 controllers), plus the
+`integrate-paypal` router and a single `paypal-sdk` agent. The SDK is on nuget.org as
+`AsadAli.Checkout.Sdk`; the clone is a read-only reference, never a build dependency.
+
+(Do not install alongside `acp-paypal` — the `integrate-paypal` skill name collides.)
+
+### twilio-sdk
+
+Twilio **.NET SDK** plugin with the same single-agent shape, over
+`github.com/context-plugins/twilio-csharp-sdk`. Ships Claude Code, Cursor and Codex manifests; the Codex
+carrier is `codex/agents/twilio-sdk.toml`, kept in sync with `agents/twilio-sdk.md` by hand.
+
 ## Per-IDE manifest convention
 
 MCP-backed plugins carry one manifest per IDE, and each manifest points at its own MCP config file so it can send an IDE-specific `X-Apimatic-Mcp-Client` telemetry header:
@@ -76,4 +120,10 @@ MCP-backed plugins carry one manifest per IDE, and each manifest points at its o
 - Cursor: `.cursor-plugin/plugin.json` → `.cursor-mcp.json` (header `Cursor`)
 - VS Code: root `plugin.json` (Copilot format) → `.mcp.json` (header `VSCode`)
 
-(The maxio-sdk plugin is the exception: it has no MCP server and ships only the Claude Code manifest.)
+(The five SDK plugins are the exception: they have no MCP server, so their manifests point at no MCP config.
+`maxio-sdk` and `maxio-sdk-lean` ship only the Claude Code manifest; `maxio-sdk-merged` and `twilio-sdk`
+add Cursor and Codex; `paypal-sdk` adds Cursor. None of the five ships a VS Code manifest.)
+
+Codex is carried differently from the others: the agent body cannot live in a Markdown file with
+frontmatter, so it is duplicated into `codex/agents/<agent>.toml` under `developer_instructions`. That
+duplication is hand-maintained — edit the `.md` and the `.toml` in the same commit.

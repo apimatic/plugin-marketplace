@@ -1,6 +1,6 @@
-# PayPal SDK Assistant (Claude Code plugin)
+# PayPal SDK Assistant (Claude Code + Cursor plugin)
 
-A Claude Code plugin that helps developers **install and consume the PayPal .NET SDK**
+A plugin for **Claude Code and Cursor** that helps developers **install and consume the PayPal .NET SDK**
 (the APIMatic-generated C# SDK at
 [asadali214/checkout-sample-sdk](https://github.com/asadali214/checkout-sample-sdk)),
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
@@ -15,17 +15,17 @@ The generated table-of-contents ships inside this plugin (`skills/paypal-getting
 plus `map/` branch pages):
 
 - **`map/operations/`** — one page per controller (5 pages — Orders, Payments, Subscriptions,
-  TransactionSearch, Vault — 44 operations): exact C# signature, must-pass-explicitly params, return
+  TransactionSearch, Vault — 40 operations): exact C# signature, must-pass-explicitly params, return
   type, error case (typed vs `RawError`) with its `TryGet…` accessors, and pagination — plus the
   source file each came from.
 - **`map/models/`** — record models (three alphabetical pages), `OneOf`/`AnyOf` unions (factories +
-  `TryGet…`), and full enum value lists.
+  `TryGet…` — the page is present, but this SDK declares none), and full enum value lists.
 
 `sdk-map.md` records the source commit it was generated from (the map is generated from the SDK
 source, which remains the ground truth; the SDK repo and the map regenerate together). The agent
 **navigates by map lookup instead of grepping**: it answers most questions from the map directly —
 field lists with JSON wire names, error accessors, enum values — and only when the map can't settle
-a fact does it clone the SDK source (branch `main`, the ref the map was generated from) and open the
+a fact does it clone the SDK source (tag `v1.0.1`, the ref the map was generated from) and open the
 one file the map names. Grepping / globbing / `find`-ing the tree to locate something is a defect —
 the map is the locator.
 
@@ -56,9 +56,10 @@ it for lookup before touching the SDK source.
   questions, and SDK errors — to the single `paypal-sdk` agent, and drives the implement-and-verify
   loop. Grounds every fact in the contract sheet the agent produces — never model knowledge, and never
   the map directly.
-- **paypal-getting-started** — install (clone + project reference; the SDK is not on NuGet),
-  Production/Sandbox environments, OAuth2 client-credentials auth, the bundled SDK map, and how to
-  clone the SDK source only on a map gap. The helper-facing entry point.
+- **paypal-getting-started** — install (`dotnet add package AsadAli.Checkout.Sdk` — the SDK *is* published
+  to nuget.org), the `Sandbox` environment (the only one this sample SDK declares), OAuth2
+  client-credentials auth, the bundled SDK map, and how to clone the SDK source only on a map gap. The
+  helper-facing entry point.
 - **dotnet-client-initialization** — construct `{Api}Client` + `{Api}ClientOptions`, supply an `HttpClient`,
   pick a server environment, register in DI.
 - **dotnet-authentication** — wire up Basic / Bearer / API-key / OAuth2 / composite auth.
@@ -79,10 +80,15 @@ it for lookup before touching the SDK source.
 
 ## Install
 
+Claude Code:
+
 ```
 /plugin marketplace add apimatic/plugin-marketplace
 /plugin install paypal-sdk@apimatic
 ```
+
+Cursor loads the same plugin from `.cursor-plugin/plugin.json`. There is no VS Code manifest and no Codex
+carrier for this plugin yet.
 
 Then ask a usage question (e.g. *"how do I create and capture a PayPal order in C#?"*) to trigger the
 relevant skill.
