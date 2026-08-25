@@ -341,7 +341,7 @@ event stream.
 using {RootNamespace}.Core.Exceptions;   // SseException, SseTimeoutException, SseDeserializationException
 
 // await once to open the stream (an opening error surfaces here — see "Errors" below):
-IAsyncEnumerable<{Item}> stream = await client.{ApiGroup}.{Operation}(ct);
+IAsyncEnumerable<{Item}> stream = await client.{ApiGroup}.{Operation}(ct: ct);
 
 try
 {

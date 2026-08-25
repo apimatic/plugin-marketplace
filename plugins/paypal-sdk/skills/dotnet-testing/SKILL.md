@@ -115,7 +115,9 @@ public async Task ThrowsOnApiError()
     // typed accessor — its name embeds the body type; the contract sheet lists the exact accessor name.
     // TryGetRawError is FALSE for those statuses, so don't assert through it here:
     Assert.True(ex.Error.TryGetSomeTypedBody(out var typed));
-    // ...assert on 'typed'. (Only statuses the operation maps to RawError populate TryGetRawError.)
+    // ...assert on 'typed'. TryGetRawError fires ONLY for a status that falls to the error factory's
+    // default arm. A status with its own RawError accessor — TryGetNoContent, say — populates that
+    // accessor and leaves TryGetRawError false, so assert the specific one.
 }
 ```
 
