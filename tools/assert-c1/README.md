@@ -30,11 +30,23 @@ python assert_c1.py <sdk-root> --json out.json
 `<sdk-root>` is the directory holding `Core/` — an emitted SDK, or the generator's own
 `StaticCode/`. Exit status is 0 when everything applicable passes.
 
+### Skipped is not passed
+
 The generator template has no `Api/`, `Models/`, `Errors/` or DI extension: those are
-rendered per API definition. Assertions that need them are **skipped**, not failed, and
-the skip message says the claim is *unsettled here*, not confirmed. That distinction is
-the whole point — a suite that quietly passes on a fixture that cannot answer the
-question is worse than no suite.
+rendered per API definition. Assertions that need them are **skipped**, not failed, and the
+skip message says the claim is *unsettled here*, not confirmed.
+
+The same rule applies whenever the fixture cannot answer: an `absent`, `count` or `at-least`
+whose glob matches no file, or a check against a file that isn't there. Those are trivially
+satisfied and tell you nothing, so they skip rather than pass. Getting this wrong is not
+hypothetical — before it was enforced, 35 assertions reported `ok` against a directory
+containing a single meaningless `.cs` file, and the twelve union assertions reported `ok`
+against an SDK with no unions in it.
+
+That is the same category error the skills themselves kept making: stating a fact
+unconditionally when the sample could not settle it. A suite that quietly passes on a
+fixture that cannot answer the question is worse than no suite, because it looks like
+coverage.
 
 ## What a failure means
 

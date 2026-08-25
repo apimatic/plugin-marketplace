@@ -105,6 +105,28 @@ class Ctx:
 # assertion kinds
 # --------------------------------------------------------------------------
 
+class Unsettleable(Exception):
+    """The fixture cannot answer this assertion.
+
+    Raised instead of returning a pass, because the two are not the same thing and
+    conflating them is how a suite starts lying. An `absent` check over a glob that
+    matched no files is trivially satisfied and tells you nothing — reported as `ok`
+    it is worse than no assertion, since it looks like coverage. The runner turns
+    this into a SKIP with the reason attached.
+    """
+
+
+def _files_or_unsettleable(ctx: "Ctx", a: dict) -> list[str]:
+    if "glob" in a:
+        hits = ctx.files(a["glob"])
+        if not hits:
+            raise Unsettleable("glob %r matched no files" % a["glob"])
+        return hits
+    if not ctx.exists(a["file"]):
+        raise Unsettleable("no such file: " + a["file"])
+    return [a["file"]]
+
+
 def _flags(a: dict) -> int:
     f = re.MULTILINE
     if a.get("dotall"):
@@ -137,7 +159,7 @@ def k_present(ctx: Ctx, a: dict) -> tuple[bool, str]:
 
 def k_absent(ctx: Ctx, a: dict) -> tuple[bool, str]:
     """A pattern matches nowhere in the named file (or glob)."""
-    targets = ctx.files(a["glob"]) if "glob" in a else [a["file"]]
+    targets = _files_or_unsettleable(ctx, a)
     hits = []
     for rel in targets:
         src = ctx.read(rel)
@@ -151,7 +173,7 @@ def k_absent(ctx: Ctx, a: dict) -> tuple[bool, str]:
 def k_count(ctx: Ctx, a: dict) -> tuple[bool, str]:
     """A pattern matches exactly `expect` times across a glob."""
     total = 0
-    for rel in ctx.files(a["glob"]):
+    for rel in _files_or_unsettleable(ctx, a):
         src = ctx.read(rel)
         if src:
             total += len(re.findall(a["pattern"], src, _flags(a)))
@@ -169,7 +191,7 @@ def k_at_least(ctx: Ctx, a: dict) -> tuple[bool, str]:
     emitted at all — a zero here means the fixture cannot settle the claim.
     """
     total = 0
-    for rel in ctx.files(a["glob"]):
+    for rel in _files_or_unsettleable(ctx, a):
         src = ctx.read(rel)
         if src:
             total += len(re.findall(a["pattern"], src, _flags(a)))
@@ -438,6 +460,10 @@ def run(root: str, surface: str, only: str | None) -> list[Result]:
             continue
         try:
             ok, detail = fn(ctx, a)
+        except Unsettleable as exc:
+            results.append(Result(a["id"], True, a["claim"], a.get("defends", ""),
+                                  "UNSETTLED here (%s) — not confirmed" % exc, skipped=True))
+            continue
         except Exception as exc:                      # a broken assertion is a failure
             ok, detail = False, "%s: %s" % (type(exc).__name__, exc)
         results.append(Result(a["id"], ok, a["claim"], a.get("defends", ""), detail))
