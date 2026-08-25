@@ -113,7 +113,14 @@ edits collide with yours. This holds for a helper you spawned AND one you resume
 follow-up message (a resumed or backgrounded helper is still running). The one thing you
 may do during a wait is the **read-only** Step-1 prerequisite work (repo survey, restore,
 baseline build, env checks) — it touches no project file. When those are done and a helper
-is still running, wait.
+is still running, end your turn with a brief status update rather than sitting inside the
+turn: a helper's completion notification can only reach you at a turn boundary, so ending the
+turn is how you actually receive it.
+
+Ending the turn here is not handing back to the user, not deferring work, and not the kind of
+early stop that leaves the task unfinished — it is the mechanism for making progress on work
+that is genuinely running in the background. Treat it as continuing the task, not pausing it:
+the moment the notification arrives, pick the plan straight back up.
 
 ## Anti-patterns — never do these
 
