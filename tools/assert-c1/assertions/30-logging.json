@@ -1,0 +1,163 @@
+{
+  "group": "logging",
+  "note": "Two shipped plugins told the reader there was no built-in logger at all. The redaction assertions here are the security-relevant ones: they pin which direction the allow/deny lists point, and they pin the fact that a JSON body is not redacted — the claim most likely to be softened by accident.",
+  "assertions": [
+    {
+      "id": "logging.options.defaults-off",
+      "kind": "present",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "public\\s+bool\\s+LogRequestHeaders\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*(?!=)",
+      "claim": "LogRequestHeaders defaults to false (no initializer).",
+      "defends": "dotnet-configuration-resilience § Logging, the defaults table"
+    },
+    {
+      "id": "logging.options.body-size-limit",
+      "kind": "present",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "BodySizeLimit\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*=\\s*32\\s*\\*\\s*1024",
+      "claim": "BodySizeLimit defaults to 32 KB — bodies are truncated, not dropped.",
+      "defends": "dotnet-configuration-resilience § Logging, the defaults table"
+    },
+    {
+      "id": "logging.options.loggable-content-types",
+      "kind": "present",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "LoggableContentTypes[^=]*=\\s*\\[\\s*\"application/json\"\\s*,\\s*\"application/x-www-form-urlencoded\"\\s*\\]",
+      "dotall": true,
+      "claim": "Only application/json and application/x-www-form-urlencoded bodies are ever logged.",
+      "defends": "dotnet-configuration-resilience § Logging, the LogRequestBody warning"
+    },
+    {
+      "id": "logging.options.redacted-keys",
+      "kind": "present",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "RedactedKeys[^=]*=\\s*\\[\\s*\"sig\"\\s*,\\s*\"signature\"\\s*,\\s*\"access_token\"\\s*,\\s*\"apikey\"\\s*,\\s*\"api_key\"\\s*,\\s*\"client_secret\"\\s*,\\s*\"password\"\\s*,\\s*\"refresh_token\"\\s*,\\s*\"code\"\\s*,\\s*\"assertion\"\\s*,\\s*\"client_assertion\"\\s*\\]",
+      "dotall": true,
+      "claim": "The default RedactedKeys list is exactly the eleven keys the skill quotes.",
+      "defends": "dotnet-configuration-resilience § Logging, the redaction paragraph"
+    },
+    {
+      "id": "logging.options.redacted-headers-empty-by-default",
+      "kind": "present",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "RedactedHeaders\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*=\\s*\\[\\s*\\]",
+      "claim": "RedactedHeaders is empty by default — header safety comes from the allow-list, not from this list.",
+      "defends": "dotnet-configuration-resilience § Logging, the redaction paragraph"
+    },
+    {
+      "id": "logging.redaction.headers-are-allowlisted",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "KnownSafe\\.Headers\\.Contains\\(name\\)\\s*\\?\\s*value\\s*\\n?\\s*:\\s*_placeholder",
+      "dotall": true,
+      "claim": "A header is masked UNLESS it is on the known-safe allow-list — the safe direction. Authorization is not on that list.",
+      "defends": "dotnet-configuration-resilience § Logging, 'redacted by allow-list'"
+    },
+    {
+      "id": "logging.redaction.authorization-not-known-safe",
+      "kind": "absent",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "\"Authorization\"",
+      "claim": "Authorization is absent from KnownSafe.Headers, so it is masked.",
+      "defends": "dotnet-configuration-resilience § Logging, 'Authorization is not on that list'"
+    },
+    {
+      "id": "logging.redaction.query-is-allowlisted",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "MaskPairs\\(query,\\s*maskUnknownKeys:\\s*true\\)",
+      "claim": "Query values are masked unless the key is known-safe (maskUnknownKeys: true).",
+      "defends": "dotnet-configuration-resilience § Logging and § Verify on the wire, checklist item 4"
+    },
+    {
+      "id": "logging.redaction.form-body-is-denylisted",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "MaskPairs\\(body,\\s*maskUnknownKeys:\\s*false\\)",
+      "claim": "A form body is masked by DENY-list only — a key not in RedactedKeys (card_number, cvv) prints in the clear, unlike the same key in a query string.",
+      "defends": "dotnet-configuration-resilience § Logging, the LogRequestBody warning"
+    },
+    {
+      "id": "logging.redaction.json-body-not-masked",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "return\\s+Truncate\\(isForm\\s*\\?\\s*MaskPairs\\([^)]*\\)\\s*:\\s*body\\)",
+      "claim": "A non-form (i.e. JSON) body is logged VERBATIM, only truncated. This is the security-relevant claim in the whole logging section.",
+      "defends": "dotnet-configuration-resilience § Logging, 'does not redact a JSON body'"
+    },
+    {
+      "id": "logging.known-safe-query-keys",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "QueryKeys\\s*=\\s*new\\(StringComparer\\.OrdinalIgnoreCase\\)\\s*\\{\\s*\"cursor\",\\s*\"dates\",\\s*\"datetime\",\\s*\"limit\",\\s*\"offset\",\\s*\"page\",\\s*\"since\",\\s*\"size\",\\s*\"strings\",?\\s*\\}",
+      "dotall": true,
+      "claim": "The known-safe query keys are exactly the nine the skill lists.",
+      "defends": "dotnet-configuration-resilience § Verify on the wire, checklist item 4"
+    },
+    {
+      "id": "logging.levels.request-line-information",
+      "kind": "present",
+      "file": "Core/Logging/SdkLog.cs",
+      "pattern": "EventName = \"HttpRequest\", Level = LogLevel\\.Information",
+      "claim": "The request line is emitted at Information and is on by default.",
+      "defends": "dotnet-configuration-resilience § Logging, the event table"
+    },
+    {
+      "id": "logging.levels.body-trace",
+      "kind": "present",
+      "file": "Core/Logging/SdkLog.cs",
+      "pattern": "EventName = \"RequestBody\", Level = LogLevel\\.Trace",
+      "claim": "The request body is emitted at Trace.",
+      "defends": "dotnet-configuration-resilience § Logging, the event table"
+    },
+    {
+      "id": "logging.levels.retry-warning",
+      "kind": "present",
+      "file": "Core/Logging/SdkLog.cs",
+      "pattern": "EventName = \"HttpRetrying\", Level = LogLevel\\.Warning",
+      "claim": "Retry notices are emitted at Warning.",
+      "defends": "dotnet-configuration-resilience § Logging, the event table"
+    },
+    {
+      "id": "logging.gated-by-ilogger-isenabled",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "_logger\\.IsEnabled\\(emitAt\\)\\s*&&\\s*\\(level is null \\? byDefault : level <= emitAt\\)",
+      "claim": "Every event is ANDed with the ILogger's own IsEnabled, and a per-call LogLevel REPLACES the per-switch default in both directions.",
+      "defends": "dotnet-configuration-resilience § Logging, the table preamble and the per-call override bullets"
+    },
+    {
+      "id": "logging.env-var.only-when-factory-null",
+      "kind": "present",
+      "file": "Core/Logging/LoggingEnvironment.cs",
+      "pattern": "if\\s*\\(current\\.LoggerFactory\\s+is\\s+not\\s+null\\)\\s*\\n?\\s*return\\s+current;",
+      "dotall": true,
+      "claim": "The environment variable is consulted only when LoggerFactory is still null — so it is inert on the DI path.",
+      "defends": "dotnet-configuration-resilience § Logging, the three-state table and the env-var warning"
+    },
+    {
+      "id": "logging.env-var.name-shape",
+      "kind": "present",
+      "file": "Core/Logging/LoggingEnvironment.cs",
+      "pattern": "\\$\"\\{clientName\\.ToUpperInvariant\\(\\)\\}_LOG\"",
+      "claim": "The variable is the client type name upper-cased plus _LOG.",
+      "defends": "dotnet-configuration-resilience § Logging, the env-var warning"
+    },
+    {
+      "id": "logging.env-var.trace-forces-body",
+      "kind": "present",
+      "file": "Core/Logging/LoggingEnvironment.cs",
+      "pattern": "LogRequestBody\\s*=\\s*true",
+      "claim": "The catch-all branch (trace) forces LogRequestBody on — unredacted JSON bodies to stderr, switched on from outside the code.",
+      "defends": "dotnet-configuration-resilience § Logging, the env-var warning"
+    },
+    {
+      "id": "logging.env-var.writes-to-stderr",
+      "kind": "present",
+      "file": "Core/Logging/ConsoleErrorLogger.cs",
+      "pattern": "Console\\.Error",
+      "claim": "The built-in console logger writes to stderr.",
+      "defends": "dotnet-configuration-resilience § Logging, the env-var warning"
+    }
+  ]
+}

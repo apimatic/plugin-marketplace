@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The behavioural tier of assert-c1. Runs the SDK rather than reading it.
+
+    Against a local, freshly generated SDK (what you want in the generator's own CI):
+        dotnet run -c Release -p:SdkProject=C:\path\to\TheSdk.csproj
+
+    Against the published package (what you want for a quick check):
+        dotnet run -c Release
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AssertC1.Behaviour</RootNamespace>
+    <AssemblyName>assert-c1-behaviour</AssemblyName>
+    <!-- The checks deliberately assert on generated symbols; a rename should fail the
+         build loudly rather than be silently tolerated. -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
+  </ItemGroup>
+
+  <!-- Prefer a local SDK tree when one is named; fall back to the published package. -->
+  <ItemGroup Condition="'$(SdkProject)' != ''">
+    <ProjectReference Include="$(SdkProject)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SdkProject)' == ''">
+    <PackageReference Include="AsadAli.Checkout.Sdk" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>
