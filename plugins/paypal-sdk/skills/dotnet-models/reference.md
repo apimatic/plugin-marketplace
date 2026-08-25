@@ -16,6 +16,9 @@ directly and let the SDK serialize it; for formatting in your own code use the B
 
 ## String-enums
 
+Schema enums under `Models/Enums/` are emitted `sealed`; the server-environment enum under `Servers/` is
+not, so do not treat `sealed` as part of the contract.
+
 ```csharp
 [JsonConverter(typeof(StringEnumConverter<{EnumType}>))]
 public sealed record {EnumType} : StringEnum<{EnumType}>

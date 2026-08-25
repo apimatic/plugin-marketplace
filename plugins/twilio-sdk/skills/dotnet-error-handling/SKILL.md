@@ -84,7 +84,9 @@ exact `TryGet…` accessors with the HTTP status each maps to — no need to gre
 class at all.
 
 In the source itself the same fact lives in the method's XML doc `<exception>` line — on hover / in
-IntelliSense, and visible when you open the file:
+IntelliSense, and visible when you open the file. Where a doc block is present it always carries exactly one
+such line, but **not every generated operation has a doc block at all**, so its absence tells you nothing
+about the error case; fall back to the contract sheet:
 
 ```csharp
 /// <exception cref="SdkException{TResult}"> of <see cref="RawError"/> when the server returns an error response.</exception>

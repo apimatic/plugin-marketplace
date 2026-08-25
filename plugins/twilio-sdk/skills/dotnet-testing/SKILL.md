@@ -47,6 +47,10 @@ public sealed class StubHandler : HttpMessageHandler
 
     // Every request, in order — retries append, so this is what you count.
     public List<HttpRequestMessage> Requests { get; } = new();
+
+    // The serialized body of each request, captured while it is still readable.
+    public List<string?> Bodies { get; } = new();
+    public string? LastBody => Bodies.Count == 0 ? null : Bodies[^1];
     public HttpRequestMessage? LastRequest => Requests.Count == 0 ? null : Requests[^1];
 
     public StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) => _responder = responder;
@@ -55,6 +59,8 @@ public sealed class StubHandler : HttpMessageHandler
         HttpRequestMessage request, CancellationToken ct)
     {
         Requests.Add(request);
+        // Buffer the body NOW — see the note below; it is gone by the time your test runs.
+        Bodies.Add(request.Content is null ? null : request.Content.ReadAsStringAsync().Result);
         var response = _responder(request);
         response.RequestMessage = request;   // real HttpClient sets this; some retry predicates read it
         return Task.FromResult(response);
@@ -168,12 +174,17 @@ Assert.Contains("/expected/path", handler.LastRequest!.RequestUri!.AbsolutePath)
 Assert.Contains("per_page=20", handler.LastRequest!.RequestUri!.Query);  // query params are snake_case on the wire
 
 // Assert the serialized request body of a POST/PUT/PATCH:
-var sentJson = await handler.LastRequest!.Content!.ReadAsStringAsync();
+var sentJson = handler.LastBody;   // NOT LastRequest.Content — see below
 Assert.Contains("\"expected_field\"", sentJson);
 ```
 
 ## Notes
 
+- ⚠ **Read the request body inside the handler, never off the captured request afterwards.** The SDK
+  disposes the request content in a `finally` that runs per attempt, *inside* the pipeline — so by the time
+  your awaited call returns, `handler.LastRequest.Content.ReadAsStringAsync()` throws
+  `ObjectDisposedException`. That is why the stub above buffers `Bodies` during `SendAsync`. Everything
+  else on the captured `HttpRequestMessage` — method, URI, headers — survives and can be asserted normally.
 - Mocking libraries (Moq, NSubstitute) work too — mock `HttpMessageHandler.SendAsync` (it's `protected`,
   so use `Protected()` with Moq). The hand-written stub above avoids that friction.
 - A stubbed retryable response — the default set is exactly `408, 429, 500, 502, 503, 504`, not all `5xx`

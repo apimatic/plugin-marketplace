@@ -127,6 +127,7 @@ environment variables, but **not** scoped services):
 
 ```csharp
 using {RootNamespace};
+using {RootNamespace}.Servers;   // ServerEnvironment lives here, not in the root namespace
 
 builder.Services.Add{Api}Client(options =>
 {

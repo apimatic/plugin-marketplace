@@ -142,11 +142,18 @@ A null collection is omitted from the JSON; an **empty** collection is serialize
 
 ## Validation attributes are documentation, not enforcement
 
-Generated models carry `[StringLength]`, `[MaxLength]`, `[MinLength]` and `[RegularExpression]` attributes
-transcribed from the API definition — hundreds of them in a large SDK. **Nothing in the SDK evaluates
-them.** There is no `Validator.TryValidateObject` call anywhere in the generated code, so a value that
-violates the attribute right next to it is serialized and sent, and the constraint is enforced only by the
-provider, as a `400` you then have to interpret.
+Generated models carry validation attributes transcribed from the API definition — hundreds, sometimes
+thousands, in a large SDK. They come from two places:
+
+- the BCL: `[StringLength]`, `[MaxLength]`, `[MinLength]`, `[RegularExpression]`, `[Range]`;
+- the SDK's own `{RootNamespace}.Core.Validation.Attributes`, for the constraints DataAnnotations has no
+  equivalent for: `[Minimum]`, `[Maximum]`, `[ExclusiveMinimum]`, `[ExclusiveMaximum]`, `[MultipleOf]`,
+  `[Format]`, `[UniqueItems]`, `[MinProperties]`, `[MaxProperties]`. `[Format]` in particular is easy to
+  miss and can be the most common attribute in the tree.
+
+**Nothing in the SDK evaluates any of them.** No validation is invoked anywhere on the request path, so a
+value that violates the attribute right next to it is serialized and sent, and the constraint is enforced
+only by the provider, as a `400` you then have to interpret.
 
 Read them as the API's documented contract — they are an accurate, machine-transcribed statement of what
 the provider will accept, and far cheaper to consult than the API docs. Just do not mistake their presence
@@ -155,6 +162,9 @@ for a client-side guard. Where you want one, opt in explicitly at your own bound
 ```csharp
 Validator.ValidateObject(body, new ValidationContext(body), validateAllProperties: true);
 ```
+
+The SDK's own attributes derive from `ValidationAttribute`, so that one call covers both families — you do
+not need to handle `[Format]` or `[Minimum]` separately.
 
 That is worth doing on user-supplied input before a write, where a rejected request costs a round-trip and
 an error path; it is usually not worth it on values your own code produced.

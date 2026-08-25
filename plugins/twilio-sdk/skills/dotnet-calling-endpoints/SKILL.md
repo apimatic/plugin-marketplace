@@ -92,10 +92,16 @@ var response = await client.{ApiGroup}.{Operation}(
 
 ## Building request models
 
-Request bodies are immutable `record`s built with object-initializer syntax (no builders). `required`
-members must be set; optional ones are nullable and are omitted from the JSON when left null. The request
-type is the type of the operation's `body` parameter — take its exact name from the contract sheet (the
-SDK helper agent grounds it from the SDK map/source):
+**Only a JSON-bodied operation has a `body` parameter.** Where the API declares a
+`application/x-www-form-urlencoded` request, the generator emits the fields as *individual method
+parameters* and assembles the form itself — there is no request record to construct and no `body` argument
+to pass. In an API built that way this is the majority shape, not an exception. The contract sheet says
+which you are looking at; the signature settles it.
+
+For the JSON case: request bodies are immutable `record`s built with object-initializer syntax (no
+builders). `required` members must be set; optional ones are nullable and are omitted from the JSON when
+left null. The request type is the type of the operation's `body` parameter — take its exact name from the
+contract sheet (the SDK helper agent grounds it from the SDK map/source):
 
 ```csharp
 var body = new {RequestType}

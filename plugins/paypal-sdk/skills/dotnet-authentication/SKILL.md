@@ -125,7 +125,7 @@ Two independent guards, failing at different moments:
 | PKCE | token request built | no secret ⇒ |
 | --- | --- | --- |
 | disabled (`Pkce = null`) | either factory | `InvalidOperationException("ClientSecret is required when PKCE is disabled.")` — **before** the prompt runs |
-| enabled (default `S256`) | `ForBasicAuthRequest` | `InvalidOperationException("Basic auth requires a client secret.")` — **after** `PromptForAuthorizationCode` has already run |
+| enabled (default `S256`) | `ForBasicAuthRequest` | `InvalidOperationException("Basic auth requires a client secret. For public clients, enable PKCE by …")` — **after** `PromptForAuthorizationCode` has already run |
 | enabled | `ForFormBodyRequest` | fine — this is the public-client case |
 
 The Basic form is the common wiring, and its failure is the expensive one: the user completes a full

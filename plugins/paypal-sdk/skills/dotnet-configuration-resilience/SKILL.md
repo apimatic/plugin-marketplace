@@ -282,8 +282,8 @@ own token is **not** retried (see Notes above), so the token cuts the call clean
 
 Operations the API marks as paginated return **`Pageable<{PageResponse}, {Item}>`**, and the shape catches
 people out: `Pageable<TPage, TItem>` implements `IAsyncEnumerable<`**`TItem`**`>`, so a plain `await foreach`
-walks **individual items**, not pages. The SDK fetches each page and advances the paging state for you
-(offset, cursor, `Link`-header, or page-number, depending on the operation). Seed the first page with the
+walks **individual items**, not pages. The SDK fetches each page and advances the paging state for you —
+one of five strategies (offset, cursor, keyset, `Link`-header, or page-number), chosen per operation. Seed the first page with the
 paging arguments, then `await foreach` the items:
 
 ```csharp
