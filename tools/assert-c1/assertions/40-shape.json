@@ -248,6 +248,17 @@
       "requires": [
         "root-client"
       ]
+    },
+    {
+      "id": "shape.no-result-siblings-generated",
+      "kind": "absent",
+      "glob": "Api/*.cs",
+      "pattern": "Task<ApiResult<|Pageable<ApiResult<",
+      "requires": [
+        "api"
+      ],
+      "claim": "No operation returns ApiResult - the no-throw `{Operation}Result` variant is not generated on either sampled SDK, so StatusCode and Headers are unreachable through the supported surface.",
+      "defends": "paypal-getting-started / twilio-getting-started - Response metadata"
     }
   ]
 }

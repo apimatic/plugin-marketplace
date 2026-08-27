@@ -254,6 +254,32 @@ the operation it calls.
 *response* body on a card flow does not disclose a PAN. The asymmetry is the point: the risk is on the way
 out, not the way back.
 
+## Response metadata — status and headers are not reachable
+
+`dotnet-error-handling` describes `ApiResult<TResponse, TError>`, which exposes `StatusCode` and `Headers`
+on both success and failure, and correctly says the generator emits it only where configured to. **On this
+SDK it never was: zero of the 40 operations have a `{Operation}Result` sibling.** The type ships in
+`Core/Models` and nothing returns it, so that whole section describes a door this SDK does not have.
+
+What is actually reachable:
+
+| you want | on a success | on a failure |
+| --- | --- | --- |
+| the **body** | the return value | the typed accessor — `Name`, `Message`, `DebugId`, `Details[].Issue` |
+| the **status** | not exposed | only on the `_` fallback arm, via `TryGetRawError` → `RawError.StatusCode` |
+| **headers** | not exposed | not exposed — `RawError` carries a status but no headers |
+
+Three things production integrations routinely need are therefore unavailable in-band: a `Retry-After` on a
+429 the SDK has already exhausted its retries against, rate-limit budget headers, and a request-id echo for
+correlation. `RawClient.ExecuteResult` does return an `ApiResult`, but `RawClient` is `internal sealed`, so
+it is not a way round this either.
+
+A `DelegatingHandler` is the only route — see `dotnet-configuration-resilience` § *When you still want a
+`DelegatingHandler`*, which also covers the DI blast radius. Two caveats before you build one: under retry
+it observes one response *per attempt*, not per call, so "the" status is the last attempt's; and getting the
+value to the caller needs `AsyncLocal` or a scoped service. For correlation specifically you probably do not
+need it — `DebugId` is `required` on every typed error body and is what PayPal support asks for.
+
 ## Integration workflow — load the companion skill at each step
 
 Before you write the code for each step, load the named companion skill — even if you've already read the
