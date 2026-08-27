@@ -87,8 +87,10 @@ agent that plans, answers narrow contract questions, and fixes build errors in p
 Cursor and Codex manifests; the Codex carrier is `codex/agents/maxio-sdk.toml`, whose
 `developer_instructions` is a verbatim copy of `agents/maxio-sdk.md` and must be kept in sync by hand.
 
-> `skills/dotnet/` in this plugin is a nested second copy of the skill set and is **not** referenced by any
-> manifest. Treat the top-level `skills/*` directories as the live ones.
+> `skills/dotnet/` in this plugin is an empty directory skeleton — the folders exist locally but contain
+> no files and nothing under it is tracked by git. It is not referenced by any manifest. Treat the
+> top-level `skills/*` directories as the live ones, and delete the skeleton if it turns up in a
+> working copy.
 
 ### maxio-sdk-lean
 

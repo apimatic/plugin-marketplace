@@ -316,8 +316,18 @@ def _p_no_model_converter(ctx: Ctx, a: dict):
     if offenders:
         return False, "%d property-level converter(s): %s" % (
             len(offenders), "; ".join(offenders[:4]))
-    return True, "no property-level converters across %d model file(s)" % len(
-        ctx.files("Models/**/*.cs"))
+    files = ctx.files("Models/**/*.cs")
+    if not files:
+        raise Unsettleable("no model files to inspect")
+    # A fixture with models but no DateTimeOffset property cannot exercise this: the
+    # claim is about what a date property does NOT carry, so with no date property the
+    # absence proves nothing.
+    dated = [f for f in files if re.search(r"\bDateTimeOffset\??\s+\w+\s*\{", ctx.read(f) or "")]
+    if not dated:
+        raise Unsettleable("no DateTimeOffset model property in this fixture — the claim is "
+                           "about what such a property does not carry")
+    return True, "no property-level converters across %d model file(s) (%d with a date property)" % (
+        len(files), len(dated))
 
 
 @probe("jsonignore-only-on-defaultless-optionals")
@@ -354,7 +364,8 @@ def _p_jsonignore(ctx: Ctx, a: dict):
         return False, "%d defaulted propert(y|ies) also carry JsonIgnore: %s" % (
             len(with_default_and_ignore), ", ".join(with_default_and_ignore[:3]))
     if defaulted == 0:
-        return True, "no defaulted optional properties in this fixture (claim not exercised)"
+        raise Unsettleable("no defaulted optional properties in this fixture — "
+                           "nothing here can exercise the claim")
     return True, "%d defaulted properties, none carrying JsonIgnore" % defaulted
 
 
@@ -475,7 +486,11 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sdk_root")
     ap.add_argument("--surface", default="4.0.0",
-                    help="core surface the fixture is expected to be (default 4.0.0)")
+                    help="core surface the fixture is expected to be (default 4.0.0). NOTE: this is a "
+                         "hook with no current users — no assertion declares a `surfaces` key, so the "
+                         "value selects nothing today. What actually discriminates between surfaces is "
+                         "the surface.* assertions, which FAIL on the wrong one; that is louder and more "
+                         "informative than silently filtering the suite down.")
     ap.add_argument("--only", help="run only assertions whose id starts with this prefix")
     ap.add_argument("--json", help="write a machine-readable report here")
     ap.add_argument("--expect-failures", metavar="FILE",
@@ -528,9 +543,14 @@ def main() -> int:
             expected = {ln.split("#")[0].strip() for ln in fh}
         expected.discard("")
         actual = {r.id for r in failed}
-        new, gone = sorted(actual - expected), sorted(expected - actual)
+        # A baselined failure that becomes SKIPPED has not been fixed — the fixture just
+        # stopped being able to answer it (a glob that no longer matches, say). Comparing
+        # only the failing set would let that pass as "resolved", which is precisely the
+        # kind of generator change this job exists to catch.
+        vanished = {r.id for r in skipped} & expected
+        new, gone = sorted(actual - expected), sorted(expected - actual - vanished)
         print()
-        if not new and not gone:
+        if not new and not gone and not vanished:
             print("drift unchanged: %d known failure(s), exactly as recorded in %s"
                   % (len(expected), os.path.basename(args.expect_failures)))
             return 0
@@ -542,6 +562,10 @@ def main() -> int:
             print("drift RESOLVED — remove these from the baseline:")
             for i in gone:
                 print("   - " + i)
+        if vanished:
+            print("BASELINED FAILURE WENT UNSETTLEABLE — not fixed, just no longer checkable:")
+            for i in sorted(vanished):
+                print("   ? " + i)
         return 1
 
     return 1 if failed else 0

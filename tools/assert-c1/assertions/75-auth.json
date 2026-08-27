@@ -421,7 +421,7 @@
       "requires": [
         "root-client"
       ],
-      "claim": "The generated AuthSchemes hands the options credentials property straight to the Core scheme factory - which is exactly how an unset property becomes NoneAuthScheme instead of an error.",
+      "claim": "The generated AuthSchemes hands the options credentials property straight to the Core scheme factory - which is exactly how an unset property becomes NoneAuthScheme instead of an error. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-authentication - 'only the **options property names** are generated per-API'; the unset-credentials bullet"
     }
   ]

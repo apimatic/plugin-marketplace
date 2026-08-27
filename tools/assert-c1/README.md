@@ -99,6 +99,15 @@ false positives.
 Run it after any change that loosens a pattern. A `MISS` means either the claim has no
 assertion or the one defending it has stopped discriminating.
 
+### What does NOT belong in the behavioural tier
+
+Only checks that need the SDK *running*. A check that exercises a BCL behaviour and never
+touches generated code proves nothing about the SDK and costs a build — the date-format check
+was exactly that (it serialized an anonymous type through `System.Text.Json` and asserted
+ISO-8601, which is a fact about STJ). The SDK-side half of that claim — that no converter is
+attached to a model property — is a static probe, and it now skips honestly on a fixture with
+no date property rather than passing.
+
 ## Adding an assertion
 
 Assertions live in `assertions/*.json`, grouped and numbered so the surface
@@ -111,10 +120,13 @@ discriminators run first. Each one is:
   "file": "Core/Configuration/RetryOptions.cs",
   "pattern": "MaxRetries\\s*=\\s*3\\s*,",
   "claim": "MaxRetries defaults to 3, i.e. up to 4 attempts.",
-  "defends": "dotnet-configuration-resilience § defaults table",
-  "requires": ["api"]
+  "defends": "dotnet-configuration-resilience § defaults table"
 }
 ```
+
+(No `requires` on that one: it reads a file under `Core/`, which every fixture has. Adding a
+spurious `requires` is not harmless — it makes the assertion SKIP on the generator template,
+silently removing it from the one run that catches drift.)
 
 `claim` and `defends` are not documentation — they are what makes a failure actionable.
 Write the claim as the skill states it, in the skill's own terms.
@@ -130,6 +142,10 @@ validation.
 `errors`, `root-client`, `di`). Omit it for `Core/`-only assertions.
 
 ## Surfaces
+
+`--surface` is a hook nothing uses yet: no assertion declares a `surfaces` key, so the value
+selects nothing today. The `surface.*` assertions do the discriminating instead, by failing on
+the wrong surface — louder than filtering, and it tells you *which* facts differ.
 
 `X-APIMatic-Gen-Version` **does not pin the surface.** codegen-v2 still stamps `4.0.0`
 while its `StaticCode/Core` has moved ahead of the SDKs reporting that same value — 20 of

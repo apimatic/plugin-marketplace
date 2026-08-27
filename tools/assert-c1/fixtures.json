@@ -7,7 +7,7 @@
     "against a newer SDK, update it here in the same commit, or CI keeps checking the old one",
     "and reports green about a surface nobody ships any more.",
     "",
-    "surface is the value passed to --surface; it selects which assertions apply."
+    "surface is passed to --surface. It is currently a no-op hook (nothing declares `surfaces`); the surface.* assertions are what actually discriminate, by failing."
   ],
   "fixtures": [
     {
@@ -15,7 +15,9 @@
       "repo": "https://github.com/asadali214/checkout-sample-sdk",
       "ref": "v1.0.1",
       "surface": "4.0.0",
-      "usedBy": ["paypal-sdk"],
+      "usedBy": [
+        "paypal-sdk"
+      ],
       "mutationTest": true
     },
     {
@@ -23,7 +25,9 @@
       "repo": "https://github.com/context-plugins/twilio-csharp-sdk",
       "ref": "main",
       "surface": "4.0.0",
-      "usedBy": ["twilio-sdk"],
+      "usedBy": [
+        "twilio-sdk"
+      ],
       "mutationTest": false
     }
   ],

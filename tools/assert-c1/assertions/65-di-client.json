@@ -20,7 +20,7 @@
       "glob": "*Client.cs",
       "pattern": "public\\s+(\\w+)Client\\(\\s*HttpClient\\s+\\w+\\s*,\\s*\\1ClientOptions\\s+\\w+\\s*\\)",
       "expect": 1,
-      "claim": "public {Api}Client(HttpClient httpClient, {Api}ClientOptions options) — the HttpClient comes first and the options type is the client type name plus 'Options'.",
+      "claim": "public {Api}Client(HttpClient httpClient, {Api}ClientOptions options) — the HttpClient comes first and the options type is the client type name plus 'Options'. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-client-initialization § Shape of the client, the constructor code block; dotnet-testing § the seam",
       "requires": [
         "root-client"
@@ -64,7 +64,7 @@
       "glob": "*Client.cs",
       "pattern": "^[ \\t]+public\\s+(\\w+)\\s+\\1\\s*\\{\\s*get;\\s*\\}",
       "expect": 1,
-      "claim": "Each API group is a get-only property on the client named after its controller type, so a grouped operation is called client.{ApiGroup}.{Operation}(...).",
+      "claim": "Each API group is a get-only property on the client named after its controller type, so a grouped operation is called client.{ApiGroup}.{Operation}(...). Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-client-initialization § Shape of the client — 'grouped under controller properties ... called client.{ApiGroup}.{Operation}(...)'",
       "requires": [
         "root-client"
@@ -87,7 +87,7 @@
       "glob": "*Client.cs",
       "pattern": "new\\s+Server\\(\\s*options\\.Environment\\s*,\\s*options\\.Server\\s*\\)",
       "expect": 1,
-      "claim": "The client reads options.Environment once, in its constructor, and hands the ServerOptions object itself to the Server — which is why assigning options.Environment after construction silently does nothing.",
+      "claim": "The client reads options.Environment once, in its constructor, and hands the ServerOptions object itself to the Server — which is why assigning options.Environment after construction silently does nothing. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment — 'Environment and Server are not read at the same time'",
       "requires": [
         "root-client"
@@ -99,7 +99,7 @@
       "glob": "*Client.cs",
       "pattern": "new\\s+HeaderParam\\(\\s*\"X-APIMatic-Gen-Version\"\\s*,\\s*\"4\\.0\\.0\"\\s*\\)",
       "expect": 1,
-      "claim": "The generated client sends X-APIMatic-Gen-Version: 4.0.0.",
+      "claim": "The generated client sends X-APIMatic-Gen-Version: 4.0.0. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "the core-surface stamp at the top of every dotnet-* skill",
       "requires": [
         "root-client"
@@ -111,7 +111,7 @@
       "glob": "*Client.cs",
       "pattern": "new\\s+ResiliencePipelineFactory\\(\\s*options\\.Retry\\s*\\)",
       "expect": 1,
-      "claim": "The resilience pipelines are built in the client constructor from options.Retry — so retry configuration is a per-client choice fixed at construction, not a per-call one.",
+      "claim": "The resilience pipelines are built in the client constructor from options.Retry — so retry configuration is a per-client choice fixed at construction, not a per-call one. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-client-initialization § HttpClient lifetime — 'two Polly pipelines are eagerly built from options.Retry'; dotnet-configuration-resilience § Retries",
       "requires": [
         "root-client"
@@ -123,7 +123,7 @@
       "glob": "*ClientOptions.cs",
       "pattern": "^public class \\w+ClientOptions\\s*$",
       "expect": 1,
-      "claim": "The options class is a plain public class named {Api}ClientOptions — not a record, no base type — so the object-initializer form the samples use compiles.",
+      "claim": "The options class is a plain public class named {Api}ClientOptions — not a record, no base type — so the object-initializer form the samples use compiles. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-client-initialization § Shape of the client, the options code block",
       "requires": [
         "root-client"
@@ -135,7 +135,7 @@
       "glob": "*ClientOptions.cs",
       "pattern": "public\\s+class\\s+\\w+ClientOptions\\s*\\{[\\s\\S]{0,200}?public\\s+ServerEnvironment\\s+Environment\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*ServerEnvironment\\.Default\\(\\);[\\s\\S]{0,200}?public\\s+RetryOptions\\s+Retry\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*RetryOptions\\.Default\\(\\);[\\s\\S]{0,200}?public\\s+LoggingOptions\\s+Logging\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\);[\\s\\S]{0,200}?public\\s+ServerOptions\\s+Server\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\);",
       "expect": 1,
-      "claim": "The options class always carries these four knobs, get/set, in this order — Environment = ServerEnvironment.Default(), Retry = RetryOptions.Default(), Logging = new(), Server = new().",
+      "claim": "The options class always carries these four knobs, get/set, in this order — Environment = ServerEnvironment.Default(), Retry = RetryOptions.Default(), Logging = new(), Server = new(). Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-client-initialization § Shape of the client — 'The options class always carries these knobs'; the 'This surface HAS: LoggingOptions on the options class' stamp",
       "requires": [
         "root-client"
@@ -213,7 +213,7 @@
       "glob": "Servers/*Options.cs",
       "pattern": "public\\s+class\\s+\\w+Options\\s*\\{\\s*public\\s+(\\w+)Options\\s+\\1\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\);[\\s\\S]*?public\\s+class\\s+\\1Options\\s*\\{\\s*public\\s+string\\s+BaseUrl\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*\"https?://",
       "expect": 1,
-      "claim": "Server options are nested per server AND per environment: {ServerName}Options carries one {Environment}Options property named after the environment, and that nested class carries the BaseUrl — always present and settable. The override path is options.Server.{ServerName}.{Environment}.BaseUrl.",
+      "claim": "Server options are nested per server AND per environment: {ServerName}Options carries one {Environment}Options property named after the environment, and that nested class carries the BaseUrl — always present and settable. The override path is options.Server.{ServerName}.{Environment}.BaseUrl. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment; dotnet-client-initialization § Choosing the server / base URL",
       "requires": [
         "root-client"
@@ -225,7 +225,7 @@
       "glob": "Servers/*Options.cs",
       "pattern": "internal\\s+UrlTemplate\\s+Resolve\\(\\s*ServerEnvironment\\s+\\w+\\s*,\\s*string\\s+\\w+\\s*\\)\\s*=>\\s*\\w+\\.Match\\(\\(\\)\\s*=>\\s*new\\s+UrlTemplate\\(\\s*\\w+\\.BaseUrl\\s*,",
       "expect": 1,
-      "claim": "The environment you select is what picks the BaseUrl the request URL is built from — only that environment's options are read.",
+      "claim": "The environment you select is what picks the BaseUrl the request URL is built from — only that environment's options are read. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment — 'only that environment's options are read'",
       "requires": [
         "root-client"

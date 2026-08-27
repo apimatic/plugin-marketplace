@@ -85,7 +85,7 @@ attempt fails, and the two cases are far apart:
 | **Hangs** (no response at all) | ≈ **100s** — the per-attempt timeout fires, and a timeout rejection is **not** retried (see Notes), so the call ends on the first attempt |
 | **Stalls, then fails retryably** (slow reset, or a slow `503` on a retryable verb) | up to **4 × 100s + 7s ≈ 407s** — each attempt burns nearly the full timeout and is then retried |
 
-Either way, a hung or stalling provider pins a request-handling thread, a pooled connection and the caller's
+Either way, a hung or stalling provider holds the request open, a pooled connection and the caller's
 browser for a window measured in minutes. Treat every default in this table as a value you have chosen only
 once you have written it down; `Timeout` in particular has no defensible default for a request-path call.
 

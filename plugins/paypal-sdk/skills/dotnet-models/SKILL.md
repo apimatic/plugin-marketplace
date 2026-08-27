@@ -70,9 +70,10 @@ only where you can see one.
 ### Read / unwrap
 
 ```csharp
-// Each variant has a bool TryGet{Variant}(out var value):
-if (u1.TryGetString(out var s))        { /* use s (string)  */ }
-else if (u1.TryGetDecimal(out var d))  { /* use d (decimal) */ }
+// Each variant has a bool TryGet{Variant}(out var value). The member name comes from the
+// variant's SCHEMA type, not its CLR type — a `decimal` variant reads TryGetBigDecimal:
+if (u1.TryGetString(out var s))            { /* use s (string)  */ }
+else if (u1.TryGetBigDecimal(out var d))   { /* use d (decimal) */ }
 
 // OneOf: branch over the variants you expect
 if (resp.{Field}.TryGet{Variant}(out var v))           { /* ... */ }

@@ -48,6 +48,9 @@ public sealed class StubHandler : HttpMessageHandler
         HttpRequestMessage request, CancellationToken ct)
     {
         LastRequest = request;
+        // Buffer the body NOW — the SDK disposes the request content per attempt, so it is
+        // already gone by the time your test reads it. See the Notes bullet below.
+        LastBody = request.Content is null ? null : request.Content.ReadAsStringAsync().Result;
         var response = _responder(request);
         response.RequestMessage = request;   // real HttpClient sets this; the retry predicate reads it
         return Task.FromResult(response);
@@ -161,12 +164,17 @@ Assert.Contains("/expected/path", handler.LastRequest!.RequestUri!.AbsolutePath)
 Assert.Contains("per_page=20", handler.LastRequest!.RequestUri!.Query);  // query params are snake_case on the wire
 
 // Assert the serialized request body of a POST/PUT/PATCH:
-var sentJson = await handler.LastRequest!.Content!.ReadAsStringAsync();
+var sentJson = handler.LastBody;   // NOT LastRequest.Content — see below
 Assert.Contains("\"expected_field\"", sentJson);
 ```
 
 ## Notes
 
+- ⚠ **Read the request body inside the handler, never off the captured request afterwards.** The SDK
+  disposes the request content when the attempt ends, so by the time your awaited call returns,
+  `handler.LastRequest.Content.ReadAsStringAsync()` throws `ObjectDisposedException`. That is why the
+  stub above captures `LastBody` during `SendAsync`. Method, URI and headers survive on the captured
+  request and can be asserted normally.
 - **Do not drop the `response.RequestMessage = request` line from the stub.** On this SDK's surface the
   status arm of the retry predicate reads the verb off `response.RequestMessage`, so a stub that leaves
   it null makes status retries silently never fire — a `503`-then-`200` test would see one request and

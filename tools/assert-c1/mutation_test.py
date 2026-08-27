@@ -91,7 +91,7 @@ def main() -> int:
         return 2
 
     tmp = tempfile.mkdtemp(prefix="assert-c1-mutant-")
-    missed = []
+    missed, skipped_muts = [], []
     try:
         for rel, find, repl, label in MUTATIONS:
             root = os.path.join(tmp, "sdk")
@@ -102,10 +102,12 @@ def main() -> int:
             target = os.path.join(root, rel)
             if not os.path.exists(target):
                 print("SKIP %-58s (no %s in this fixture)" % (label, rel))
+                skipped_muts.append(label)
                 continue
             src = open(target, encoding="utf-8-sig").read()
             if find not in src:
                 print("SKIP %-58s (pattern absent — fixture may be a different surface)" % label)
+                skipped_muts.append(label)
                 continue
             open(target, "w", encoding="utf-8").write(src.replace(find, repl, 1))
 
@@ -119,12 +121,23 @@ def main() -> int:
         shutil.rmtree(tmp, ignore_errors=True)
 
     print()
+    applied = len(MUTATIONS) - len(skipped_muts)
     if missed:
         print("%d mutation(s) went unnoticed — the suite has a gap there:" % len(missed))
         for m in missed:
             print("   " + m)
         return 1
-    print("every mutation was caught")
+    if skipped_muts:
+        # Reporting "every mutation was caught" here would be the same hollow pass the
+        # suite itself is built to avoid: nothing was caught, because nothing was tried.
+        print("%d of %d mutation(s) could not be applied to this fixture:" % (
+            len(skipped_muts), len(MUTATIONS)))
+        for m in skipped_muts:
+            print("   " + m)
+        print()
+        print("%d applied, %d caught — but coverage here is PARTIAL, not proven." % (applied, applied))
+        return 1
+    print("every mutation was caught (%d/%d applied)" % (applied, len(MUTATIONS)))
     return 0
 
 

@@ -10,9 +10,11 @@ description: Client configuration and resilience for an APIMatic-generated .NET 
      RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
      BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
      for retry-ineligible requests.
-     verified-this-file: 2026-08-25 — PARTIAL on pagination AND SSE - neither sampled SDK generates a paginated or a streaming operation, so both operation-level signatures are inferred from Core rather than observed. `Pageable<TPage,TItem> : IAsyncEnumerable<TItem>`
-     with `.AsPages()` is verified from Core/Pagination + RawClient.ExecutePaged, but neither sampled SDK
-     generates a paginated operation, so the operation-level signature is inferred. Verified: retry predicate, RetryOptions defaults, Disabled(), timeout-only pipeline, Retry-After + 60s clamp, LoggingOptions/HttpLogger/LoggingEnvironment redaction and levels.
+     verified-this-file: 2026-08-25 - PARTIAL on pagination AND SSE: `Pageable<TPage,TItem> :
+     IAsyncEnumerable<TItem>` with `.AsPages()` is verified from Core/Pagination +
+     RawClient.ExecutePaged, but neither sampled SDK generates a paginated or a streaming operation,
+     so both operation-level signatures are inferred from Core rather than observed.
+     Verified: retry predicate, RetryOptions defaults, Disabled(), timeout-only pipeline, Retry-After + 60s clamp, LoggingOptions/HttpLogger/LoggingEnvironment redaction and levels.
      CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
      (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
      differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
@@ -283,8 +285,8 @@ own token is **not** retried (see Notes above), so the token cuts the call clean
 Operations the API marks as paginated return **`Pageable<{PageResponse}, {Item}>`**, and the shape catches
 people out: `Pageable<TPage, TItem>` implements `IAsyncEnumerable<`**`TItem`**`>`, so a plain `await foreach`
 walks **individual items**, not pages. The SDK fetches each page and advances the paging state for you —
-one of five strategies (offset, cursor, keyset, `Link`-header, or page-number), chosen per operation. Seed the first page with the
-paging arguments, then `await foreach` the items:
+one of five strategies (offset, cursor, keyset, `Link`-header, or page-number), chosen per operation. Seed
+the first page with the paging arguments, then `await foreach` the items:
 
 ```csharp
 // The paging args (e.g. offset/limit, cursor/limit, or page/size) seed the FIRST page;

@@ -3,11 +3,21 @@
   <!--
     The behavioural tier of assert-c1. Runs the SDK rather than reading it.
 
-    Against a local, freshly generated SDK (what you want in the generator's own CI):
+    Against the published package:
+        dotnet run -c Release
+
+    Against a local tree of the SAME SDK (a regenerated checkout-sample-sdk, say):
         dotnet run -c Release -p:SdkProject=C:\path\to\TheSdk.csproj
 
-    Against the published package (what you want for a quick check):
-        dotnet run -c Release
+    SdkProject swaps which project is referenced; it does NOT make these checks
+    SDK-agnostic. Program.cs names PayPalServerSdk types directly — the client, the
+    options class, ApplePayPaymentDataType, CheckoutPaymentIntent, OrderRequest — so it
+    compiles only against an SDK with that root namespace and those models. Porting it
+    elsewhere means editing Program.cs.
+
+    Making it generic would mean reflection over a named client type, which trades away
+    the compile-time binding that is half the point: a renamed member currently fails the
+    BUILD, loudly, and the static tier cannot produce that signal.
   -->
 
   <PropertyGroup>
@@ -17,9 +27,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>AssertC1.Behaviour</RootNamespace>
     <AssemblyName>assert-c1-behaviour</AssemblyName>
-    <!-- The checks deliberately assert on generated symbols; a rename should fail the
-         build loudly rather than be silently tolerated. -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- The checks deliberately bind to generated symbols by name, so a rename is a
+         compile ERROR and fails the build on its own — no warning promotion needed. -->
   </PropertyGroup>
 
   <ItemGroup>

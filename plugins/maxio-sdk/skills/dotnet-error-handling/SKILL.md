@@ -50,12 +50,19 @@ spell the `out` types out or use `out var`:
 | `{RootNamespace}.Core.Exceptions` | `SdkException<TError>` — the exception itself |
 | `{RootNamespace}.Errors` | the `{Operation}Error` you name in the `catch` |
 | `{RootNamespace}.Core.ErrorResponse` | `RawError`, which the inherited `TryGetRawError` hands back |
-| `{RootNamespace}.Models` | the **typed body** a `TryGet…` yields |
+| *depends on the body* | the **typed body** a `TryGet…` yields — see below |
 
-The last two only bite when you write the `out` type out. `out var` needs neither, which is why the
+**The fourth is not a fixed namespace.** A typed body is whatever the API definition declared, so where
+its type lives follows the body's schema kind — a model in `{RootNamespace}.Models`, a union in
+`.Models.OneOf` / `.Models.AnyOf`, an enum in `.Models.Enums`, a binary body in `.Core.Models`
+(`ErrorByteContent`), and a map or dynamic body in no SDK namespace at all
+(`IReadOnlyDictionary<string, JsonElement>` needs `System.Collections.Generic` and `System.Text.Json`). A
+scalar body — `TryGetString`, `TryGetLong` — needs nothing. Read the accessor's `out` type and import what
+*it* names; do not assume `.Models`.
+
+The last two rows only bite when you write the `out` type out. `out var` needs neither, which is why the
 template below imports three namespaces and not four — it uses `out var` for the typed bodies and names
-`RawError` explicitly. Name a typed body's type and you need `.Models` as well, and the omission surfaces as
-a compile error in the middle of an otherwise finished catch block. A Case B catch needs only
+`RawError` explicitly. A Case B catch needs only
 `Core.Exceptions` and `Core.ErrorResponse`. This namespace layout is identical across the APIMatic .NET SDKs
 checked.
 

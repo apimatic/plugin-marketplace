@@ -6,9 +6,9 @@
       "id": "retry.defaults.status-codes",
       "kind": "present",
       "file": "Core/Configuration/RetryOptions.cs",
-      "pattern": "StatusCodesToRetry\\s*=\\s*\\[\\s*HttpStatusCode\\.RequestTimeout\\s*,\\s*\\(HttpStatusCode\\)429[^\\]]*HttpStatusCode\\.InternalServerError\\s*,\\s*HttpStatusCode\\.BadGateway\\s*,\\s*HttpStatusCode\\.ServiceUnavailable\\s*,\\s*HttpStatusCode\\.GatewayTimeout",
+      "pattern": "StatusCodesToRetry\\s*=\\s*\\[\\s*HttpStatusCode\\.RequestTimeout\\s*,\\s*\\(HttpStatusCode\\)429[^\\]]*?HttpStatusCode\\.InternalServerError\\s*,\\s*HttpStatusCode\\.BadGateway\\s*,\\s*HttpStatusCode\\.ServiceUnavailable\\s*,\\s*HttpStatusCode\\.GatewayTimeout\\s*\\]",
       "dotall": true,
-      "claim": "StatusCodesToRetry defaults to exactly 408, 429, 500, 502, 503, 504 — not 'all 5xx'.",
+      "claim": "StatusCodesToRetry defaults to exactly 408, 429, 500, 502, 503, 504 — not 'all 5xx'. The closing ] is part of the pattern on purpose: without it the assertion matched a LONGER list too, and could not detect the one drift it exists to catch.",
       "defends": "dotnet-configuration-resilience § defaults table; dotnet-testing § Notes"
     },
     {

@@ -52,7 +52,7 @@
       "glob": "Models/**/*.cs",
       "pattern": "^\\s*public\\s+required\\s",
       "expect": 1,
-      "claim": "`required` members must be set - required schema members are emitted with the C# `required` modifier.",
+      "claim": "`required` members must be set - required schema members are emitted with the C# `required` modifier. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-calling-endpoints § request bodies",
       "requires": [
         "models"
@@ -166,7 +166,7 @@
       "glob": "Models/Enums/*.cs",
       "pattern": "^\\s*public\\s+static\\s+readonly\\s+\\w+\\s+\\w+\\s*=\\s*new\\(",
       "expect": 1,
-      "claim": "Use the static constants - each known value is exposed as a public static readonly field of the enum type, holding the wire value.",
+      "claim": "Use the static constants - each known value is exposed as a public static readonly field of the enum type, holding the wire value. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-models § Enums, use the static constants",
       "requires": [
         "enums"
@@ -275,7 +275,7 @@
       "pattern": "\\A(?!.*JSON does not match).*class\\s+\\w+Converter",
       "dotall": true,
       "claim": "A payload matching no variant throws: both converters end in `throw new JsonException(\"JSON does not match … schemas: …\")`.",
-      "defends": "dotnet-models § Polymorphic union types, the ⚠ warning",
+      "defends": "dotnet-models § Polymorphic union types, the !! warning",
       "requires": [
         "models"
       ]

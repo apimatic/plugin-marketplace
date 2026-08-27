@@ -6,8 +6,8 @@
       "id": "logging.options.defaults-off",
       "kind": "present",
       "file": "Core/Configuration/LoggingOptions.cs",
-      "pattern": "public\\s+bool\\s+LogRequestHeaders\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*(?!=)",
-      "claim": "LogRequestHeaders defaults to false (no initializer).",
+      "pattern": "public\\s+bool\\s+LogRequestHeaders\\s*\\{\\s*get;\\s*init;\\s*\\}[ \\t]*\\r?\\n",
+      "claim": "LogRequestHeaders defaults to false — the declaration ends at the closing brace with no initializer. Matching to end-of-line matters: `\\s*(?!=)` backtracks to zero-width and passes even when the property gains `= true;`.",
       "defends": "dotnet-configuration-resilience § Logging, the defaults table"
     },
     {

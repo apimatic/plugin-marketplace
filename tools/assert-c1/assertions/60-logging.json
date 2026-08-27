@@ -24,7 +24,7 @@
       "glob": "*ClientOptions.cs",
       "pattern": "public\\s+LoggingOptions\\s+Logging\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\)\\s*;",
       "expect": 1,
-      "claim": "`Logging` is a real, settable property on the options class, defaulted to `new()` — which is what makes `options.Logging = new LoggingOptions { ... }` compile and `options.Logging.X` safe to read.",
+      "claim": "`Logging` is a real, settable property on the options class, defaulted to `new()` — which is what makes `options.Logging = new LoggingOptions { ... }` compile and `options.Logging.X` safe to read. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-client-initialization § options class; dotnet-configuration-resilience § Logging, the options sample",
       "requires": [
         "root-client"
@@ -77,7 +77,7 @@
       "glob": "*Client.cs",
       "pattern": "class\\s+(\\w+)\\b[\\s\\S]*?new\\s+HttpLogger\\(\\s*[^,()]*,\\s*\"\\1\"\\s*\\)",
       "expect": 1,
-      "claim": "The client hands the logger its own type name, so the log category is '{Api}Client.Http' and the environment variable is '{APICLIENTTYPENAME}_LOG' for that same name.",
+      "claim": "The client hands the logger its own type name, so the log category is '{Api}Client.Http' and the environment variable is '{APICLIENTTYPENAME}_LOG' for that same name. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-configuration-resilience § Logging; dotnet-client-initialization § options class",
       "requires": [
         "root-client"
@@ -146,7 +146,7 @@
       "glob": "Core/Logging/LoggingEnvironment.cs",
       "pattern": "LoggerFactory\\s*=\\s*new\\s+ConsoleErrorLoggerFactory\\(",
       "expect": 3,
-      "claim": "Every accepted value installs the built-in console logger as the factory — that is how the variable gets output to stderr with no code change.",
+      "claim": "Every accepted value installs the built-in console logger as the factory — that is how the variable gets output to stderr with no code change. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-configuration-resilience § Logging, the env-var warning"
     },
     {

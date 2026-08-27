@@ -55,7 +55,7 @@
       "glob": "Core/Pagination/States/*.cs",
       "pattern": ":\\s*IPageState<",
       "expect": 5,
-      "claim": "The SDK advances the paging state for you — offset, cursor, Link-header or page-number, depending on the operation. (The generator emits FIVE IPageState implementations; the fifth, keyset, is not in the skill's list.)",
+      "claim": "Five paging strategies are emitted — Cursor, Keyset, Link, Offset and Page. The skills list all five; this pins the count so a sixth (or a removal) shows up as a change to reconcile rather than a silently stale sentence.",
       "defends": "dotnet-configuration-resilience § Pagination — '(offset, cursor, `Link`-header, or page-number, depending on the operation)'"
     },
     {
@@ -105,7 +105,7 @@
       "glob": "Api/*.cs",
       "pattern": "/// <exception cref=\"SdkException\\{TResult\\}\"> of <see cref=\"\\w+\"/> when the server returns an error response\\.</exception>",
       "expect": 1,
-      "claim": "The operation's XML doc carries an <exception> line naming the TError — the fact 'lives in the method's XML doc <exception> line', so it is readable on hover without opening the error class.",
+      "claim": "The operation's XML doc carries an <exception> line naming the TError — the fact 'lives in the method's XML doc <exception> line', so it is readable on hover without opening the error class. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-error-handling § Which TError does an endpoint throw? — 'In the source itself the same fact lives in the method's XML doc <exception> line'",
       "requires": [
         "api"

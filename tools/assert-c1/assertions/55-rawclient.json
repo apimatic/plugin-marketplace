@@ -291,7 +291,7 @@
       "requires": [
         "errors"
       ],
-      "claim": "A generated {Operation}Error type lives in {RootNamespace}.Errors — one of the four namespaces a Case A catch ladder has to import, and distinct from Core.Exceptions and Core.ErrorResponse.",
+      "claim": "A generated {Operation}Error type lives in {RootNamespace}.Errors — one of the four namespaces a Case A catch ladder has to import, and distinct from Core.Exceptions and Core.ErrorResponse. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-error-handling § Case A — operation has a typed {Operation}Error model, the using list; dotnet-testing § Test an error path"
     },
     {

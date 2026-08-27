@@ -165,24 +165,6 @@ checks.Run(
     });
 
 // ---------------------------------------------------------------------------
-// dates — no converter on a model property
-// ---------------------------------------------------------------------------
-
-checks.Run(
-    "models.datetimeoffset-uses-stj-default",
-    "A DateTimeOffset model property carries no converter and round-trips as "
-    + "System.Text.Json's default ISO-8601-with-offset.",
-    "dotnet-models § Dates & numbers",
-    () =>
-    {
-        var probe = new { when = new DateTimeOffset(2024, 6, 17, 15, 30, 45, TimeSpan.Zero) };
-        var json = System.Text.Json.JsonSerializer.Serialize(probe);
-        return json.Contains("2024-06-17T15:30:45+00:00")
-            ? Ok("ISO-8601 with offset")
-            : Fail($"serialized as {json} — check whether a converter is now attached");
-    });
-
-// ---------------------------------------------------------------------------
 // client lifetime — the OAuth token cache lives on the client
 // ---------------------------------------------------------------------------
 
@@ -246,18 +228,30 @@ checks.Run(
 checks.Run(
     "di.logger-factory-comes-from-container",
     "Add{Api}Client fills Logging.LoggerFactory from the container, so SDK request "
-    + "logging is already on in any host.",
+    + "logging is already on in any host — nobody has to opt in.",
     "dotnet-configuration-resilience § Logging, the three-state table",
     () =>
     {
+        // Resolve the CLIENT and make a call through it. Asserting that the container has an
+        // ILoggerFactory would only prove AddLogging worked; the claim is that the SDK's own
+        // logger ends up wired to it, and only a real request can show that.
+        var sink = new List<string>();
         var services = new ServiceCollection();
-        services.AddLogging(b => b.AddProvider(new CapturingProvider(out var sink)));
-        services.AddPayPalServerSdkClient(o => { });
+        services.AddLogging(b => b.AddProvider(new CapturingProvider(sink)));
+        services.AddPayPalServerSdkClient(o => { });          // Logging.LoggerFactory left null
+        services.AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)
+                .ConfigurePrimaryHttpMessageHandler(() =>
+                    new CountingHandler(_ => Json("""{"id":"o1"}""")));
+
         var provider = services.BuildServiceProvider();
-        var factory = provider.GetService<ILoggerFactory>();
-        return factory is not null
-            ? Ok("the container supplies an ILoggerFactory for the extension to pick up")
-            : Fail("no ILoggerFactory in a container that called AddLogging");
+        var client = provider.GetRequiredService<PayPalServerSdkClient>();
+        Swallow(() => Get(client).GetAwaiter().GetResult());
+
+        var httpLines = sink.Where(l => l.Contains("HTTP ", StringComparison.Ordinal)).ToList();
+        return httpLines.Count > 0
+            ? Ok($"{httpLines.Count} SDK log line(s) reached the container's logger, unasked")
+            : Fail("no SDK log line reached the container's logger — either the extension no "
+                   + "longer fills LoggerFactory, or the request line is no longer on by default");
     });
 
 return checks.Report();
@@ -337,9 +331,9 @@ sealed class CountingHandler : HttpMessageHandler
 
 sealed class CapturingProvider : ILoggerProvider
 {
-    public CapturingProvider(out List<string> sink) => sink = Lines;
-    public List<string> Lines { get; } = new();
-    public ILogger CreateLogger(string categoryName) => new Sink(Lines);
+    private readonly List<string> _lines;
+    public CapturingProvider(List<string> sink) => _lines = sink;
+    public ILogger CreateLogger(string categoryName) => new Sink(_lines);
     public void Dispose() { }
 
     private sealed class Sink(List<string> lines) : ILogger

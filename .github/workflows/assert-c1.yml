@@ -12,14 +12,23 @@ name: assert-c1
 
 on:
   pull_request:
+    # Deliberately NOT plugins/*/skills/dotnet-*: the suite only has an assertion
+    # set for the generator-4.0.0 surface, which is paypal-sdk and twilio-sdk. The
+    # three maxio plugins document a pre-4.0.0 SDK and fail ~98 assertions by
+    # construction, so running against them would be noise — and triggering on
+    # them without checking them is worse: a green assert-c1 that asserted nothing
+    # about the files in the diff. If a pre-4.0.0 assertion set is ever written,
+    # widen this and add the fixture below in the same commit.
     paths:
-      - 'plugins/*/skills/dotnet-*/**'
+      - 'plugins/paypal-sdk/skills/dotnet-*/**'
+      - 'plugins/twilio-sdk/skills/dotnet-*/**'
       - 'tools/assert-c1/**'
       - '.github/workflows/assert-c1.yml'
   push:
     branches: [main, dev]
     paths:
-      - 'plugins/*/skills/dotnet-*/**'
+      - 'plugins/paypal-sdk/skills/dotnet-*/**'
+      - 'plugins/twilio-sdk/skills/dotnet-*/**'
       - 'tools/assert-c1/**'
   schedule:
     # Weekly. The generator-drift job below is the reason this runs on a timer:
@@ -31,28 +40,38 @@ permissions:
   contents: read
 
 concurrency:
-  group: assert-c1-${{ github.ref }}
-  cancel-in-progress: true
+  # Keyed on the event too: on main, github.ref is the same for a push and for the
+  # weekly schedule, so a push would cancel the scheduled run — and the schedule is
+  # the ONLY trigger for the generator-drift job.
+  group: assert-c1-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # The fixture list lives in tools/assert-c1/fixtures.json so there is one place
+  # to update when a plugin is regenerated. This job turns it into the matrix
+  # rather than duplicating it in YAML, where the two would drift apart quietly.
+  fixtures:
+    name: read fixtures.json
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          d = json.load(open("tools/assert-c1/fixtures.json"))
+          print("matrix=" + json.dumps({"include": d["fixtures"]}))
+          PY
+
   static:
     name: static · ${{ matrix.name }}
+    needs: fixtures
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # Keep in step with tools/assert-c1/fixtures.json.
-          - name: paypal
-            repo: asadali214/checkout-sample-sdk
-            ref: v1.0.1
-            surface: '4.0.0'
-            mutation: true
-          - name: twilio
-            repo: context-plugins/twilio-csharp-sdk
-            ref: main
-            surface: '4.0.0'
-            mutation: false
+      matrix: ${{ fromJson(needs.fixtures.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -63,7 +82,7 @@ jobs:
       - name: Clone the SDK fixture
         run: |
           git clone --depth 1 --branch "${{ matrix.ref }}" \
-            "https://github.com/${{ matrix.repo }}.git" "$RUNNER_TEMP/sdk"
+            "${{ matrix.repo }}.git" "$RUNNER_TEMP/sdk"
 
       - name: Assert
         run: |
@@ -73,9 +92,10 @@ jobs:
 
       # Proves the suite can still fail. A regex loosened during a refactor until
       # it matches anything leaves every assertion green over a rotted claim —
-      # this is the only thing that catches that.
+      # this is the only thing that catches that. It also fails when a mutation
+      # cannot be applied, since nothing caught is not the same as all caught.
       - name: Mutation test
-        if: matrix.mutation
+        if: matrix.mutationTest
         run: python tools/assert-c1/mutation_test.py "$RUNNER_TEMP/sdk"
 
       - uses: actions/upload-artifact@v4
@@ -97,8 +117,8 @@ jobs:
 
       # Runs the SDK rather than reading it: how many times a stub handler is
       # called, what ToString() returns, whether a transient client refetches a
-      # token. Against the published package — pass -p:SdkProject=<csproj> to
-      # point it at a freshly generated tree instead.
+      # token, whether the DI extension really wires the logger. PayPal-specific
+      # by construction — see the csproj — so it does not fan out over fixtures.
       - name: Run the behavioural checks
         working-directory: tools/assert-c1/behaviour
         run: dotnet run -c Release
@@ -135,6 +155,8 @@ jobs:
       # its Core has moved ahead of both shipped SDKs. --expect-failures pins the
       # known set, so the job goes red when the drift CHANGES, not while it
       # merely exists. A permanently red job is one everybody learns to ignore.
+      # It also flags a baselined failure that becomes UNSETTLEABLE, which is a
+      # generator change wearing the disguise of a fix.
       - name: Assert against StaticCode
         if: steps.clone.outputs.skipped == 'false'
         run: |

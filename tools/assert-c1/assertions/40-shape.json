@@ -51,7 +51,7 @@
       "glob": "Errors/*.cs",
       "pattern": "^using\\s+\\w+\\.Models;",
       "expect": 1,
-      "claim": "A typed {Operation}Error's body type comes from {RootNamespace}.Models — the fourth using a Case A catch needs once it names the body's type.",
+      "claim": "A typed {Operation}Error's body type comes from {RootNamespace}.Models — the fourth using a Case A catch needs once it names the body's type. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
       "defends": "dotnet-error-handling § the four namespaces",
       "requires": [
         "errors"
