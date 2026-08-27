@@ -1,5 +1,5 @@
 {
-  "name": "maxio-sdk-merged",
+  "name": "maxio-sdk",
   "displayName": "Maxio SDK Assistant (unified)",
   "version": "0.2.0",
   "description": "Install and consume the Maxio Advanced Billing .NET SDK, grounded in a bundled SDK map. A single maxio-sdk agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-maxio router and the map-grounded maxio-sdk agent. No MCP server.",

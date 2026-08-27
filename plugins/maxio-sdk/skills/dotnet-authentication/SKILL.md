@@ -1,6 +1,6 @@
 ---
 name: dotnet-authentication
-description: Configure authentication on an APIMatic-generated C#/.NET API client — each scheme is a nullable credentials property on the options class (set it before constructing the client, or inside the Add{Api}Client DI callback) — Basic (BasicAuthCredentials), Bearer token, API key (header/query/cookie), and OAuth 2.0 (client-credentials, authorization-code+PKCE, password) plus combined AND/OR schemes and no-auth. Use the moment you set credentials, an API key, a token, or OAuth on any APIMatic .NET SDK, or need to know which schemes its options class exposes — load it even after reading the options class in the source, since the property type doesn't tell you when to set it or that secrets belong in configuration.
+description: Authentication for an APIMatic-generated .NET SDK in C# — supplying credentials, the auth scheme and manager shape, per-environment configuration, and rotating or refreshing credentials. Load before wiring credentials or an auth scheme into the client, or when a call fails with 401/403.
 ---
 
 <!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
@@ -27,8 +27,8 @@ client (see `dotnet-client-initialization`).
 > `{Api}ClientOptions`, `{BasicAuthProperty}`) — replace it with the concrete identifier from the source.
 
 To see which schemes a specific SDK accepts, read the **credentials properties on its `{Api}ClientOptions`
-class** — those are the source of truth (read the class in the SDK source, not a decompiled or reflected
-view of the installed package). The `{RootNamespace}.Core.Authentication` folder ships *every*
+class** — those are the source of truth (take them from the contract sheet the SDK helper agent grounds from the
+SDK map/source, not a decompiled or reflected view of the installed package). The `{RootNamespace}.Core.Authentication` folder ships *every*
 scheme class as shared runtime code regardless of what the API accepts, so rely on the options class rather
 than that folder. (An SDK whose API uses only Basic, for instance, exposes a single
 `options.{BasicAuthProperty}` of type `BasicAuthCredentials`.)

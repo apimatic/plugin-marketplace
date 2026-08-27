@@ -7,7 +7,7 @@ plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
 The **SDK map is bundled with the plugin**, and a single `twilio-sdk` agent grounds every fact in it —
 cloning the SDK source only when the map can't settle a fact. Structure adopted from the
-`maxio-sdk-merged` plugin (an `integrate-twilio` router plus one `twilio-sdk` agent).
+`maxio-sdk` plugin (an `integrate-twilio` router plus one `twilio-sdk` agent).
 
 ## The SDK map (bundled; source cloned only on a gap)
 

@@ -1,24 +1,32 @@
 ---
 name: integrate-maxio
-description: 'Entry point and router for all Maxio Advanced Billing .NET SDK work — routes planning to the maxio-plan subagent (which returns a map-grounded contract sheet) and SDK errors to the maxio-debug subagent. Use when the user asks to integrate Maxio (formerly Chargify) billing, implement subscriptions/customers/usage/invoices with the Maxio .NET SDK, or reports a Maxio error or unexpected SDK behaviour in a C#/.NET project. Main agent: you never read, clone, grep, or decompile SDK source or the compiled/NuGet package, and you never handle the SDK clone or its path — that is the job of the plan and debug agents; never create or edit a project file while plan or debug is running, because it edits files in place and its edits collide with yours.'
+description: MANDATORY FIRST STEP for Maxio Advanced Billing (formerly Chargify) .NET SDK work in a C#/.NET project — load this BEFORE spawning the maxio-sdk agent, not after; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate Maxio billing in C# — subscriptions, customers, usage, invoices, plan changes, components, coupons — or when a Maxio SDK call errors or behaves unexpectedly. Knowing to delegate to the maxio-sdk agent is NOT a substitute for loading this, because it carries five binding gates stated NOWHERE else and not inferable from the agent description — (1) the exact plan-file path you must dictate to the agent, (2) the no-project-file-edits window while the agent runs, (3) the hard gate that the plan file exists and has been read before any code, (4) the mandatory load of every dotnet-* companion skill the contract sheet names, and (5) the map boundary, where the SDK map and maxio-getting-started are the agent's to open and never yours.
 ---
 
-# Maxio Advanced Billing .NET SDK — Router (map + subagents)
+# Maxio Advanced Billing .NET SDK — Router (map + one agent)
 
-You (the main agent) orchestrate; the subagents carry the SDK knowledge. The division of
-labour keeps YOUR context small and YOUR code grounded — you never touch the SDK yourself.
+You (the main agent) orchestrate; the `maxio-sdk` agent carries the SDK knowledge. The
+division of labour keeps YOUR code grounded and keeps the **SDK map and source** off your
+context entirely — you work from the contract sheet it returns, never from the map or source
+yourself. The `dotnet-*` companion skills are a different thing: they are API-agnostic *usage*
+guidance, they are yours to load, and Step 1c below makes loading them mandatory.
 
-## The subagents
+## The subagent
 
-- **`maxio-plan`** does all SDK contract discovery against the bundled map and returns a
-  **contract sheet with no open lookups** — exact signatures, wire names, envelope shapes,
-  error accessors, and enum values for the operations in scope. (A fact the map genuinely
-  cannot carry becomes a defensive directive or a row flagged for `maxio-debug`, never left
-  open.) You implement from that sheet; route every SDK contract need to it.
-- **`maxio-debug`** owns SDK-related build/runtime failures — any error naming an SDK
-  symbol, or any unexpected Maxio behaviour — and is the only agent that opens SDK source
-  (map row first; it clones the source itself only when the map genuinely falls short). It
-  fixes the code in place and reports what changed.
+- **`maxio-sdk`** is the single agent for every SDK need. It grounds in a bundled SDK map
+  (and clones the SDK source itself only when the map genuinely falls short), and it:
+  - **plans** — returns a **contract sheet with no open lookups** (exact signatures, wire
+    names, envelope shapes, error accessors, and enum values for the operations in scope);
+    you implement from that sheet;
+  - **answers** narrow contract questions directly (a field, a signature, an enum's values,
+    which error type an operation throws);
+  - **fixes** — hand it a compile or build error on an SDK type and it investigates from the
+    map (then the one source file the map names) and fixes the code in place, building to
+    verify.
+
+  Route EVERY SDK need — planning, a fact, an error — to this one agent. **Spawn it once;
+  every later need is a follow-up message to that same warm agent.** A fresh spawn rebuilds
+  its whole map context from scratch (the dominant helper cost); reuse is not optional.
 
 **Scope guard:** Maxio Advanced Billing .NET SDK (`AsadAli.AdvancedBilling.Sdk`,
 namespace `MaxioAdvancedBilling`) in C#/.NET projects only. Unrelated API or language —
@@ -26,119 +34,125 @@ do nothing.
 
 ## Workflow
 
-**If the user opens with a reported SDK error or unexpected Maxio behaviour** (not new feature work),
-spawn **`maxio-debug`** directly with the error output and the files involved, and wait — do not run the
-plan-first flow for a bug report. Otherwise, for implementation work:
+**If the user opens with a reported SDK error or unexpected Maxio behaviour** (not new
+feature work), spawn **`maxio-sdk`** directly with the error output and the files involved,
+and wait — do not run the plan-first flow for a bug report. Otherwise, for implementation
+work:
 
 ### Step 1 — Plan first (always, for any implementation work)
 
-Your FIRST action is to spawn **`maxio-plan`** once, with the user's full request (all
-features in scope — one spawn covers the whole implementation). Dictate the output path
-in the brief: the absolute path where it writes the plan (`<project repo
-root>/maxio-plan.md`) — do not let the helper pick its own location.
+Your FIRST action is to spawn **`maxio-sdk`** once, with the user's full request (all
+features in scope — one spawn covers the whole implementation). Dictate the output path in
+the brief: the absolute path where it writes the plan (`<project repo root>/maxio-plan.md`) —
+do not let it pick its own location.
 
 It writes `maxio-plan.md` (plan + contract sheet) and returns its path.
 
-**Parallelize the wait — prerequisites only.** Repo reconnaissance (where the
-integration lands in this codebase) is not `maxio-plan`'s job: kick it off in the
-SAME message as the `maxio-plan` spawn (parallel tool calls; background spawns if
-your harness has them). While `maxio-plan` works, do ONLY work that needs no SDK
-knowledge and touches no project file:
+**Parallelize the wait — prerequisites only.** Repo reconnaissance (where the integration
+lands in this codebase) is not the `maxio-sdk` agent's job: kick it off in the SAME message
+as the spawn (parallel tool calls; background spawns if your harness has them). While the
+agent works, do ONLY work that needs no SDK knowledge and touches no project file:
 
-- the repo survey (read-only exploration of conventions and layering) — brief it to
-  return each convention as *pattern + the ONE exemplar file path to imitate*, NOT
-  inline code snippets: you will Read the exemplar at edit time anyway (edits need
-  the file's exact current text), so a snippet dump gets paid for twice;
-- `dotnet restore` and a baseline `dotnet build` / `dotnet test` of the UNTOUCHED
-  solution, so later failures are attributable to your changes;
+- the repo survey (read-only exploration of conventions and layering) — brief it to return
+  each convention as *pattern + the ONE exemplar file path to imitate*, NOT inline code
+  snippets: you will Read the exemplar at edit time anyway (edits need the file's exact
+  current text), so a snippet dump gets paid for twice;
+- `dotnet restore` and a baseline `dotnet build` / `dotnet test` of the UNTOUCHED solution,
+  so later failures are attributable to your changes;
 - locating the SDK package and its version in the project;
 - credentials/environment verification (per the task's secret-handling rules);
 - setting up your task tracking.
 
-Never sit idle while one of these read-only prerequisites is still undone. Equally,
-never use the wait to get a "head start" on implementation: **creating or editing ANY
-project file before the gate below is a defect**, no matter how obvious the code
-seems — the plan agent (and later `maxio-debug`) edits files in place, so your writes
-race its writes. This applies while a helper is running whether you spawned it OR
-resumed it via a follow-up message — a resumed or backgrounded helper is still running.
+Never sit idle while one of these read-only prerequisites is still undone. Equally, never use
+the wait to get a "head start" on implementation: **creating or editing ANY project file
+before the gate below is a defect**, no matter how obvious the code seems — the agent edits
+files in place, so your writes race its writes. This applies while it is running whether you
+spawned it OR resumed it via a follow-up message — a resumed or backgrounded agent is still
+running.
 
-**HARD GATE — no project-file creation or edits until:** the plan agent has
-RETURNED, the file EXISTS at the path you dictated (check it — helpers have
-misreported save locations), and you have read it. The gate bars coding
-"meanwhile"; it does not bar the read-only prerequisite work above. Starting to
-code before the sheet exists defeats the entire plan-first design.
+**HARD GATE — no project-file creation or edits until:** the agent has RETURNED, the file
+EXISTS at the path you dictated (check it — helpers have misreported save locations), and you
+have read it. The gate bars coding "meanwhile"; it does not bar the read-only prerequisite
+work above. Starting to code before the sheet exists defeats the entire plan-first design.
+
+### Step 1c — Required reading (do this before you write any code)
+
+The contract sheet ends with a **REQUIRED READING** block, and its rows carry inline
+`MUST load <skill>` pointers. **Load every `dotnet-*` skill the sheet names, now, before you
+start implementing** — not lazily at the step that needs it. The sheet deliberately does *not*
+carry the how-to: it names the hazard and hands you the skill that resolves it, so an unloaded
+pointer is a gap in what you know, not a formality. If the sheet names none, load
+`dotnet-error-handling` anyway — every integration writes an error boundary.
+
+These are API-agnostic usage skills; loading them is not the same as reading the map, and it
+does not breach the map boundary. Contract *facts* still come only from the sheet or the warm
+agent.
 
 Before implementing, check the plan's **Assumptions & Blockers** section:
-- Blocker or major assumption → surface it to the user in plain language, get their
-  answer, send the clarification to the EXISTING `maxio-plan` agent (re-spawn only if it
-  is gone). It revises the file in place and replies with the changed rows.
+- Blocker or major assumption → surface it to the user in plain language, get their answer,
+  send the clarification to the EXISTING `maxio-sdk` agent (re-spawn only if it is gone). It
+  revises the file in place and replies with the changed rows.
 - Minor assumptions only → proceed.
 
-Full re-planning only on genuine scope change; for a single missing fact mid-implementation
-see *Anti-patterns* — ask the warm plan agent, never guess.
+Full re-planning only on genuine scope change; for a single missing fact mid-implementation,
+ask the warm `maxio-sdk` agent, never guess.
 
 ### Step 2 — Implement from the contract sheet
 
 1. Read `maxio-plan.md` once. Treat its contracts as authoritative — do not re-derive or
-   "double-check" them from memory. When a helper later revises the sheet, it replies with
+   "double-check" them from memory. When the agent later revises the sheet, it replies with
    the changed rows verbatim: work from that reply, not a re-read of the file.
-2. Implement sequentially, following the repo's own conventions and layering.
+2. Implement sequentially, following the repo's own conventions and layering. You loaded the
+   companion skills the sheet named in Step 1c — implement each step in line with the one that
+   governs it, and re-check the sheet's `MUST load` pointer for a step if you skipped ahead.
+   Take every contract *fact* (signatures, wire names, error accessors, enum values) from the
+   contract sheet or the warm `maxio-sdk` agent — never re-derive one from a companion.
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
 4. **Any compile or runtime error involving an SDK type or member** (`CS1061`, `CS0117`,
-   `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `MaxioAdvancedBilling.*`, or a provider
-   error at runtime) → spawn **`maxio-debug`** with the exact error output and the files
-   involved, and wait for it. Do not attempt more than one self-fix of an SDK-name error
-   before escalating — rewriting from the same knowledge that produced the error is
-   guessing.
-5. Run the project's tests (`dotnet test`); verify the integration end to end the way the
-   task demands.
-
-**Reuse, don't re-spawn.** A fresh spawn rebuilds a prompt cache from scratch (the dominant
-helper cost). If your harness can send a follow-up message to an already-spawned agent,
-direct follow-up questions and plan revisions to the EXISTING `maxio-plan` agent — its map
-context is already warm. Spawn fresh only when that isn't available or the agent is gone.
-Require tight returns; if one arrives bloated, use what you need and drop the rest — never
-paste a helper's reference dump into files or carry it forward.
+   `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `MaxioAdvancedBilling.*`, or a provider error
+   at runtime) → send the exact error output and the files involved to your EXISTING
+   `maxio-sdk` agent (a follow-up message, NOT a new spawn), and wait. It fixes the code in
+   place and reports what changed and whether it could build-verify. **If it reports it could
+   not build because the solution is running, stop the app, rebuild, and verify yourself** —
+   it will never touch your running process. Do not attempt more than one self-fix of an
+   SDK-name error before handing it over — rewriting from the same knowledge that produced the
+   error is guessing.
+5. Run the project's tests (`dotnet test`); verify the integration end to end the way the task
+   demands.
 
 ### Step 3 — Answering pure questions
 
-A standalone Maxio question with no code change: spawn `maxio-plan` in narrow-question mode
-and relay its grounded answer. Never answer from memory, even for "easy" questions.
+A standalone Maxio question with no code change: ask the warm `maxio-sdk` agent (narrow-
+question mode) and relay its grounded answer. Never answer from memory, even for "easy"
+questions.
 
-## Wait for your agents
+## Wait for your agent
 
-The race rule is precise: **never create or edit a project file while a helper is
-running** — `maxio-plan`, and especially `maxio-debug`, edit files in place, and their
-edits collide with yours. This holds for a helper you spawned AND one you resumed via a
-follow-up message (a resumed or backgrounded helper is still running). The one thing you
-may do during a wait is the **read-only** Step-1 prerequisite work (repo survey, restore,
-baseline build, env checks) — it touches no project file. When those are done and a helper
-is still running, wait.
+**Never create or edit a project file while `maxio-sdk` is running** — it edits files in
+place, and its edits collide with yours. This holds for an agent you spawned AND one you
+resumed via a follow-up message (a resumed or backgrounded agent is still running). The one
+thing you may do during a wait is the **read-only** Step-1 prerequisite work (repo survey,
+restore, baseline build, env checks) — it touches no project file. When those are done and the
+agent is still running, wait.
 
 ## Anti-patterns — never do these
 
-Everything the main agent must NOT do is collected here, in one place:
-
-- **Never touch the SDK source yourself.** Don't read, clone, grep, `find`, or otherwise
-  ingest the SDK source to find an implementation detail — that is `maxio-plan`'s job (for
-  planning) and `maxio-debug`'s (for failures).
-- **Don't use the compiled SDK either.** No decompiling or reflecting over the
-  installed/NuGet package to find implementation.
-- **Don't handle the clone.** The SDK clone and its filesystem path belong to
-  `maxio-debug`; you never read the clone and never need or receive its path.
-- **Never open `map/models/records-*.md` yourself.** They are the largest pages in the map
-  and would ride in your context for every remaining turn.
-- **Don't bulk-load reference material.** Don't load `maxio-getting-started`, the `dotnet-*`
-  skills, or the SDK map pages, and don't carry reference dumps — the contract sheet is
-  your working reference. (The one allowed exception is the single targeted map-page read
-  below.)
-- **Don't open the SDK's `api-reference.md`, and don't web-search Maxio topics.**
-- **Never write a Maxio/SDK fact from memory** — every signature, field name, enum value,
-  and error type in your code must come from the contract sheet or a lookup. And **never
-  write a call from memory "to fix later".**
+- **Get SDK knowledge from the `maxio-sdk` agent, not yourself.** Don't clone or decompile the
+  SDK, don't fetch its source files, and don't web-search Maxio topics to find an
+  implementation detail — that is the agent's job. (You have no SDK source or clone locally;
+  the agent holds the bundled map and clones on a real gap.)
+- **Don't load `maxio-getting-started` or the SDK map pages** — the map is the agent's, and
+  loading it just bloats your context. (The `dotnet-*` companions are the opposite case: load
+  them, per Step 1c.) Don't re-derive a contract *fact* from a companion: exact signatures, wire names,
+  error accessors, and enum values come from the contract sheet (or you ask the warm `maxio-sdk`
+  agent). Where a companion points at the SDK source or a clone, that path is the agent's, not
+  yours — you have no local clone.
+- **Never write a Maxio/SDK fact from memory** — every signature, field name, enum value, and
+  error type in your code must come from the contract sheet or a lookup. And **never write a
+  call from memory "to fix later".**
 - **Don't re-derive or double-check a sheet row from memory.** If you are unsure what a row
-  said, either batch your questions into ONE message to the warm `maxio-plan` agent (it
-  holds the map pages warm and answers in seconds), or make ONE targeted read of just the
-  map page that row cites — never `map/models/records-*.md`.
-- **Don't create or edit project files while a helper runs** — see *Wait for your agents*
-  (read-only Step-1 prerequisites are the one exception).
+  said, batch your questions into ONE message to the warm `maxio-sdk` agent — it holds the map
+  warm and answers in seconds.
+- **Never spawn a second `maxio-sdk` agent.** One spawn per session; everything after is a
+  follow-up message to it — a fresh spawn rebuilds the whole map context (the dominant cost).
+- **Don't create or edit project files while the agent runs** — see *Wait for your agent*.

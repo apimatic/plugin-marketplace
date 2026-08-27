@@ -1,16 +1,17 @@
 # Maxio SDK Assistant (Claude Code plugin)
 
-A Claude Code plugin that helps developers **install and consume the Maxio Advanced Billing
-.NET SDK**, plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
+A Claude Code plugin that helps developers **install and consume the Maxio Advanced Billing .NET SDK**,
+plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
-Sourced from [apimatic/v4-plugins](https://github.com/apimatic/v4-plugins) `plugins/maxio-sdk`,
-extended with a bundled **SDK map** and **subagent orchestration** (an `integrate-maxio` router plus
-`maxio-plan` and `maxio-debug` agents).
+The **SDK map is bundled with the plugin**, and a single `maxio-sdk` agent grounds every fact in it —
+cloning the SDK source only when the map can't settle a fact. Sourced from
+[apimatic/v4-plugins](https://github.com/apimatic/v4-plugins) `plugins/maxio-sdk`, extended with
+**subagent orchestration** (an `integrate-maxio` router plus one `maxio-sdk` agent).
 
-## The SDK map
+## The SDK map (bundled; source cloned only on a gap)
 
-The `maxio-getting-started` skill bundles a generated table-of-contents for the SDK
-(`skills/maxio-getting-started/sdk-map.md` plus `map/` branch pages):
+The generated table-of-contents ships inside this plugin (`skills/maxio-getting-started/sdk-map.md`
+plus `map/` branch pages):
 
 - **`map/operations/`** — one page per controller (33 pages, 247 operations): exact C# signature,
   must-pass-explicitly params, return type, error case (typed vs `RawError`) with its `TryGet…`
@@ -18,11 +19,12 @@ The `maxio-getting-started` skill bundles a generated table-of-contents for the 
 - **`map/models/`** — record models, `OneOf`/`AnyOf` unions (factories + `TryGet…`), and full
   enum value lists.
 
-The SDK source remains the ground truth, but the agent **navigates by map lookup instead of
-grepping a clone**: it answers most questions from the map directly — field lists with JSON wire
-names, error accessors, enum values — and only when it needs a full method or model body does it
-clone the source (on first need) and open the one file the map names. This avoids expensive
-searches over a 600+-file source tree.
+`sdk-map.md` records the SDK version and source commit it was generated from (the map is generated
+from the SDK source, which remains the ground truth). The agent **navigates by map lookup instead of
+grepping**: it answers most questions from the map directly — field lists with JSON wire names, error
+accessors, enum values — and only when the map can't settle a fact does it clone the SDK source
+(pinned to the ref the map was generated from) and open the one file the map names. Grepping /
+globbing / `find`-ing the 600+-file tree to locate something is a defect — the map is the locator.
 
 ## Two layers
 
@@ -32,20 +34,28 @@ the same cross-cutting shape for every .NET SDK it produces. The plugin reflects
 | Layer | Skill(s) | Names used |
 | --- | --- | --- |
 | **SDK-specific** (entry point) | `maxio-getting-started` (+ the bundled SDK map) | Concrete Maxio names (`MaxioAdvancedBillingClient`, etc.) |
-| **API-agnostic usage** | `dotnet-client-initialization`, `dotnet-authentication`, `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`, `dotnet-configuration-resilience`, `dotnet-testing` | Placeholders (`<Api>Client`, `<Api>ClientOptions`, …) so they apply to *any* APIMatic .NET SDK |
+| **API-agnostic usage** | `dotnet-client-initialization`, `dotnet-authentication`, `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`, `dotnet-configuration-resilience`, `dotnet-testing` | Placeholders (`{Api}Client`, `{Api}ClientOptions`, `{RootNamespace}`, …) so they apply to *any* APIMatic .NET SDK |
 
-The agnostic skills never name Maxio directly — they describe the generator's patterns so they apply
-to whatever APIMatic .NET SDK your project consumes as a published NuGet package. Where an SDK map is
-bundled (as it is here), they defer to it for lookup before touching the SDK source.
+The agnostic skills never name Maxio — not in their bodies and not in their `description` frontmatter,
+which says "an APIMatic-generated .NET SDK". They describe the generator's patterns so they apply to
+whatever APIMatic .NET SDK your project consumes as a published NuGet package, **and so they can be
+copied into another APIMatic plugin unedited**. Where an SDK map ships (as it does here, bundled), they
+defer to it for lookup before touching the SDK source.
+
+> **Adding these skills to another APIMatic .NET plugin:** copy the seven `dotnet-*` directories as they
+> are. Everything SDK-specific — package id, root namespace, environments, auth pattern, the map, and any
+> "this SDK doesn't generate X" caveats — belongs in that plugin's own getting-started skill, the way
+> `maxio-getting-started` carries it here.
 
 ## Skills
 
-- **integrate-maxio** — orchestrator/router. Routes a Maxio .NET SDK task to the `maxio-plan` or
-  `maxio-debug` agent, handles blocker hand-back, and drives the implement-and-verify loop. Grounds
-  every fact in the bundled skills + SDK map — never model knowledge.
-- **maxio-getting-started** — NuGet install, US/EU environments, Basic-auth quickstart, the bundled
-  SDK map, and how to clone and navigate the SDK source. Start here.
-- **dotnet-client-initialization** — construct `<Api>Client` + `<Api>ClientOptions`, supply an `HttpClient`,
+- **integrate-maxio** — orchestrator/router. Routes every Maxio .NET SDK task — planning, contract
+  questions, and SDK errors — to the single `maxio-sdk` agent, and drives the implement-and-verify
+  loop. Grounds every fact in the contract sheet the agent produces — never model knowledge, and never
+  the map directly.
+- **maxio-getting-started** — NuGet install, US/EU environments, Basic-auth quickstart, the bundled SDK
+  map, and how to clone the SDK source only on a map gap. The helper-facing entry point.
+- **dotnet-client-initialization** — construct `{Api}Client` + `{Api}ClientOptions`, supply an `HttpClient`,
   pick a server environment, register in DI.
 - **dotnet-authentication** — wire up Basic / Bearer / API-key / OAuth2 / composite auth.
 - **dotnet-calling-endpoints** — method-signature conventions, building request `record`s, enums, reading
@@ -58,10 +68,10 @@ bundled (as it is here), they defer to it for lookup before touching the SDK sou
 
 ## Agents
 
-- **maxio-plan** — read-only planner. Loads the bundled skills + SDK map and writes a
-  contract-grounded `maxio-plan.md` before any code is written. No MCP.
-- **maxio-debug** — diagnoses and fixes Maxio code in place, map-first (its first step on an
-  SDK-name error is the map row), verifying with `dotnet build` / `dotnet test`. No MCP.
+- **maxio-sdk** — the single SDK agent. Grounds every contract in the bundled map (cloning the SDK
+  source only when the map can't settle a fact), writes a contract-grounded `maxio-plan.md` before any
+  code is written, answers narrow contract questions, and fixes SDK compile/build errors in place —
+  building to verify. No MCP.
 
 ## Install
 

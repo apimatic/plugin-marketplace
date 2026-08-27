@@ -1,6 +1,6 @@
 ---
 name: dotnet-testing
-description: Unit-test code that uses an APIMatic-generated C#/.NET SDK by injecting a fake HttpClient — the client's HttpClient constructor argument is the test seam (no SDK mocking helpers) — stub success and error responses with a custom HttpMessageHandler, assert the outgoing request, assert SdkException<TError> on error paths, and register a stub client in DI. Use when writing, mocking, or stubbing tests for calls made through an APIMatic .NET SDK client — load it even after reading the constructor in the source, since the seam alone won't tell you to match the project's test stack or assert the right exception per operation.
+description: Testing code that calls an APIMatic-generated .NET SDK in C# — which seam to fake, covering error and edge paths, asserting real behaviour rather than execution, and keeping tests independent of SDK internals. Load before writing tests for the integration layer.
 ---
 
 <!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
@@ -40,19 +40,26 @@ using System.Net;
 public sealed class StubHandler : HttpMessageHandler
 {
     private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
-    public HttpRequestMessage? LastRequest { get; private set; }
+
+    // Every request, in order — retries append, so this is what you count.
+    public List<HttpRequestMessage> Requests { get; } = new();
+    public HttpRequestMessage? LastRequest => Requests.Count == 0 ? null : Requests[^1];
+
+    // The serialized body of each request, captured while it is still readable.
+    public List<string?> Bodies { get; } = new();
+    public string? LastBody => Bodies.Count == 0 ? null : Bodies[^1];
 
     public StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) => _responder = responder;
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
     {
-        LastRequest = request;
+        Requests.Add(request);
         // Buffer the body NOW — the SDK disposes the request content per attempt, so it is
         // already gone by the time your test reads it. See the Notes bullet below.
-        LastBody = request.Content is null ? null : request.Content.ReadAsStringAsync().Result;
+        Bodies.Add(request.Content is null ? null : request.Content.ReadAsStringAsync().Result);
         var response = _responder(request);
-        response.RequestMessage = request;   // real HttpClient sets this; the retry predicate reads it
+        response.RequestMessage = request;   // real HttpClient sets this; some retry predicates read it
         return Task.FromResult(response);
     }
 }
@@ -102,8 +109,8 @@ public async Task ThrowsOnApiError()
         () => client.{ApiGroup}.{Operation}(/* args */, ct: default));
 
     // ex.Error is the typed ApiError. For a status the operation maps to a typed body (e.g. 422), assert the
-    // typed accessor — its name embeds the body type, so open the {Operation}Error under Errors/ for the
-    // exact name. TryGetRawError is FALSE for those statuses, so don't assert through it here:
+    // typed accessor — its name embeds the body type; the contract sheet lists the exact accessor name.
+    // TryGetRawError is FALSE for those statuses, so don't assert through it here:
     Assert.True(ex.Error.TryGetSomeTypedBody(out var typed));
     // ...assert on 'typed'. (Only statuses the operation maps to RawError populate TryGetRawError.)
 }
@@ -182,11 +189,32 @@ Assert.Contains("\"expected_field\"", sentJson);
 - Mocking libraries (Moq, NSubstitute) work too — mock `HttpMessageHandler.SendAsync` (it's `protected`,
   so use `Protected()` with Moq). The hand-written stub above avoids that friction.
 - A stubbed retryable response — the default set is exactly `408, 429, 500, 502, 503, 504`, not all `5xx`
-  — on a retryable method will be retried by the SDK before the call returns. The verb filter applies to
-  *status* retries only: a `POST` won't retry on a `503` unless you add its method to `HttpMethodsToRetry`,
-  but a stub that **throws** `HttpRequestException` is a different trigger and *is* retried on every verb,
-  `POST` included (see `dotnet-configuration-resilience`). To observe status retries firing, have the stub
-  return `503` then `200` and count invocations.
+  — on a retryable method will be retried by the SDK before the call returns — *status* retries apply to `GET/HEAD/PUT/OPTIONS` only by default, so a `POST` won't retry
+  on a `503` unless you add its method to `HttpMethodsToRetry`. A stub that **throws**
+  (`HttpRequestException`) is a different trigger and *is* retried on every verb, `POST` included (see
+  `dotnet-configuration-resilience`). To observe status retries firing, have the stub return `503` then
+  `200` and count invocations.
+- **Assert the send count on a write, and expect `1 + MaxRetries` unless you have a guard.** Because the
+  transport trigger ignores the verb on this SDK, a stub that throws on a `POST` is sent **four** times with
+  the default `MaxRetries = 3`. A test asserting one send is asserting that *your* write-once guard works,
+  not that the SDK is well behaved — write it that way, and it will fail loudly the day the guard is
+  removed.
+- **Status faults and transport faults are separate retry triggers** — the SDK distinguishes them itself
+  (`RetryAttempt.Reason` is `RetryReason.Status(...)` *or* `RetryReason.Failure(Exception)`). A test that
+  stubs a `503` therefore proves nothing about what happens when the *connection* fails. If a duplicated
+  write would be unacceptable in your domain (a charge, an enrollment, an order), assert write-once under
+  **both** triggers explicitly rather than inferring one from the other:
+  ```csharp
+  // Transport fault: the stub throws instead of answering, then we count what the server actually received.
+  var handler = new StubHandler(_ => throw new HttpRequestException("connection reset"));
+  var client = new {Api}Client(new HttpClient(handler), new {Api}ClientOptions());
+
+  await Assert.ThrowsAnyAsync<Exception>(() => client.{ApiGroup}.{Operation}(body, ct: default));
+
+  // WITHOUT a write-once guard this is 4 (1 + MaxRetries): the transport trigger ignores the verb here.
+  // WITH one, it is 1 — which is what the test exists to prove.
+  Assert.Equal(1, handler.Requests.Count(r => r.Method == HttpMethod.Post));
+  ```
 - For DI-based code, the SDK's `Add{Api}Client` resolves the **default (unnamed)** `IHttpClientFactory`
   client, so register your stub on that one, then resolve `{Api}Client` from the provider:
   ```csharp
@@ -194,8 +222,8 @@ Assert.Contains("\"expected_field\"", sentJson);
   services.AddHttpClient(Options.DefaultName).ConfigurePrimaryHttpMessageHandler(() => stubHandler);
   var client = services.BuildServiceProvider().GetRequiredService<{Api}Client>();
   ```
-- To look up an operation's signature, its request type, or a `{Operation}Error`'s accessor names, read the
-  SDK source `.cs` files — don't decompile or reflect over the installed package, which drops the XML-doc
-  comments and the request-builder details.
+- To look up an operation's signature, its request type, or a `{Operation}Error`'s accessor names, take them
+  from the contract sheet (the SDK helper agent grounds it from the SDK map/source) — not a decompiled or
+  reflected view of the installed package, and not memory.
 - Prefer this `HttpClient`-seam approach over wrapping the SDK in your own interface unless you need to
   abstract the SDK for other reasons.

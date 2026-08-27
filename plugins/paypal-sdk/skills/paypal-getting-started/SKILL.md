@@ -282,22 +282,21 @@ need it — `DebugId` is `required` on every typed error body and is what PayPal
 
 ## The `dotnet-*` skill names are not unique in this marketplace
 
-Five plugins in this marketplace — `maxio-sdk`, `maxio-sdk-lean`, `maxio-sdk-merged`, `paypal-sdk` and
-`twilio-sdk` — each ship their own copy of the same seven `dotnet-*` skill names. The 35 copies are **not
-interchangeable**: they resolve to **24 distinct versions**, and `dotnet-configuration-resilience` differs
-in all five. Two plugins of this family installed side by side therefore expose two different skills under
-one name, and nothing announces which one a bare name resolves to.
+Three plugins in this marketplace — `maxio-sdk`, `paypal-sdk` and `twilio-sdk` — each ship their own copy
+of the same seven `dotnet-*` skill names. The 21 copies are **not interchangeable**: they resolve to
+**16 distinct versions**, and `dotnet-configuration-resilience` and `dotnet-error-handling` differ in all
+three. Two of them installed side by side therefore expose two different skills under one name, and nothing
+announces which one a bare name resolves to.
 
 **Load the copy that ships with THIS plugin.** Where your harness supports plugin-qualified skill names,
-write them out — `paypal-sdk:dotnet-error-handling`, `paypal-sdk:dotnet-configuration-resilience`, and so on. Where it does not, and more than one of those five plugins is installed,
+write them out — `paypal-sdk:dotnet-error-handling`, `paypal-sdk:dotnet-configuration-resilience`, and so on. Where it does not, and more than one of those three plugins is installed,
 confirm you have this plugin's copy before you rely on it: check the `core-surface:` stamp at the top of
 the file, where it must name generator **4.0.0**.
 
 The drift is not cosmetic, and it is not safe to shrug at:
 
-- `maxio-sdk`, `maxio-sdk-lean` and `maxio-sdk-merged` document a **pre-4.0.0** generator surface — 88
-  `Core/*.cs` against 122, with 28 of the 87 shared files differing. Loading one of those here would
-  describe a runtime this SDK does not have.
+- `maxio-sdk` documents a **pre-4.0.0** generator surface — 88 `Core/*.cs` against 122, with 28 of the 87
+  shared files differing. Loading its copy here would describe a runtime this SDK does not have.
 - `paypal-sdk` and `twilio-sdk` are both 4.0.0 but still differ where the *API definition* differs. The
   clearest case is `dotnet-error-handling`: twilio's boundary ladder reads `ex.Error.StatusCode`, which
   works there because 858 of its 887 operations are Case B — and is unavailable on paypal, where 39 of 40

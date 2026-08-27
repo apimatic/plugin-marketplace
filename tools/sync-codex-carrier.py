@@ -32,8 +32,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAIRS = [
     ("plugins/twilio-sdk/agents/twilio-sdk.md",
      "plugins/twilio-sdk/codex/agents/twilio-sdk.toml"),
-    ("plugins/maxio-sdk-merged/agents/maxio-sdk.md",
-     "plugins/maxio-sdk-merged/codex/agents/maxio-sdk.toml"),
+    ("plugins/maxio-sdk/agents/maxio-sdk.md",
+     "plugins/maxio-sdk/codex/agents/maxio-sdk.toml"),
     ("plugins/paypal-sdk/agents/paypal-sdk.md",
      "plugins/paypal-sdk/codex/agents/paypal-sdk.toml"),
 ]

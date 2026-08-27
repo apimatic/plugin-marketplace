@@ -4,15 +4,13 @@ General-purpose AI models are trained on public code and documentation, much of 
 
 APIMatic gives coding assistants deterministic, version-aware API context, generated directly from your API definition and SDKs. Instead of scraping public documentation or guessing from memory, the AI is grounded in the exact OpenAPI definition, current SDK versions, executable, idiomatic code samples, and recommended integration workflows.
 
-This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Claude Code, Cursor, VS Code and Codex**. It ships seven plugins under `plugins/`, all registered in `.claude-plugin/marketplace.json`:
+This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Claude Code, Cursor, VS Code and Codex**. It ships five plugins under `plugins/`, all registered in `.claude-plugin/marketplace.json`:
 
 | Plugin | Kind | Harness manifests |
 | --- | --- | --- |
 | `context-matic` | MCP, multi-API | Claude Code, Cursor, VS Code |
 | `acp-paypal` | MCP, PayPal | Claude Code, Cursor, VS Code |
-| `maxio-sdk` | skills + map, .NET | Claude Code |
-| `maxio-sdk-merged` | skills + map, .NET | Claude Code, Cursor, Codex |
-| `maxio-sdk-lean` | skills + map-in-SDK, .NET | Claude Code |
+| `maxio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
 | `paypal-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
 | `twilio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
 
@@ -52,52 +50,43 @@ PayPal-focused plugin built on the same context engine.
 
 ### maxio-sdk
 
-Maxio Advanced Billing (formerly Chargify) **.NET SDK** plugin — no MCP server, no telemetry,
-Claude Code only, C#/.NET only. Its core feature is a bundled, generated **SDK map**
-(`skills/maxio-getting-started/sdk-map.md` + `map/`) plus a subagent orchestration layer: the agent
-answers every signature/model/enum/error question by map lookup, clones the SDK source **only on
-first need** for a full body the map doesn't carry, and never greps the clone or opens the SDK's
+Maxio Advanced Billing (formerly Chargify) **.NET SDK** plugin — no MCP server, no telemetry, C#/.NET
+only. Its core feature is a bundled, generated **SDK map** (`skills/maxio-getting-started/sdk-map.md` +
+`map/`): the agent answers every signature/model/enum/error question by map lookup, clones the SDK source
+**only on first need** for a full body the map doesn't carry, and never greps the clone or opens the SDK's
 `api-reference.md`.
+
+One agent does everything — `maxio-sdk` plans, answers narrow contract questions, and fixes build errors
+in place. Ships Claude Code, Cursor and Codex manifests; the Codex carrier is
+`codex/agents/maxio-sdk.toml`, whose `developer_instructions` is a verbatim copy of `agents/maxio-sdk.md`.
+Regenerate it with `python tools/sync-codex-carrier.py` rather than editing it by hand; CI fails the PR if
+the two drift.
 
 **Skills**
 
-- **integrate-maxio** — orchestrator/router: routes a Maxio .NET SDK task to the `maxio-plan` or
-  `maxio-debug` agent, handles blocker hand-back, and drives the implement-and-verify loop.
-- **maxio-getting-started** — SDK-specific entry point: identity, client construction, servers/auth,
-  the SDK map, lookup hygiene ("keep lookups cheap"), and the contract-sheet workflow.
+- **integrate-maxio** — router: routes a Maxio .NET SDK task to the `maxio-sdk` agent, handles blocker
+  hand-back, and drives the implement-and-verify loop.
+- **maxio-getting-started** — SDK-specific entry point: identity, client construction, servers/auth, the
+  SDK map, lookup hygiene ("keep lookups cheap"), and the contract-sheet workflow.
 - Seven `dotnet-*` companions (`dotnet-client-initialization`, `dotnet-authentication`,
   `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`,
   `dotnet-configuration-resilience`, `dotnet-testing`) — usage guidance layered on the map.
 
-**Agents**
+The map's generated pages are never hand-edited — they are produced by the `sdk-map-generator` repo and
+verified field-exact against the SDK source (github.com/asadali214/advanced-billing-sample-sdk, pinned per
+map stamp).
 
-- **maxio-plan** — read-only planner: loads the bundled skills + SDK map and writes a
-  contract-grounded `maxio-plan.md` before any code is written (no MCP).
-- **maxio-debug** — diagnoses and fixes Maxio code in place, map-first, verifying with `dotnet build`
-  / `dotnet test` (no MCP).
+> This plugin documents a **pre-4.0.0** generator surface (88 `Core/*.cs`), unlike `paypal-sdk` and
+> `twilio-sdk` at 4.0.0 (122). That is the single most important thing to know before editing any of its
+> `dotnet-*` skills — see the section below.
 
-The map's generated pages are never hand-edited — they are produced by the
-`sdk-map-generator` repo and verified field-exact against the SDK source
-(github.com/asadali214/advanced-billing-sample-sdk, pinned per map stamp).
+> `skills/dotnet/` is an empty directory skeleton — the folders exist locally but contain no files and
+> nothing under it is tracked by git. It is not referenced by any manifest. Treat the top-level
+> `skills/*` directories as the live ones, and delete the skeleton if it turns up in a working copy.
 
-### maxio-sdk-merged
-
-Same SDK and same bundled map as `maxio-sdk`, but the two agents are collapsed into **one** `maxio-sdk`
-agent that plans, answers narrow contract questions, and fixes build errors in place. Ships Claude Code,
-Cursor and Codex manifests; the Codex carrier is `codex/agents/maxio-sdk.toml`, whose
-`developer_instructions` is a verbatim copy of `agents/maxio-sdk.md`. Regenerate it with
-`python tools/sync-codex-carrier.py` rather than editing it by hand; CI fails the PR if the two drift.
-
-> `skills/dotnet/` in this plugin is an empty directory skeleton — the folders exist locally but contain
-> no files and nothing under it is tracked by git. It is not referenced by any manifest. Treat the
-> top-level `skills/*` directories as the live ones, and delete the skeleton if it turns up in a
-> working copy.
-
-### maxio-sdk-lean
-
-Same SDK, same single-agent shape, but the map is **not bundled** — it ships inside the SDK's own source
-(branch `docs/sdk-map` of `mohammadali2549/advanced-billing-sample-sdk`) and the agent reads it from the
-root of the clone. Claude Code manifest only.
+> Two earlier variants, `maxio-sdk-lean` (map shipped inside the SDK source) and the original two-agent
+> `maxio-sdk` (separate `maxio-plan` / `maxio-debug`), were retired on `dev`; this plugin — formerly
+> `maxio-sdk-merged` — took over the name.
 
 ### paypal-sdk
 
@@ -117,18 +106,18 @@ carrier is `codex/agents/twilio-sdk.toml`, kept in sync with `agents/twilio-sdk.
 
 ## The `dotnet-*` companion skills are shared, but not uniform
 
-Five plugins (`maxio-sdk`, `maxio-sdk-lean`, `maxio-sdk-merged`, `paypal-sdk`, `twilio-sdk`) each carry
-their own copy of the seven `dotnet-*` skills. The copies have **drifted**, and the drift is not
+Three plugins (`maxio-sdk`, `paypal-sdk`, `twilio-sdk`) each carry their own copy of the seven
+`dotnet-*` skills. The copies have **drifted**, and the drift is not
 accidental: they describe the emitted `Core/`, and the SDKs behind these plugins come from **two different
 generator versions**. Before editing any `dotnet-*` skill, see the provenance stamp at the top of that
 file — it names the generator surface the text was verified against. Copying a correction from one plugin
 to another without checking that stamp will introduce a falsehood.
 
-Measured: **35 copies, 24 distinct versions.** `dotnet-configuration-resilience` differs in all five
-plugins; `dotnet-error-handling` in four.
+Measured: **21 copies, 16 distinct versions.** `dotnet-configuration-resilience` and
+`dotnet-error-handling` differ in all three.
 
 That makes the seven names **ambiguous at install time**, because a bare `dotnet-error-handling` names
-five different documents. Two of this family installed together — a realistic pairing, since an
+three different documents. Two of this family installed together — a realistic pairing, since an
 integration can need both PayPal and Twilio — expose two different skills under one name, and nothing
 announces which one resolves. The consequence is concrete: twilio's `dotnet-error-handling` builds its
 boundary ladder on `ex.Error.StatusCode`, which is right there (858 of 887 operations are Case B) and
@@ -147,9 +136,8 @@ MCP-backed plugins carry one manifest per IDE, and each manifest points at its o
 - Cursor: `.cursor-plugin/plugin.json` → `.cursor-mcp.json` (header `Cursor`)
 - VS Code: root `plugin.json` (Copilot format) → `.mcp.json` (header `VSCode`)
 
-(The five SDK plugins are the exception: they have no MCP server, so their manifests point at no MCP config.
-`maxio-sdk` and `maxio-sdk-lean` ship only the Claude Code manifest; `maxio-sdk-merged`, `twilio-sdk`
-and `paypal-sdk` add Cursor and Codex. None of the five ships a VS Code manifest — see below; that is now
+(The three SDK plugins are the exception: they have no MCP server, so their manifests point at no MCP config.
+all three of `maxio-sdk`, `twilio-sdk` and `paypal-sdk` ship Claude Code, Cursor and Codex manifests. None of the three ships a VS Code manifest — see below; that is now
 a decision rather than an omission.)
 
 ### VS Code: a deliberate no, for one specific reason

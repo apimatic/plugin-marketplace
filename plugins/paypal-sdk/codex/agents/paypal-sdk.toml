@@ -205,8 +205,8 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    > `dotnet-configuration-resilience`** before wiring the client.
 4. **REQUIRED READING** — close the sheet with the de-duplicated list of every `dotnet-*` skill
    named above, one line each: skill · the step it governs. **Write each name plugin-qualified**
-   (`paypal-sdk:dotnet-error-handling`): five plugins in this marketplace ship these same seven
-   skill names with different content — 35 copies, 24 distinct versions — and a bare name gives
+   (`paypal-sdk:dotnet-error-handling`): three plugins in this marketplace ship these same seven
+   skill names with different content — 21 copies, 16 distinct versions — and a bare name gives
    the implementer no way to tell which one they loaded. Where the harness has no qualified form,
    say in the same line which plugin the copy must come from. State that these are to be loaded
    **before implementation starts**, and that the sheet deliberately does not carry their

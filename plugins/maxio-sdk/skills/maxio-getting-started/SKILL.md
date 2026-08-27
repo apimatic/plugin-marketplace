@@ -1,19 +1,16 @@
 ---
 name: maxio-getting-started
-description: Identify and orient in the Maxio Advanced Billing (formerly Chargify) .NET SDK — its NuGet package id and root namespace, the namespace layout, US/EU environments and the Basic-auth pattern, and how the map points you to the exact source file when one is needed (maxio-debug clones it, at the pinned ref, only when the map falls short). Bundles a generated SDK map (sdk-map.md + map/) — a table of contents over every operation signature, error type, model, enum and union — so you look facts up and open exactly the file you need instead of grepping the clone. This is the helper-facing reference layer, preloaded for the maxio-plan and maxio-debug subagents; the main agent routes Maxio work through integrate-maxio and works from its contract sheet rather than loading this or the map wholesale. It also routes you to the companion dotnet-* skills and gates loading each at its step — load them even after reading the SDK source, which shows signatures but not the usage gotchas these skills carry.
+description: Maxio Advanced Billing (formerly Chargify) .NET SDK identity and lookup layer for the maxio-sdk helper agent — package id, root namespace, environments, auth pattern, and the bundled SDK map of every operation signature, model, enum, union and error type. The helper agent loads this to answer contract questions; other agents work from the contract sheet it produces.
 ---
 
 # Getting started with the Maxio Advanced Billing .NET SDK
 
-> **Who this skill is for.** This is the helper-facing reference layer, preloaded for the
-> `maxio-plan` and `maxio-debug` subagents — if you are one of them, it is yours to follow
-> directly and fully. If you are the **main agent**, do not load this skill, the map pages,
-> or the companion `dotnet-*` skills wholesale: route the task through `integrate-maxio`
-> and implement from the contract sheet it produces (the router allows it one targeted
-> map-page read when a fact is missing mid-implementation). The "load the companion skill" steps below address whoever
-> is doing the grounding — in this plugin's flow, the helpers; the main agent receives
-> those traps as one-line notes on the contract sheet. This skill never calls back into
-> the router, so there is no loop.
+> **Who this skill is for.** This is the **map layer**, preloaded for the `maxio-sdk` helper
+> agent — if you are it, this skill is yours to follow directly and fully. It is the only place
+> the bundled SDK map is opened, and the map stays here: an implementer works from the contract
+> sheet this agent produces, and asks the warm agent for any fact the sheet is missing. The
+> "load the companion skill" steps below address whoever is doing the grounding. This skill
+> never calls back into the router, so there is no loop.
 
 This is the **SDK-specific** entry point. For general patterns that apply to any APIMatic-generated
 .NET SDK (auth, calling endpoints, models, error handling, retries, testing), see the companion
@@ -31,7 +28,7 @@ confirm names against the map.
 > in this skill's directory) — it carries every operation signature, error type, enum value list, field
 > list with JSON wire names, and union accessor by lookup, so most questions never touch the SDK source
 > at all. When the map can't answer something — a full method/model body, or a map-sourced name that
-> fails to compile — the SDK source must be consulted (`maxio-debug` clones it — see the *SDK source*
+> fails to compile — the SDK source must be consulted (you clone it — see the *SDK source*
 > section below) and the one file the map names opened; **never fill the gap from memory.** Do **not** decompile or
 > reflect over the installed package, do **not** fetch GitHub files ad hoc, and do **not** grep or run
 > other expensive searches over the clone.
@@ -62,7 +59,7 @@ The SDK splits its public types across **separate child namespaces**. C# does **
 namespaces transitively, so `using MaxioAdvancedBilling.Models;` alone does **not** make enums, union
 types, or error types visible — you get `CS0103`/`CS0246` ("name/type does not exist") on build. Add a
 separate `using` for each kind of type you reference — the map lists each type's namespace, so take it from
-the map row; only if the map is silent does `maxio-debug` open the file in the clone and copy the `namespace`
+the map row; only if the map is silent do you open the file in the clone and copy the `namespace`
 declaration at its top.
 
 ## Install — always via NuGet
@@ -123,35 +120,31 @@ from the map fails to compile, trust the compiler and re-read the source file th
 The clone is the ground truth the map was generated from, but it is a **last resort, not a step** — most
 integrations never open it. Clone only when the map has actually failed you: a map-sourced name fails to
 compile, ambiguity remains after the map lookup, or you need a full method/model body the map doesn't
-carry. (In this plugin's flow cloning is **`maxio-debug`'s** move; `maxio-plan` never clones — it flags the
-source-only fact for `maxio-debug`. Nobody clones "just in case".) The clone and the session file that
-records its path both live in the **system temp directory** (`<temp>/maxio-sdk-src/`), never in the project
+carry. (You clone only on a real map-side issue — never "just in case".) The clone lives in the **system
+temp directory** (`<temp>/maxio-sdk-src/`), never in the project
 repo, so the clone stays invisible to the main agent — navigated via the SDK map above, a read-only
 reference, **not** a build dependency (never add a project reference to it).
 
-**Cloning is `maxio-debug`'s job, and only on a real map-side issue.** If you are `maxio-plan`, never clone:
-flag the source-only fact for `maxio-debug`. If you are `maxio-debug`, first check the shared session file
-`<temp>/maxio-sdk-src/.maxio-session.md` for a clone already recorded this session and reuse its path;
-otherwise clone once — shallow, **pinned to `v1.0.2`** (the ref the map was generated from) — into a fresh
-timestamped folder, then record the path in that session file (create it if absent) so every later debug
-spawn reuses it:
+**Clone only on a real map-side issue.** Clone once this session — shallow, **pinned to `v1.0.2`** (the ref
+the map was generated from) — into a fresh timestamped folder under `<temp>/maxio-sdk-src/`, and reuse that
+folder for the rest of your session:
 
 ```bash
 # Linux/macOS:
 dir="${TMPDIR:-/tmp}/maxio-sdk-src/$(date +%Y%m%d-%H%M%S)"
 git clone --depth 1 --branch v1.0.2 https://github.com/asadali214/advanced-billing-sample-sdk "$dir"
-# Record "$dir" in <temp>/maxio-sdk-src/.maxio-session.md — it is your clone path for the session.
+# Reuse "$dir" for the rest of your session (it is your clone path).
 ```
 
 ```powershell
 # Windows (PowerShell):
 $dir = "$env:TEMP\maxio-sdk-src\$(Get-Date -Format yyyyMMdd-HHmmss)"
 git clone --depth 1 --branch v1.0.2 https://github.com/asadali214/advanced-billing-sample-sdk $dir
-# Record $dir in $env:TEMP\maxio-sdk-src\.maxio-session.md — it is your clone path for the session.
+# Reuse $dir for the rest of your session (it is your clone path).
 ```
 
-The session file lives in `<temp>/maxio-sdk-src/`, **never** in the project repo, and the clone path never
-goes into `maxio-plan.md` — the main agent must never see the clone or its path.
+The clone lives in `<temp>/maxio-sdk-src/`, **never** in the project repo, and its path never goes into
+`maxio-plan.md` — the main agent must never see the clone or its path.
 
 Then confirm the SDK shape **only** from that local clone — not by either of these:
 
@@ -184,26 +177,27 @@ temp directory on its own; a future session simply makes its own timestamped clo
 
 ## The `dotnet-*` skill names are not unique in this marketplace
 
-Five plugins in this marketplace — `maxio-sdk`, `maxio-sdk-lean`, `maxio-sdk-merged`, `paypal-sdk` and
-`twilio-sdk` — each ship their own copy of the same seven `dotnet-*` skill names. The 35 copies are **not
-interchangeable**: they resolve to **24 distinct versions**, and `dotnet-configuration-resilience` differs
-in all five. Two plugins of this family installed side by side therefore expose two different skills under
-one name, and nothing announces which one a bare name resolves to.
+Three plugins in this marketplace — `maxio-sdk`, `paypal-sdk` and `twilio-sdk` — each ship their own copy
+of the same seven `dotnet-*` skill names. The 21 copies are **not interchangeable**: they resolve to
+**16 distinct versions**, and `dotnet-configuration-resilience` and `dotnet-error-handling` differ in all
+three. Two of them installed side by side therefore expose two different skills under one name, and nothing
+announces which one a bare name resolves to.
 
 **Load the copy that ships with THIS plugin.** Where your harness supports plugin-qualified skill names,
-write them out — `maxio-sdk:dotnet-error-handling`, `maxio-sdk:dotnet-configuration-resilience`, and so on. Where it does not, and more than one of those five plugins is installed,
+write them out — `maxio-sdk:dotnet-error-handling`, `maxio-sdk:dotnet-configuration-resilience`, and so on. Where it does not, and more than one of those three plugins is installed,
 confirm you have this plugin's copy before you rely on it: check the `core-surface:` stamp at the top of
 the file, where it must name the **pre-4.0.0** surface.
 
 The drift is not cosmetic, and it is not safe to shrug at:
 
-- `maxio-sdk`, `maxio-sdk-lean` and `maxio-sdk-merged` document a **pre-4.0.0** generator surface — 88
-  `Core/*.cs` against 122, with 28 of the 87 shared files differing. Loading one of those here would
-  describe a runtime this SDK does not have.
-- `paypal-sdk` and `twilio-sdk` are both 4.0.0 but still differ where the *API definition* differs. The
-  clearest case is `dotnet-error-handling`: twilio's boundary ladder reads `ex.Error.StatusCode`, which
-  works there because 858 of its 887 operations are Case B — and is unavailable on paypal, where 39 of 40
-  are Case A and carry no status at all.
+- `paypal-sdk` and `twilio-sdk` document generator **4.0.0** — 122 `Core/*.cs` against this SDK's 88, with
+  28 of the 87 shared files differing. Loading either copy here would describe a runtime this SDK does not
+  have: it would promise you `RetryOptions.Disabled()`, `LoggingOptions` on the options class and a
+  `RequestOptions` argument on every operation, none of which exist on a pre-4.0.0 surface.
+- Those two also differ from each other where the *API definition* differs, so neither is a safe stand-in
+  for the other either. The clearest case is `dotnet-error-handling`: twilio's boundary ladder reads
+  `ex.Error.StatusCode`, which works there because 858 of its 887 operations are Case B, and is unavailable
+  on paypal, where 39 of 40 are Case A and carry no status at all.
 
 ## Integration workflow — load the companion skill at each step
 
@@ -232,10 +226,11 @@ them in this order:
    `{Operation}Result`/`ApiResult` no-throw variants — every operation is throw-only, so ignore the
    Result-style sections of the companion skills and always wrap the throwing call.)
 6. **Configuration & resilience** — load **dotnet-configuration-resilience** when you tune retries, timeouts,
-   the base URL, pagination, or logging. (*The signature won't tell you:* the `HttpMethodsToRetry` filter
-   gates **status** retries only — a **transport failure** (`HttpRequestException`) is retried on **every**
-   verb, `POST` included, so a non-idempotent write can execute more than once. `Timeout` is per-attempt not
-   total, and there's no built-in logging hook.)
+   the base URL, pagination, or logging. (*The signature won't tell you:* `HttpMethodsToRetry` gates only the
+   **status** trigger, so a `503` on a `POST` is not resent — but a **transport failure**
+   (`HttpRequestException`) is retried on **every** verb, `POST` included, so a non-idempotent write can
+   execute more than once and no setting disables that (`MaxRetries = 0` is rejected at construction;
+   the floor is 1). `Timeout` is per-attempt not total, and there's no built-in logging hook.)
 7. **Testing** — load **dotnet-testing** before you stub the SDK. (*The signature won't tell you:* the
    `HttpClient` constructor argument is the test seam; match the project's existing framework and assertion
    style.)
