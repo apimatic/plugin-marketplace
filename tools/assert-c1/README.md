@@ -93,8 +93,9 @@ A suite that passes everywhere proves nothing, and the failure mode is quiet: a 
 loosened during a refactor until it matches anything, and the report stays green while the
 claim rots. `mutation_test.py` copies the fixture, breaks one documented fact at a time —
 the retry default, the method filter, the redaction direction, the expiry buffer — and
-checks that something notices. Ten mutations, ten caught, one assertion each, no
-false positives.
+checks that something notices. Twenty-three mutations, twenty-three caught, no false positives. Two of them
+target `Api/` rather than `Core/`, because the idempotency claim is about an emission rule and the emitted
+operations are the only place it is visible.
 
 Run it after any change that loosens a pattern. A `MISS` means either the claim has no
 assertion or the one defending it has stopped discriminating.
@@ -133,10 +134,18 @@ Write the claim as the skill states it, in the skill's own terms.
 
 Kinds: `file`, `no-file`, `present`, `absent`, `count`, `at-least`, `ordered`, `probe`.
 Reach for `probe` when a regex would have to lie about what it checks — a Python function
-in `assert_c1.py` registered with `@probe("name")`. The existing probes cover the
+in `assert_c1.py` registered with `@probe("name")`. The ten existing probes cover the
 structural claims: every operation's parameter order, converters on model properties,
-`JsonIgnore` versus defaults, enum declaration form, and the absence of client-side
-validation.
+`JsonIgnore` versus defaults, enum declaration form, the absence of client-side validation,
+the client constructor not being a thin wrapper, the `Idempotency-Key` emission rule and the
+source of its value, the raw-PAN model set, the webhook verifier having no callers, and every
+OAuth2 credentials property having its `TokenStrategy` sibling.
+
+Three of those deliberately raise `Unsettleable` rather than pass on a fixture that cannot
+answer them: the PAN allow-list is paypal-sdk's and skips on any other root namespace, the
+OAuth2 pairing skips on an SDK with no OAuth2 scheme, and the webhook probe skips without a
+`SignatureVerifier.cs`. Each was a vacuous `ok` before — an `absent` regex asks "is there a
+counter-example", and on a fixture with no examples at all the answer is no.
 
 `requires` lists the fixture parts the assertion needs (`api`, `models`, `enums`,
 `errors`, `root-client`, `di`). Omit it for `Core/`-only assertions.
@@ -180,10 +189,11 @@ fixture that exercises them exists:
 
 ## CI
 
-`.github/workflows/assert-c1.yml`. Three jobs:
+`.github/workflows/assert-c1.yml`. Four jobs — `fixtures` reads fixtures.json into the `static` matrix and
+fails if that list is empty, then:
 
 **static** — clones each SDK fixture at its pinned ref and runs the suite, plus the mutation
-test on one of them. Triggers on any PR touching `plugins/*/skills/dotnet-*` or this
+test on one of them. Triggers on any PR touching `plugins/{paypal,twilio}-sdk/skills/dotnet-*` or this
 directory. Fixtures are listed in `fixtures.json`; the refs there must track what the
 plugins themselves pin, or CI reports green about a surface nobody ships any more.
 

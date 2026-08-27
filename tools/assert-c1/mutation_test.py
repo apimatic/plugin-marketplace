@@ -60,6 +60,13 @@ MUTATIONS = [
     ("Core/Authentication/OAuth2/OAuthToken.cs",
      "ExpiryBufferSeconds = 30", "ExpiryBufferSeconds = 5",
      "the OAuth expiry buffer shrank"),
+    # The TokenStrategy sibling disappearing. As an `absent` regex this claim passed
+    # vacuously on any SDK with no OAuth2 scheme at all; as a probe it skips there and
+    # actually checks here.
+    ("PayPalServerSdkClientOptions.cs",
+     "public IOAuth2TokenStrategy<OAuth2ClientCredentials>? Oauth2TokenStrategy { get; set; }",
+     "public IOAuth2TokenStrategy<OAuth2ClientCredentials>? TokenStrategyRenamed { get; set; }",
+     "the OAuth2 TokenStrategy sibling lost its paired name"),
     ("Core/Configuration/RetryOptions.cs",
      "public static RetryOptions Disabled()", "internal static RetryOptions Disabled()",
      "Disabled() stopped being part of the public surface"),
@@ -69,6 +76,14 @@ MUTATIONS = [
      'new HeaderParam("Idempotency-Key", Guid.NewGuid())],',
      'new HeaderParam("PayPal-Removed-Header", (string?)null)],',
      "the generator stopped injecting Idempotency-Key on a write"),
+    # A CONSTANT idempotency key. Worse than no key: every call on that operation dedupes
+    # against the first one ever made, so the second charge silently returns the first
+    # charge's result. The earlier version of the probe counted value-sources without
+    # asserting on them, and this passed green.
+    ("Api/Orders.cs",
+     'new HeaderParam("Idempotency-Key", Guid.NewGuid())],',
+     'new HeaderParam("Idempotency-Key", "fixed-key-abc")],',
+     "the injected idempotency key became a constant"),
     ("Api/Orders.cs",
      '[new Param("fields", fields)],' + chr(10) +
      '            [new HeaderParam("PayPal-Mock-Response", payPalMockResponse),' + chr(10) +
@@ -98,6 +113,22 @@ MUTATIONS = [
      "public sealed class WebhookRequest",
      "public sealed class WebhookRequest // paired with SignatureVerifier",
      "something outside its own file started referencing the verifier"),
+    # Values GROWING, not shrinking. Every one of these was invisible until the patterns
+    # defending them were anchored: an unanchored `= 30` still matches `= 300`, so a limit
+    # that widens tenfold reads as unchanged. The shrink direction was already covered; this
+    # is the direction that quietly relaxes a bound.
+    ("Core/Authentication/OAuth2/OAuthToken.cs",
+     "ExpiryBufferSeconds = 30;", "ExpiryBufferSeconds = 300;",
+     "the OAuth expiry buffer grew tenfold"),
+    ("Core/Configuration/LoggingOptions.cs",
+     "BodySizeLimit { get; init; } = 32 * 1024;", "BodySizeLimit { get; init; } = 32 * 10240;",
+     "the logged-body limit grew tenfold"),
+    ("Core/ResiliencePipelineFactory.cs",
+     "AttemptNumber = args.AttemptNumber + 1,", "AttemptNumber = args.AttemptNumber + 10,",
+     "OnRetry's attempt number stopped being one-based"),
+    ("Core/HttpStatusPolicy.cs",
+     "is >= 200 and <= 299;", "is >= 200 and <= 2999;",
+     "the success window widened past 2xx"),
 ]
 
 

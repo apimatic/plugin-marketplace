@@ -207,12 +207,19 @@ Assert.Contains("\"expected_field\"", sentJson);
   ```csharp
   // Transport fault: the stub throws instead of answering, then we count what the server actually received.
   var handler = new StubHandler(_ => throw new HttpRequestException("connection reset"));
-  var client = new {Api}Client(new HttpClient(handler), new {Api}ClientOptions());
+
+  // The guard must be IN the chain for this test to mean anything. On this surface the
+  // transport trigger ignores the verb, so a client built straight over `handler` sends
+  // 4 (1 + MaxRetries) and the assertion below would fail. `WriteOnceHandler` is the
+  // DelegatingHandler from dotnet-configuration-resilience, *Making a write safe under
+  // retries*, remedy 4 — the one that refuses a re-send it did not authorise.
+  var guarded = new WriteOnceHandler { InnerHandler = handler };
+  var client = new {Api}Client(new HttpClient(guarded), new {Api}ClientOptions());
 
   await Assert.ThrowsAnyAsync<Exception>(() => client.{ApiGroup}.{Operation}(body, ct: default));
 
-  // WITHOUT a write-once guard this is 4 (1 + MaxRetries): the transport trigger ignores the verb here.
-  // WITH one, it is 1 — which is what the test exists to prove.
+  // 1, not 4 — and that difference is the whole point of the test. Delete the guard and
+  // watch this go to 4: that is the regression it exists to catch.
   Assert.Equal(1, handler.Requests.Count(r => r.Method == HttpMethod.Post));
   ```
 - For DI-based code, the SDK's `Add{Api}Client` resolves the **default (unnamed)** `IHttpClientFactory`

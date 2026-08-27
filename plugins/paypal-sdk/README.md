@@ -1,6 +1,6 @@
-# PayPal SDK Assistant (Claude Code + Cursor plugin)
+# PayPal SDK Assistant (Claude Code + Cursor + Codex plugin)
 
-A plugin for **Claude Code and Cursor** that helps developers **install and consume the PayPal .NET SDK**
+A plugin for **Claude Code, Cursor and Codex** that helps developers **install and consume the PayPal .NET SDK**
 (the APIMatic-generated C# SDK at
 [asadali214/checkout-sample-sdk](https://github.com/asadali214/checkout-sample-sdk)),
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
@@ -87,8 +87,10 @@ Claude Code:
 /plugin install paypal-sdk@apimatic
 ```
 
-Cursor loads the same plugin from `.cursor-plugin/plugin.json`. There is no VS Code manifest and no Codex
-carrier for this plugin yet.
+Cursor loads the same plugin from `.cursor-plugin/plugin.json`, and Codex from `.codex-plugin/plugin.json`
+plus the `codex/agents/paypal-sdk.toml` carrier — regenerate that with
+`python tools/sync-codex-carrier.py`, never by hand. There is no VS Code manifest; see CLAUDE.md for why
+that is a decision rather than an omission.
 
 Then ask a usage question (e.g. *"how do I create and capture a PayPal order in C#?"*) to trigger the
 relevant skill.

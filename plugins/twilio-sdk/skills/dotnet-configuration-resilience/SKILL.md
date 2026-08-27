@@ -206,8 +206,10 @@ The four, **weakest guarantee first** — so do not read the numbering as a reco
    provider's idempotency key in any of three places, and only one of them is the body:
 
    - a **header parameter** — a bare `string?` in the signature (PayPal's `payPalRequestId`);
-   - a **form field** — also a bare `string?`, routed into `FormUrlEncodedRequest.Create([...])`
-     (Twilio's `idempotencyKey`);
+   - a **form field** — routed into `FormUrlEncodedRequest.Create([...])` (Twilio's `idempotencyKey`).
+     Do not search for a nullable type here: on Twilio's two payment operations the parameter is a
+     **non-nullable** `string`, and on its other six it is `string?`. Match on the parameter reaching a
+     `new Param("...", x)` in the form body, not on its nullability;
    - a field on the **request model**.
 
    A model-only search finds nothing on the first two and concludes wrongly that the API offers no key. Ask

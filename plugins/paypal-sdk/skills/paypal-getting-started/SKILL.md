@@ -266,7 +266,7 @@ What is actually reachable:
 | you want | on a success | on a failure |
 | --- | --- | --- |
 | the **body** | the return value | the typed accessor — `Name`, `Message`, `DebugId`, `Details[].Issue` |
-| the **status** | not exposed | only on the `_` fallback arm, via `TryGetRawError` → `RawError.StatusCode` |
+| the **status** | not exposed | any arm whose out-type is `RawError` → `RawError.StatusCode`: the `_` fallback on all 39, plus a documented-500 `TryGetNoContent` on seven Payments-side operations. Never on the model arms |
 | **headers** | not exposed | not exposed — `RawError` carries a status but no headers |
 
 Three things production integrations routinely need are therefore unavailable in-band: a `Retry-After` on a

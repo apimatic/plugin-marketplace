@@ -193,20 +193,25 @@ different shapes:
 `new HeaderParam("Idempotency-Key", Guid.NewGuid())` on the line directly above
 `new Param("IdempotencyKey", idempotencyKey)` in the form body. Only the second is yours and only the second
 means anything. The names differ by one hyphen, and these are the operations that charge a card — so this is
-the one place in the SDK where reading the wrong one costs money. Pass `idempotencyKey` explicitly; it is a
-nullable positional parameter, so `null` compiles and silently gives up the protection.
+the one place in the SDK where reading the wrong one costs money.
+
+On these two the compiler is on your side: `CreatePayments` and `UpdatePayments` declare
+`string idempotencyKey` — **non-nullable and positional**, so you cannot quietly omit it. The other six
+declare `string?`, and there `null` compiles and silently gives up the protection.
 
 **The remaining 426 writes have no key at all.** For those the answer is reconciliation — see
 `dotnet-configuration-resilience` § *Reconcile after a failure* — not a key. Do not let the injected header
 persuade you otherwise; `dotnet-configuration-resilience` § *Make the write idempotent at the provider*
 explains why a visible header is worse than an absent one.
 
-**Seven operations offer optimistic concurrency instead**, via an `If-Match` header parameter — a different
-guarantee (reject my write if the resource changed) that solves a different problem (lost updates, not
-duplicates): `SyncV1Document.UpdateDocument`, `SyncV1SyncListItem.UpdateSyncListItem`,
+**Eleven operations offer optimistic concurrency instead**, via an `If-Match` header parameter — a
+different guarantee (reject my write if the resource changed) solving a different problem (lost updates,
+not duplicates). Seven updates: `SyncV1Document.UpdateDocument`, `SyncV1SyncListItem.UpdateSyncListItem`,
 `SyncV1SyncMapItem.UpdateSyncMapItem`, `TaskrouterV1Task.UpdateTask`,
 `TaskrouterV1TaskReservation.UpdateTaskReservation`, `TaskrouterV1Worker.UpdateWorker`,
-`TaskrouterV1WorkerReservation.UpdateWorkerReservation`.
+`TaskrouterV1WorkerReservation.UpdateWorkerReservation`. And four **conditional deletes**, which are the
+easier ones to overlook: `SyncV1SyncListItem.DeleteSyncListItem`, `SyncV1SyncMapItem.DeleteSyncMapItem`,
+`TaskrouterV1Task.DeleteTask`, `TaskrouterV1Worker.DeleteWorker`.
 
 ## Response metadata — headers are not reachable, and the status only sometimes
 
@@ -219,7 +224,7 @@ What is actually reachable:
 
 | you want | on a success | on a failure |
 | --- | --- | --- |
-| the **body** | the return value | `RawError` (858 Case B ops) or a typed accessor (37 Case A ops) |
+| the **body** | the return value | `RawError` (858 Case B ops) or a typed accessor (29 Case A ops) |
 | the **status** | not exposed | **usually yes** — `ex.Error.StatusCode` on the 858 Case B ops; on a Case A op only via the `_` fallback arm |
 | **headers** | not exposed | **never** — `RawError` carries a status but no headers |
 

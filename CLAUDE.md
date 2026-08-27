@@ -90,7 +90,7 @@ map stamp).
 
 ### paypal-sdk
 
-PayPal **.NET SDK** plugin — no MCP server, Claude Code + Cursor, C#/.NET only. Bundled SDK map
+PayPal **.NET SDK** plugin — no MCP server, Claude Code + Cursor + Codex, C#/.NET only. Bundled SDK map
 (`skills/paypal-getting-started/sdk-map.md` + `map/`) over
 `github.com/asadali214/checkout-sample-sdk` at tag `v1.0.1` (40 operations, 5 controllers), plus the
 `integrate-paypal` router and a single `paypal-sdk` agent. The SDK is on nuget.org as
@@ -102,7 +102,8 @@ PayPal **.NET SDK** plugin — no MCP server, Claude Code + Cursor, C#/.NET only
 
 Twilio **.NET SDK** plugin with the same single-agent shape, over
 `github.com/context-plugins/twilio-csharp-sdk`. Ships Claude Code, Cursor and Codex manifests; the Codex
-carrier is `codex/agents/twilio-sdk.toml`, kept in sync with `agents/twilio-sdk.md` by hand.
+carrier is `codex/agents/twilio-sdk.toml`. Regenerate it with `python tools/sync-codex-carrier.py`
+rather than editing it by hand; CI fails the PR if the two drift.
 
 ## The `dotnet-*` companion skills are shared, but not uniform
 

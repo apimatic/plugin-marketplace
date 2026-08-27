@@ -137,7 +137,7 @@
       "id": "other.status.default-success-window-is-2xx",
       "kind": "present",
       "file": "Core/HttpStatusPolicy.cs",
-      "pattern": "\\.Count\\s*>\\s*0[\\s\\S]{0,80}?Contains\\([\\s\\S]{0,80}?is\\s+>=\\s*200\\s+and\\s+<=\\s*299",
+      "pattern": "\\.Count\\s*>\\s*0[\\s\\S]{0,80}?Contains\\([\\s\\S]{0,80}?is\\s+>=\\s*200\\s+and\\s+<=\\s*299\\s*;",
       "claim": "A non-2xx response throws: success is the spec-derived allowlist when one is configured, otherwise the 200-299 default — so 304 is NOT success.",
       "defends": "dotnet-calling-endpoints § Making the call and reading the response; dotnet-testing § Test a success path"
     },

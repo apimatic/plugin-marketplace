@@ -54,7 +54,42 @@ def md_body(text: str) -> str:
     return text[m.end():].strip("\n")
 
 
-def rebuilt(toml_text: str, body: str, carrier: str) -> str:
+def md_description(text: str) -> str:
+    """The agent's `description:` from the YAML frontmatter.
+
+    This matters as much as the body. Codex routes to a subagent on its description, so a
+    carrier whose description has drifted is selected under different conditions from the
+    .md — the agent may simply never be reached, and nothing errors. Syncing only
+    `developer_instructions`, as this tool first did, left that gap wide open.
+    """
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    if not m:
+        raise SystemExit("no YAML frontmatter found — is this an agent file?")
+    d = re.search(r"^description:[ ]*(.*)$", m.group(1), re.M)
+    if not d:
+        raise SystemExit("agent frontmatter has no `description:`")
+    return d.group(1).strip()
+
+
+DESC_OPEN = "description = " + "'''"
+
+
+def _replace_block(text, opener, value, carrier, what):
+    i = text.find(opener)
+    if i < 0:
+        raise SystemExit("%s: no `%s` block" % (carrier, what))
+    j = text.find("'''", i + len(opener))
+    if j < 0:
+        raise SystemExit("%s: unterminated %s block" % (carrier, what))
+    if "'''" in value:
+        raise SystemExit("%s: the %s contains a triple quote, which cannot be carried "
+                         "in a TOML literal string" % (carrier, what))
+    return text[:i + len(opener)] + value + text[j:]
+
+
+def rebuilt(toml_text: str, body: str, carrier: str, description=None) -> str:
+    if description is not None:
+        toml_text = _replace_block(toml_text, DESC_OPEN, description, carrier, "description")
     i = toml_text.find(OPEN)
     if i < 0:
         raise SystemExit("%s: no `developer_instructions = '''` block" % carrier)
@@ -78,9 +113,10 @@ def main() -> int:
 
     stale = []
     for md, carrier in PAIRS:
-        body = md_body(read(md))
+        text = read(md)
+        body, desc = md_body(text), md_description(text)
         current = read(carrier)
-        want = rebuilt(current, body, carrier)
+        want = rebuilt(current, body, carrier, desc)
         if want == current:
             print("ok    %s" % carrier)
             continue

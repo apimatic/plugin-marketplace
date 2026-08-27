@@ -14,7 +14,7 @@ on:
   pull_request:
     # Deliberately NOT plugins/*/skills/dotnet-*: the suite only has an assertion
     # set for the generator-4.0.0 surface, which is paypal-sdk and twilio-sdk. The
-    # three maxio plugins document a pre-4.0.0 SDK and fail ~98 assertions by
+    # maxio-sdk plugin documents a pre-4.0.0 SDK and fails ~98 assertions by
     # construction, so running against them would be noise — and triggering on
     # them without checking them is worse: a green assert-c1 that asserted nothing
     # about the files in the diff. If a pre-4.0.0 assertion set is ever written,

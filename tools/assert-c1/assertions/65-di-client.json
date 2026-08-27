@@ -165,14 +165,13 @@
     },
     {
       "id": "diclient.options.oauth2-token-strategy-sibling",
-      "kind": "absent",
-      "glob": "*ClientOptions.cs",
-      "pattern": "public\\s+(OAuth2\\w*Credentials)\\?\\s+(\\w+)\\s*\\{\\s*get;\\s*set;\\s*\\}(?!\\s*public\\s+IOAuth2(?:Refreshable)?TokenStrategy<\\1>\\?\\s+\\2TokenStrategy\\b)",
       "claim": "For an OAuth2 scheme the options class exposes a {OAuthProperty}TokenStrategy immediately alongside the credentials, typed over that same credentials type.",
       "defends": "dotnet-client-initialization § the options code block — 'a nullable {Scheme}TokenStrategy hook alongside it'; dotnet-authentication § Supplying your own token source",
       "requires": [
         "root-client"
-      ]
+      ],
+      "kind": "probe",
+      "probe": "oauth2-credentials-have-a-token-strategy-sibling"
     },
     {
       "id": "diclient.servers.serverenvironment-namespace-and-shape",

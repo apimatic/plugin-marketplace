@@ -290,7 +290,8 @@ catch (SdkException<{Operation}Error> ex)        // API error (non-2xx), Case A 
     if (ex.Error.TryGetError(out Error e))
         throw new {ProviderException}(e.Message, e.Name, e.DebugId, ex);
 
-    // The `_` arm — an UNDOCUMENTED status. This is the only branch where a status exists.
+    // Any arm whose out-type is RawError — the `_` fallback here, and on the seven Payments-side
+    // operations also their documented-500 `TryGetNoContent`. Those are the branches with a status.
     if (ex.Error.TryGetRawError(out RawError raw))
         throw new {ProviderException}($"HTTP {(int)raw.StatusCode}", name: null, debugId: null, ex);
 
@@ -329,18 +330,29 @@ different operation, callers can't reason about it. One shared ladder, not per-c
 error type needs to carry something that separates "you sent something invalid" from "the provider is
 down". The reflex is to carry the HTTP status. On this SDK you mostly cannot:
 
-- **39 of 40 operations throw a typed `{Operation}Error`,** whose `TryGet…` accessors hand you a *model*
-  — `Error`, `Error1`, `SubscriptionError`, `DefaultError` — and none of those carries an HTTP status.
-  `SdkException<TError>` has exactly one member, `Error`. There is no `StatusCode` anywhere on that path.
-- **The typed arm swallows the distinction you wanted.** Each error class switches on the status and
-  routes every *documented* status into a single accessor — `PatchSubscriptionError` maps
-  `400/401/403/404/422/500` to one `TryGetError(out SubscriptionError)`. **29 of the 39** mix 4xx and 5xx
-  that way, so "caller's fault or provider's" is not answerable from the status even in principle.
-- **`TryGetRawError` is not a fallback for this.** It returns `true` only on the `_` arm — the statuses
-  the spec did *not* document. When a documented status arrives, the typed arm fires and
-  `TryGetRawError` is `false`.
-- **`SearchTransactions` is the one exception:** it throws `SdkException<RawError>`, and `RawError` does
-  carry `StatusCode`.
+- **39 of 40 operations throw a typed `{Operation}Error`,** whose model-returning accessors hand you an
+  `Error`, `Error1`, `SubscriptionError` or `DefaultError` — none of which carries an HTTP status.
+  `SdkException<TError>` has exactly one member, `Error`, with no `StatusCode` on it.
+- **The accessor is named after the payload, not the word "error", and the name differs per operation.**
+  Across the 39 classes there are four model accessors in use: `TryGetSubscriptionError` (17 classes),
+  `TryGetError` (15), `TryGetError1` (6) and `TryGetDefaultError` (1). `PatchSubscriptionError` maps
+  `400/401/403/404/422/500` to one **`TryGetSubscriptionError(out SubscriptionError)`** — writing
+  `TryGetError` there is a `CS1061`, not a runtime surprise. Take the name from the operation's own map
+  row every time.
+- **The typed arm swallows the distinction you wanted.** Each error class routes every *documented*
+  status into a single accessor, and **29 of the 39** put 4xx and 5xx through the same one — so
+  "caller's fault or provider's" is not answerable from the status even in principle.
+- **Seven operations are the exception, and they are the ones that move money.**
+  `CaptureAuthorizedPaymentError`, `GetAuthorizedPaymentError`, `GetCapturedPaymentError`,
+  `GetRefundError`, `ReauthorizePaymentError`, `RefundCapturedPaymentError` and `VoidPaymentError` each
+  declare a **second, status-specific accessor** — `TryGetNoContent(out RawError)` for their documented
+  `500` — and `RawError` *does* carry `StatusCode`. So on those seven a documented 500 is distinguishable
+  from the 4xx bundle; on the other 32 it is not.
+- **`TryGetRawError` is not a general fallback.** It returns `true` only on the `_` arm — statuses the
+  spec did *not* document. When a documented status arrives, the arm that fires is the typed one or a
+  status-specific one like `TryGetNoContent`, and `TryGetRawError` is `false`.
+- **`SearchTransactions` is the one operation with no typed error at all:** it throws
+  `SdkException<RawError>`, so `ex.Error.StatusCode` works directly.
 
 **Use what the body gives you — it is better than the status anyway.** Every typed body carries a
 `required string Name`, the provider's own error identity, and `Details[].Issue`, a `required string` the

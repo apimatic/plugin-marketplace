@@ -319,42 +319,110 @@ _IDEM_INJECTED = 'HeaderParam("Idempotency-Key", Guid.NewGuid())'
 # minus the injected literal has no such hole.
 
 
+def _operations_with_blocks(ctx: Ctx):
+    """Yield (file, method-name, parameter-text, Execute-argument-text) per operation.
+
+    The idempotency probe needs the SIGNATURE as well as the call, because the claim it
+    defends is about where the header's value comes from — and "a parameter feeds it" is
+    only answerable against that operation's own parameter list."""
+    for rel in ctx.files("Api/*.cs"):
+        src = ctx.read(rel) or ""
+        for m in re.finditer(r"\bpublic\s+[\w<>,\[\]\?\.\s]+?\s+(\w+)\s*\(", src):
+            depth, i = 1, m.end()
+            while i < len(src) and depth:
+                if src[i] == "(":
+                    depth += 1
+                elif src[i] == ")":
+                    depth -= 1
+                i += 1
+            # No window cap: an operation with a long parameter list and a long form body
+            # can run past any fixed budget, and a truncated block silently loses the very
+            # arguments this probe reads — a parameter would read as unreferenced.
+            params, rest = src[m.end():i - 1], src[i:]
+            c = rest.find("_rawClient.Execute")
+            if c < 0 or "\n    public " in rest[:c]:
+                continue
+            j = rest.index("(", c) + 1
+            depth, k = 1, j
+            while k < len(rest) and depth:
+                if rest[k] == "(":
+                    depth += 1
+                elif rest[k] == ")":
+                    depth -= 1
+                k += 1
+            yield rel, m.group(1), params, rest[j:k - 1]
+
+
+_IDEM_VALUE = re.compile(r'HeaderParam\(\s*"Idempotency-Key"\s*,\s*((?:[^()]|\([^()]*\))*)\)')
+
+
 @probe("idempotency-key-on-every-non-get")
 def _p_idempotency_key(ctx: Ctx, a: dict):
-    """Every non-GET operation sends an `Idempotency-Key` header and no GET does;
-    where no parameter feeds it, the value is a generator-injected `Guid.NewGuid()`.
+    """Every non-GET operation sends an `Idempotency-Key` header and no GET does; its value
+    is either a generator-injected `Guid.NewGuid()` or a parameter of that same operation,
+    and NEVER a GUID on an operation whose own signature offers an idempotency parameter.
 
-    The skills tell the reader that seeing this header on the wire proves nothing —
-    only the *source* of its value does, and that is readable from the signature.
-    That advice is safe only while this emission rule holds, and the rule is the
-    generator's, not any API definition's. If a later template stops injecting, or
-    starts injecting over a spec-declared parameter, the guidance goes wrong in the
-    direction that costs money: a write that looks deduplicated and is not."""
-    get_with, nonget_without = [], []
+    The skills tell the reader that seeing this header proves nothing — only the *source*
+    of its value does. Three distinct regressions would each falsify that, so all three are
+    checked rather than counted:
+
+      * the header disappears from a write, or appears on a read;
+      * the value becomes a CONSTANT — every call on that operation would then dedupe
+        against the first one ever made, which is worse than no key at all;
+      * the generator starts injecting a GUID *over* a spec-declared idempotency parameter,
+        so the caller's key is silently discarded and the write only looks deduplicated.
+
+    Counting injected-vs-declared without asserting on it, as an earlier version of this
+    probe did, leaves all three green."""
+    get_with, nonget_without, bad_value, overridden = [], [], [], []
     total = injected = declared = 0
-    for rel, blk in _execute_blocks(ctx):
+    for rel, name, params, blk in _operations_with_blocks(ctx):
         total += 1
         mt = re.search(r"HttpMethod\.(\w+)|new HttpMethod\(\"(\w+)\"\)", blk)
         meth = ((mt.group(1) or mt.group(2)) if mt else "?").upper()
-        has_inj = _IDEM_INJECTED in blk
-        has_dec = (not has_inj) and _IDEM_HEADER in blk
-        name = rel.split("/")[-1][:-3]
+        where = "%s.%s" % (rel.split("/")[-1][:-3], name)
+        vm = _IDEM_VALUE.search(blk)
         if meth == "GET":
-            if has_inj or has_dec:
-                get_with.append(name)
-        elif not (has_inj or has_dec):
-            nonget_without.append(name)
-        injected += has_inj
-        declared += has_dec
+            if vm:
+                get_with.append(where)
+            continue
+        if not vm:
+            nonget_without.append(where)
+            continue
+        value = vm.group(1).strip()
+        param_names = set(re.findall(r"(\w+)\s*(?:,|$)", params))
+        if value == "Guid.NewGuid()":
+            injected += 1
+            # A spec-declared idempotency parameter the generator DISCARDS is the expensive
+            # failure: the caller passes a key and it never ships. Declaring one alongside an
+            # injected header is NOT that — Twilio's payment operations route the caller's
+            # value into the form body and the header is simply a separate, inert thing. So
+            # flag only a parameter that reaches the request nowhere at all.
+            for p in param_names:
+                if "idempotency" in p.lower() and p not in blk:
+                    overridden.append("%s (param %s unreferenced)" % (where, p))
+        elif re.fullmatch(r"[A-Za-z_]\w*", value) and value in param_names:
+            declared += 1
+        else:
+            bad_value.append("%s -> %s" % (where, value[:40]))
     if total == 0:
-        return False, "no _rawClient.Execute calls under Api/ — wrong fixture?"
+        return False, "no operations with _rawClient.Execute under Api/ — wrong fixture?"
     if get_with:
-        return False, "%d GET operation(s) carry an Idempotency-Key header: %s" % (
-            len(get_with), ", ".join(sorted(set(get_with))[:5]))
+        return False, "%d GET operation(s) carry an Idempotency-Key: %s" % (
+            len(get_with), ", ".join(sorted(get_with)[:4]))
     if nonget_without:
-        return False, "%d non-GET operation(s) carry no Idempotency-Key header: %s" % (
-            len(nonget_without), ", ".join(sorted(set(nonget_without))[:5]))
-    return True, "%d operations — %d injected, %d spec-declared, 0 on a GET" % (
+        return False, "%d non-GET operation(s) carry none: %s" % (
+            len(nonget_without), ", ".join(sorted(nonget_without)[:4]))
+    if bad_value:
+        return False, ("%d operation(s) set Idempotency-Key to something that is neither "
+                       "Guid.NewGuid() nor one of their own parameters — a constant key "
+                       "dedupes every call against the first: %s") % (
+            len(bad_value), ", ".join(sorted(bad_value)[:4]))
+    if overridden:
+        return False, ("%d operation(s) declare an idempotency parameter but ship an injected "
+                       "GUID instead, so the caller's key never reaches the provider: %s") % (
+            len(overridden), ", ".join(sorted(overridden)[:4]))
+    return True, "%d operations — %d injected, %d fed by a parameter, 0 on a GET, 0 constant" % (
         total, injected, declared)
 
 
@@ -379,6 +447,20 @@ def _p_pan_models(ctx: Ctx, a: dict):
 
     Skips on a fixture with no card models at all: absence of cards settles
     nothing about an API that has them."""
+    # This allow-list is paypal-sdk's, enumerated from ITS API definition. Every other
+    # assertion in this suite is SDK-agnostic; this one is not, and on a third SDK with a
+    # different set of card models it would fail for being a different API rather than for
+    # any drift. Scope it to the SDK it documents and say so, rather than failing loudly
+    # somewhere it was never meant to run.
+    ns = ""
+    for rel in ctx.files("Core/**/*.cs"):
+        m = re.search(r"^namespace\s+([\w.]+)", ctx.read(rel) or "", re.M)
+        if m:
+            ns = m.group(1).split(".")[0]
+            break
+    if ns and ns != "PayPalServerSdk":
+        raise Unsettleable(
+            "the raw-PAN allow-list is paypal-sdk's; this fixture's root namespace is %s" % ns)
     found = set()
     for rel in ctx.files("Models/*.cs"):
         src = ctx.read(rel) or ""
@@ -418,6 +500,45 @@ def _p_verifier_unused(ctx: Ctx, a: dict):
         return False, "%d file(s) now reference SignatureVerifier: %s" % (
             len(callers), ", ".join(sorted(callers)[:5]))
     return True, "referenced only by %s" % own
+
+
+_OAUTH_CREDS = re.compile(
+    r"public\s+(OAuth2\w*Credentials)\?\s+(\w+)\s*\{\s*get;\s*set;\s*\}")
+
+
+@probe("oauth2-credentials-have-a-token-strategy-sibling")
+def _p_oauth_strategy_sibling(ctx: Ctx, a: dict):
+    """Every OAuth2 credentials property on the options class has a
+    `{Property}TokenStrategy` sibling typed over that same credentials type.
+
+    Written as a probe rather than an `absent` regex because the regex form asked
+    "is there a credentials property WITHOUT a sibling" — which is trivially false,
+    and therefore green, on an SDK that declares no OAuth2 property at all. Twilio
+    is exactly that SDK (Basic auth only), so the claim reported `ok` there while
+    checking nothing. An SDK with no OAuth2 scheme cannot settle a claim about
+    OAuth2 schemes; it skips."""
+    opts = [r for r in ctx.files("*ClientOptions.cs")]
+    if not opts:
+        raise Unsettleable("no *ClientOptions.cs in this fixture")
+    pairs, missing = [], []
+    for rel in opts:
+        src = ctx.read(rel) or ""
+        for m in _OAUTH_CREDS.finditer(src):
+            cred, name = m.group(1), m.group(2)
+            pairs.append(name)
+            want = re.compile(
+                r"IOAuth2(?:Refreshable)?TokenStrategy<%s>\?\s+%sTokenStrategy\b"
+                % (re.escape(cred), re.escape(name)))
+            if not want.search(src):
+                missing.append("%s (%s)" % (name, cred))
+    if not pairs:
+        raise Unsettleable(
+            "this SDK's options class declares no OAuth2 credentials property — nothing "
+            "to pair a token strategy with")
+    if missing:
+        return False, "%d OAuth2 credentials property(ies) with no matching TokenStrategy sibling: %s" % (
+            len(missing), ", ".join(missing))
+    return True, "%d OAuth2 credentials property(ies), each with its TokenStrategy sibling" % len(pairs)
 
 
 @probe("no-converter-on-model-property")

@@ -1,6 +1,6 @@
-# Twilio SDK Assistant (Claude Code plugin)
+# Twilio SDK Assistant (Claude Code + Cursor + Codex plugin)
 
-A Claude Code plugin that helps developers **install and consume the Twilio .NET SDK**
+A plugin for **Claude Code, Cursor and Codex** that helps developers **install and consume the Twilio .NET SDK**
 (the APIMatic-generated C# SDK at
 [context-plugins/twilio-csharp-sdk](https://github.com/context-plugins/twilio-csharp-sdk)),
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.

@@ -1,4 +1,4 @@
-# Codex carrier for the twilio-sdk agent. HAND-MAINTAINED.
+# Codex carrier for the twilio-sdk agent. GENERATED - do not hand-edit the body.
 #
 # Claude Code and Cursor load this agent from plugins/twilio-sdk/agents/twilio-sdk.md via their
 # plugin manifests. Codex cannot: it defines a custom subagent as a TOML file in a config-layer
@@ -27,9 +27,12 @@
 #      are unaffected - which is why the install order names $CODEX_HOME/agents/ first.
 #
 # codex-cli at the time of writing: rust-v0.149.0 (2026-08-20).
-# Confirm the brief actually arrived before treating any codex run as a data point.
+# INSTALL: copy to $CODEX_HOME/agents/<name>.toml (first choice), or ~/.codex/agents/. The
+# project's .codex/agents/ works too but only in a TRUSTED project - see note 2 above - so it
+# is the one to avoid when you cannot guarantee that. Restart Codex after copying.
 # The benchmark harness copies this into the per-run $CODEX_HOME/agents/ at provision, so runs
-# need no manual install. A human working by hand copies it to .codex/agents/ and restarts Codex.
+# need no manual install. Confirm the brief actually arrived before treating any codex run as
+# a data point.
 #
 # ⚠ NOT YET VERIFIED LIVE. The maxio-sdk carrier was confirmed against codex-cli 0.147.0
 # (gpt-5.6-sol) on 2026-08-20 - agent binds by name, brief arrives as a `developer` role message.
@@ -260,7 +263,7 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    | 5 | **Idempotency & ambiguous writes** | For each write in scope: the key it uses, or that none exists. Only **8 of 887** operations take one — `idempotencyKey` as a form field on `CreatePayments`, `UpdatePayments`, `CreateUserDefinedMessage`, `CreateUserDefinedMessageSubscription`, and as a caller-supplied header on the four `ConversationsV2` operations. The injected `Idempotency-Key` header on the other 430 writes is **not** a key and must not be cited as one. Where no key exists, record the reconciliation path instead. |
    | 6 | **Observability** | What is logged at which level, that **JSON request bodies are logged unredacted** when `LogRequestBody` is on, and which correlation id reaches your own logs. |
    | 7 | **Sensitive data** | Whether the scope carries data you would not want in a log — phone numbers, message bodies, recording URLs, call metadata. If it does: `LogRequestBody` stays off **and** `LoggerFactory` is assigned explicitly, so `TWILIOSDKCLIENT_LOG=trace` cannot switch it on from outside the code. Form bodies are masked only by deny-list, so a key you have not listed prints in the clear. |
-   | 8 | **Environment selection** | Which base URL each deployment talks to — and note that there is only one. `ServerEnvironment` has exactly **one** member, `Production`, and every call resolves through `Server.Default.Production.BaseUrl` (`https://api.twilio.com`). **This SDK has no sandbox.** A dev run, an integration test and a production deployment all reach live Twilio unless you point `BaseUrl` somewhere else yourself: real messages sent, real charges. Say what each environment does about that. |
+   | 8 | **Environment selection** | Which base URLs each deployment talks to — **plural, and there are fifteen**. `ServerEnvironment` has exactly one member, `Production`, but `ServerOptions` declares fifteen server groups (`Default` … `Default14`) on fifteen different hosts, and each operation resolves through its own. Only **197 of 887** go through `Server.Default` / `api.twilio.com`; the other **690** reach `conversations`, `flex-api`, `messaging`, `numbers`, `taskrouter`, `verify`, `trusthub`, `sync`, `studio`, `video`, `insights`, `proxy`, `content` and `lookups`. **This SDK has no sandbox**, so a dev run, an integration test and a production deploy all reach live Twilio: real messages, real charges. State which groups the scope touches and what each deployment repoints — overriding `Default` alone leaves 690 operations pointed at production. |
 
    A reviewer grades this from the table alone: each row either records a decision or records why
    it does not apply. A row that points at a skill, restates the concern, or sits blank is **not

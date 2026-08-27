@@ -130,7 +130,7 @@
       "id": "retry.onretry.attempt-number-is-one-based",
       "kind": "present",
       "file": "Core/ResiliencePipelineFactory.cs",
-      "pattern": "AttemptNumber\\s*=\\s*args\\.AttemptNumber\\s*\\+\\s*1",
+      "pattern": "AttemptNumber\\s*=\\s*args\\.AttemptNumber\\s*\\+\\s*1\\s*,",
       "claim": "The AttemptNumber on the RetryAttempt handed to OnRetry is 1-based — the first retry reports 1, not Polly's 0.",
       "defends": "dotnet-configuration-resilience § Retries, the Customize sample's `retry #{attempt.AttemptNumber}`"
     },

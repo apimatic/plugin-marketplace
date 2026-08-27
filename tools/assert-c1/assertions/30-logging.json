@@ -14,7 +14,7 @@
       "id": "logging.options.body-size-limit",
       "kind": "present",
       "file": "Core/Configuration/LoggingOptions.cs",
-      "pattern": "BodySizeLimit\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*=\\s*32\\s*\\*\\s*1024",
+      "pattern": "BodySizeLimit\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*=\\s*32\\s*\\*\\s*1024\\s*;",
       "claim": "BodySizeLimit defaults to 32 KB — bodies are truncated, not dropped.",
       "defends": "dotnet-configuration-resilience § Logging, the defaults table"
     },

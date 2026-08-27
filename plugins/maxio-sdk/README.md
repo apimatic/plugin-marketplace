@@ -1,6 +1,6 @@
-# Maxio SDK Assistant (Claude Code plugin)
+# Maxio SDK Assistant (Claude Code + Cursor + Codex plugin)
 
-A Claude Code plugin that helps developers **install and consume the Maxio Advanced Billing .NET SDK**,
+A plugin for **Claude Code, Cursor and Codex** that helps developers **install and consume the Maxio Advanced Billing .NET SDK**,
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
 The **SDK map is bundled with the plugin**, and a single `maxio-sdk` agent grounds every fact in it —

@@ -1,6 +1,6 @@
 name: codex-carrier-sync
 
-# Two plugins ship the same agent brief twice: once as agents/<name>.md, which Claude
+# Three plugins ship the same agent brief twice: once as agents/<name>.md, which Claude
 # Code and Cursor load, and once as codex/agents/<name>.toml, which Codex loads from a
 # `developer_instructions` key. CLAUDE.md says to edit both in the same commit.
 #

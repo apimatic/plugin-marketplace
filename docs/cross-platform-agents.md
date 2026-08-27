@@ -66,7 +66,9 @@ directory:
   $CODEX_HOME/agents/     whatever CODEX_HOME points at
 
 That is why each Codex-targeting plugin carries codex/agents/<name>.toml holding the .md
-body verbatim under developer_instructions, kept in sync by hand.
+body verbatim under developer_instructions. That copy is GENERATED — `python tools/sync-codex-carrier.py`
+rewrites it from the .md, and the codex-carrier-sync workflow fails any PR where the two drift. It used to
+be hand-maintained, which is why several files still describe it that way if you find one.
 
 ⚠ ONE STANDING SILENT FAILURE, and one that was fixed before we wrote it down
    (rechecked 2026-08-27):
