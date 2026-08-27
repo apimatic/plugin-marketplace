@@ -1,0 +1,42 @@
+name: codex-carrier-sync
+
+# Two plugins ship the same agent brief twice: once as agents/<name>.md, which Claude
+# Code and Cursor load, and once as codex/agents/<name>.toml, which Codex loads from a
+# `developer_instructions` key. CLAUDE.md says to edit both in the same commit.
+#
+# Until now that instruction was the entire safety mechanism. When the two drift, Codex
+# runs a different brief from Claude Code and Cursor — no error, no failing test, and a
+# cross-harness comparison quietly becomes a cross-brief comparison with numbers that
+# still look like numbers.
+#
+# See tools/sync-codex-carrier.py.
+
+# -- TRIGGERS TEMPORARILY REDUCED ---------------------------------------------
+# On this branch the workflow is workflow_dispatch ONLY. The pull_request, push
+# and schedule triggers arrive with the PR that also brings tools/ - until then
+# the paths those triggers filter on do not exist here, so an automatic run
+# would fail for want of the scripts rather than tell us anything.
+# Do not add triggers here; change them in that PR so the two stay in step.
+# -----------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codex-carrier-sync-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: carriers match their Markdown agents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check every Codex carrier is in sync
+        run: python tools/sync-codex-carrier.py --check
