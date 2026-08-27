@@ -105,7 +105,26 @@ The carriers' headers carry the same warning.
 CLAIMS CHECKED AND REJECTED  (2026-08-25)
 ─────────────────────────────────────────
 Earlier research asserted three "silent-failure defects" in the shipped manifests. Two are
-wrong and one did not reproduce; recorded here so they are not re-fixed:
+wrong and one did not reproduce; recorded here so they are not re-fixed. A fourth rejected
+claim was added on 2026-08-27:
+
+0. "The root plugin.json (Agent-Plugin format) CANNOT carry agents, which is why the modern
+   plugins quietly dropped VS Code." Wrong. Agent Plugins 1.0 ships custom agents from a
+   client-extension namespace — com.github.copilot/agents/*.agent.md — beside the portable
+   skills/ folder, and VS Code, Copilot CLI and the Copilot app all load them. The manifest
+   does not list them; they are found by convention. So VS Code CAN run these agents.
+
+   What actually blocks us is narrower and real: a .agent.md declares its tools from a
+   VS Code-specific vocabulary (search/codebase, web/fetch, read/terminalLastCommand, edit, …)
+   that the published docs do not enumerate. These agents need a shell (dotnet build, the lazy
+   git clone) and file writes. A guessed tools: list would mis-capability the agent silently,
+   so VS Code stays out of scope until those ids are verified against a running instance.
+
+   Separately: the two VS Code manifests that exist (context-matic, acp-paypal) predate
+   1.0 — no $schema, and skills/mcpServers/logo/displayName as top-level fields, none of which
+   are in the closed 1.0 schema. Unknown fields are ignored rather than rejected, so they are
+   not invalid, but those keys do nothing and discovery falls back to convention (skills/,
+   mcp.json — note we ship .mcp.json). A conformance pass is worth scheduling.
 
   "Cursor's agents key takes a directory, so passing a file means the specialist silently
    doesn't exist"  → WRONG. The schema is "agent files or directories". Our manifests are

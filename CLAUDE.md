@@ -149,7 +149,30 @@ MCP-backed plugins carry one manifest per IDE, and each manifest points at its o
 
 (The five SDK plugins are the exception: they have no MCP server, so their manifests point at no MCP config.
 `maxio-sdk` and `maxio-sdk-lean` ship only the Claude Code manifest; `maxio-sdk-merged`, `twilio-sdk`
-and `paypal-sdk` add Cursor and Codex. None of the five ships a VS Code manifest.)
+and `paypal-sdk` add Cursor and Codex. None of the five ships a VS Code manifest — see below; that is now
+a decision rather than an omission.)
+
+### VS Code: a deliberate no, for one specific reason
+
+An earlier plan asserted that the root `plugin.json` "cannot carry agents", which is **false**. Agent
+Plugins 1.0 ships custom agents from a client-extension namespace — `com.github.copilot/agents/*.agent.md`
+— alongside the portable `skills/` folder, and VS Code, Copilot CLI and the Copilot app all load them.
+Capability is not the blocker.
+
+The blocker is the `tools:` frontmatter. A `.agent.md` declares its tools from a VS Code-specific
+vocabulary (`search/codebase`, `web/fetch`, `read/terminalLastCommand`, `edit`, …) that the published docs
+do not enumerate. These agents need a terminal (`dotnet build`, the lazy `git clone`) and file writes; a
+guessed `tools:` list would hand the agent the wrong capabilities **silently**, which is the failure mode
+this repo keeps paying for. So the SDK plugins do not target VS Code until that vocabulary is verified
+against a running instance — specifically the ids for running a shell command, creating a file, and
+editing a file.
+
+Note also that the two VS Code manifests that do exist (`context-matic`, `acp-paypal`) predate Agent
+Plugins 1.0: they omit the required `$schema` and use `skills`, `mcpServers`, `logo` and `displayName` as
+top-level fields, none of which are in the 1.0 closed schema. Unknown top-level fields are *ignored*, not
+rejected, so those plugins are not invalid — but their skills and MCP servers are discovered by
+convention (`skills/`, `mcp.json`) rather than by those keys, and ours ship `.mcp.json`. Worth a
+conformance pass; out of scope here.
 
 Codex is carried differently from the others: the agent body cannot live in a Markdown file with
 frontmatter, so it is duplicated into `codex/agents/<agent>.toml` under `developer_instructions`. That
