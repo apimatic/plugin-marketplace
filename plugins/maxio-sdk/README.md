@@ -77,7 +77,7 @@ defer to it for lookup before touching the SDK source.
 
 ```
 /plugin marketplace add apimatic/plugin-marketplace
-/plugin install maxio-sdk-merged@apimatic
+/plugin install maxio-sdk@apimatic
 ```
 
 Then ask a usage question (e.g. *"how do I authenticate this SDK with an API key?"*) to trigger the

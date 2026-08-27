@@ -1,6 +1,6 @@
 # Codex carrier for the maxio-sdk agent. HAND-MAINTAINED.
 #
-# Claude Code and Cursor load this agent from plugins/maxio-sdk-merged/agents/maxio-sdk.md
+# Claude Code and Cursor load this agent from plugins/maxio-sdk/agents/maxio-sdk.md
 # via their plugin manifests. Codex cannot: it defines a custom subagent as a TOML file in a
 # config-layer agents/ directory (~/.codex/agents/, .codex/agents/, or $CODEX_HOME/agents/),
 # keyed on `developer_instructions`. .codex-plugin/plugin.json has no agents key. So this file
