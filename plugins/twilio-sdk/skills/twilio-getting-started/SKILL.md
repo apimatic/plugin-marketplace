@@ -177,6 +177,37 @@ Layout — where the SDK map's file references resolve (open these directly; don
 keeping it is what lets every later step in this session reuse it instead of cloning again. The OS reaps the
 temp directory on its own; a future session simply makes its own timestamped clone.
 
+## Idempotency — eight operations have a real key; the header is not it
+
+Of this SDK's 887 operations, **434 are non-GET and every one of them sends an `Idempotency-Key` header**.
+On 430 of those the value is `Guid.NewGuid()`, injected by the generator — you cannot set it, and Twilio does
+not document that header as a general mechanism. Only **eight** operations let you supply a key, in two
+different shapes:
+
+| Shape | Operations |
+| --- | --- |
+| **Form field** `IdempotencyKey` (parameter `idempotencyKey`) | `Api20100401Payment.CreatePayments`, `Api20100401Payment.UpdatePayments`, `Api20100401UserDefinedMessage.CreateUserDefinedMessage`, `Api20100401UserDefinedMessageSubscription.CreateUserDefinedMessageSubscription` |
+| **Header** `Idempotency-Key`, caller's value (no injected GUID) | `ConversationsV2ConfigurationApi.CreateConfiguration`, `.DeleteConfiguration`, `.UpdateConfiguration2`, `ConversationsV2ConversationApi.DeleteConversationAsync` |
+
+⚠ **The two payment operations carry both keys at once.** `CreatePayments` emits
+`new HeaderParam("Idempotency-Key", Guid.NewGuid())` on the line directly above
+`new Param("IdempotencyKey", idempotencyKey)` in the form body. Only the second is yours and only the second
+means anything. The names differ by one hyphen, and these are the operations that charge a card — so this is
+the one place in the SDK where reading the wrong one costs money. Pass `idempotencyKey` explicitly; it is a
+nullable positional parameter, so `null` compiles and silently gives up the protection.
+
+**The remaining 426 writes have no key at all.** For those the answer is reconciliation — see
+`dotnet-configuration-resilience` § *Reconcile after a failure* — not a key. Do not let the injected header
+persuade you otherwise; `dotnet-configuration-resilience` § *Make the write idempotent at the provider*
+explains why a visible header is worse than an absent one.
+
+**Seven operations offer optimistic concurrency instead**, via an `If-Match` header parameter — a different
+guarantee (reject my write if the resource changed) that solves a different problem (lost updates, not
+duplicates): `SyncV1Document.UpdateDocument`, `SyncV1SyncListItem.UpdateSyncListItem`,
+`SyncV1SyncMapItem.UpdateSyncMapItem`, `TaskrouterV1Task.UpdateTask`,
+`TaskrouterV1TaskReservation.UpdateTaskReservation`, `TaskrouterV1Worker.UpdateWorker`,
+`TaskrouterV1WorkerReservation.UpdateWorkerReservation`.
+
 ## Integration workflow — load the companion skill at each step
 
 Before you write the code for each step, load the named companion skill — even if you've already read the
@@ -194,7 +225,9 @@ them in this order:
    constructing the client or in the DI callback, and load secrets from configuration rather than hardcoding.)
 3. **Calling an endpoint / building a request body** — load **dotnet-calling-endpoints** before the first
    `client.{ApiGroup}.{Operation}(...)` call. (*The signature won't tell you:* call list/search ops with
-   named arguments — many optional params have no C# default and mis-bind in a positional call.)
+   named arguments — many optional params have no C# default and mis-bind in a positional call; and on the
+   two payment operations, `idempotencyKey` sits one hyphen away from an injected header that is not it,
+   see *Idempotency* above.)
 4. **Models** — load **dotnet-models** the moment a request/response field isn't a plain string or number.
    (*The signature won't tell you:* unions are built with factory methods and read via `TryGet…` (no `new`),
    enums are `StringEnum<T>` not C# enums, and unmodeled JSON fields are dropped on deserialize.)

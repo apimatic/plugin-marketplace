@@ -177,6 +177,45 @@ Layout — where the SDK map's file references resolve (open these directly; don
 keeping it is what lets every later step in this session reuse it instead of cloning again. The OS reaps the
 temp directory on its own; a future session simply makes its own timestamped clone.
 
+## Idempotency — `payPalRequestId`, and the header that isn't it
+
+Twelve operations take a `payPalRequestId` parameter. It carries the `PayPal-Request-Id` header, and it is
+PayPal's idempotency key — the only one this SDK offers. All twelve are POSTs that move money or create a
+billing artefact:
+
+| Group | Operations | Key retention (from the parameter docs) |
+| --- | --- | --- |
+| `Orders` | `AuthorizeOrder`, `CaptureOrder`, `CreateOrder` | **6 hours** (up to 72 by arrangement with your account manager) |
+| `Payments` | `CaptureAuthorizedPayment`, `ReauthorizePayment`, `RefundCapturedPayment`, `VoidPayment` | **45 days** |
+| `Subscriptions` | `CaptureSubscription`, `CreateBillingPlan`, `CreateSubscription` | **72 hours** |
+| `Vault` | `CreatePaymentToken`, `CreateSetupToken` | **3 hours** |
+
+Three things decide whether the integration is actually safe, and the signature states none of them:
+
+- **It is a nullable positional parameter with no default**, so `null` compiles and runs. Passing `null` is
+  not "taking the default" — it is switching idempotency off on a payment capture. The map row flags the
+  parameter as *must pass explicitly*; that flag is about argument binding, and this is about money.
+- **The value must be generated and persisted *before* the first attempt**, keyed to business intent — the
+  order being captured, not the attempt capturing it. A value minted inside the call, or freshly on each
+  caller-level retry, is a *different* key, and PayPal treats it as a different request. Persist it with the
+  unit of work so that a process restart reuses it rather than generating a new one.
+- **Retention is finite and differs per group** — the fourth column above, and the spread is wide: a Vault
+  key is forgotten in 3 hours, a Payments key survives 45 days. Past the window the same value no longer
+  deduplicates, so a replay after the window is a fresh write. Reconcile instead.
+
+`CreateOrder`'s parameter doc adds that the key is **mandatory** for single-step create-order calls carrying
+payment-source information (card, `PayPal.vault_id`, `PayPal.billing_agreement_id`).
+
+**The other fourteen writes have no key at all.** Of the 26 non-GET operations only these 12 expose
+`payPalRequestId`; for the remaining 14 the answer is reconciliation — see
+`dotnet-configuration-resilience` § *Reconcile after a failure* — not a key.
+
+⚠ **Do not read the injected `Idempotency-Key` header as protection.** The generator puts
+`Idempotency-Key: Guid.NewGuid()` on all 26 non-GET operations, including the 14 that have no real key. It is
+not a PayPal parameter, PayPal documents `PayPal-Request-Id` instead, and the value is fresh on every call.
+`dotnet-configuration-resilience` § *Make the write idempotent at the provider* explains why a visible header
+is worse than an absent one.
+
 ## Integration workflow — load the companion skill at each step
 
 Before you write the code for each step, load the named companion skill — even if you've already read the
@@ -194,7 +233,9 @@ them in this order:
    constructing the client or in the DI callback, and load secrets from configuration rather than hardcoding.)
 3. **Calling an endpoint / building a request body** — load **dotnet-calling-endpoints** before the first
    `client.{ApiGroup}.{Operation}(...)` call. (*The signature won't tell you:* call list/search ops with
-   named arguments — many optional params have no C# default and mis-bind in a positional call.)
+   named arguments — many optional params have no C# default and mis-bind in a positional call; and on the
+   twelve operations taking `payPalRequestId`, passing `null` compiles and silently turns idempotency off,
+   see *Idempotency* above.)
 4. **Models** — load **dotnet-models** the moment a request/response field isn't a plain string or number.
    (*The signature won't tell you:* unions are built with factory methods and read via `TryGet…` (no `new`),
    enums are `StringEnum<T>` not C# enums, and unmodeled JSON fields are dropped on deserialize.)

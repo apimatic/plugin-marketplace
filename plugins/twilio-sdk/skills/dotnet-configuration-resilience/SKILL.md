@@ -201,11 +201,49 @@ The four, **weakest guarantee first** — so do not read the numbering as a reco
 
 1. **Make the write idempotent at the provider** — a client-supplied unique reference or idempotency key,
    where the API offers one. Makes a resend *harmless* rather than rarer; the send count stays above one.
-   Check the write's request model for a client-supplied unique field (the contract sheet lists the fields) —
-   but note that **whether the provider actually rejects a duplicate value is not visible in the model**. Such
-   a field is typically just a nullable string, equally consistent with a uniqueness-enforced key and with a
+
+   Look at the operation's **own parameters**, not just the request model. The generator can put a
+   provider's idempotency key in any of three places, and only one of them is the body:
+
+   - a **header parameter** — a bare `string?` in the signature (PayPal's `payPalRequestId`);
+   - a **form field** — also a bare `string?`, routed into `FormUrlEncodedRequest.Create([...])`
+     (Twilio's `idempotencyKey`);
+   - a field on the **request model**.
+
+   A model-only search finds nothing on the first two and concludes wrongly that the API offers no key. Ask
+   the contract sheet for the operation's full parameter list, not just its body shape.
+
+   Note that **whether the provider actually rejects a duplicate value is not visible in the model**. Such a
+   field is typically just a nullable string, equally consistent with a uniqueness-enforced key and with a
    free-text label. Verify against live traffic before relying on it; if it is not enforced, this gives you
    nothing.
+
+   ⚠ **An `Idempotency-Key` header on the wire is usually not the provider's key.** Across both sampled
+   4.0.0 SDKs (927 operations) **every** non-GET operation carries an `Idempotency-Key` header and **no** GET
+   does — 460 against 467. On **456 of those 460** the value is `Guid.NewGuid()`, injected by the generator:
+   not a spec parameter, no doc comment, nothing the caller can reach. The other four take the caller's
+   value, because their own spec declares `Idempotency-Key` as a parameter and the generator defers to it.
+
+   So the header's *presence* tells you nothing — only the **source of its value** does, and that is visible
+   in the signature: if no parameter feeds it, it is injected. Three consequences, all of which cut against
+   the reading you would naturally take:
+
+   - **An injected key makes nothing safe unless your provider consumes that exact header name.** Neither
+     sampled API documents `Idempotency-Key` as its mechanism, so on both it is inert.
+   - **The value is fresh per call.** `Guid.NewGuid()` is evaluated at the call site, before the resilience
+     pipeline runs — so it is stable across the SDK's *internal* retry attempts, and different on every
+     *caller-level* retry. The resend that a job re-running after a timeout produces is exactly the one it
+     cannot deduplicate.
+   - **It can sit alongside the real key, under a near-identical name.** Twilio's
+     `CreateUserDefinedMessage` puts the injected `Idempotency-Key` *header* and the spec-declared
+     `IdempotencyKey` *form field* on the same request; only the second one means anything. Matching on the
+     name alone picks the wrong one.
+
+   The trap is not that an injected key is useless; it is that it is *visible*. Seeing `Idempotency-Key` go
+   out on the wire, or in a log, reads as evidence that idempotency is handled. Treat it as absent until you
+   have confirmed both that the provider consumes that header name and that a parameter feeds it — and note
+   the default `HttpMethodsToRetry` includes `PUT`, so a `PUT` is resent by the SDK itself under a header
+   that probably means nothing to the provider.
 2. **Reconcile after a failure** — on a transport failure on a write, re-read provider state to establish
    what actually happened instead of assuming nothing did. (Same reflex as an unreadable write response —
    see `dotnet-error-handling`.) Detects a duplicate; does not prevent one.

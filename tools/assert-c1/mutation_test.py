@@ -63,6 +63,21 @@ MUTATIONS = [
     ("Core/Configuration/RetryOptions.cs",
      "public static RetryOptions Disabled()", "internal static RetryOptions Disabled()",
      "Disabled() stopped being part of the public surface"),
+    # These two target Api/ rather than Core/: the idempotency claim is about an
+    # EMISSION rule, so the emitted operations are the only place it is visible.
+    ("Api/Orders.cs",
+     'new HeaderParam("Idempotency-Key", Guid.NewGuid())],',
+     'new HeaderParam("PayPal-Removed-Header", (string?)null)],',
+     "the generator stopped injecting Idempotency-Key on a write"),
+    ("Api/Orders.cs",
+     '[new Param("fields", fields)],' + chr(10) +
+     '            [new HeaderParam("PayPal-Mock-Response", payPalMockResponse),' + chr(10) +
+     '                new HeaderParam("PayPal-Auth-Assertion", payPalAuthAssertion)],',
+     '[new Param("fields", fields)],' + chr(10) +
+     '            [new HeaderParam("PayPal-Mock-Response", payPalMockResponse),' + chr(10) +
+     '                new HeaderParam("PayPal-Auth-Assertion", payPalAuthAssertion),' + chr(10) +
+     '                new HeaderParam("Idempotency-Key", Guid.NewGuid())],',
+     "Idempotency-Key started being injected on reads too"),
 ]
 
 

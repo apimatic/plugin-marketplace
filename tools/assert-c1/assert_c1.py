@@ -296,6 +296,68 @@ def _p_requestoptions(ctx: Ctx, a: dict):
     return True, "all %d operations" % total
 
 
+def _execute_blocks(ctx: Ctx):
+    """Yield (file, argument-text) for every `_rawClient.Execute*` call in Api/."""
+    for rel in ctx.files("Api/*.cs"):
+        src = ctx.read(rel) or ""
+        for m in re.finditer(r"_rawClient\.Execute\w*\(", src):
+            depth, i = 1, m.end()
+            while i < len(src) and depth:
+                if src[i] == "(":
+                    depth += 1
+                elif src[i] == ")":
+                    depth -= 1
+                i += 1
+            yield rel, src[m.end():i - 1]
+
+
+_IDEM_HEADER = 'HeaderParam("Idempotency-Key"'
+_IDEM_INJECTED = 'HeaderParam("Idempotency-Key", Guid.NewGuid())'
+# Deliberately NOT a negative lookahead after `,\s*`: `\s*` matches zero characters and
+# the lookahead then reads the space rather than the value, so `(?!Guid\.NewGuid)`
+# succeeds on the injected form too and every operation reads as spec-declared. Presence
+# minus the injected literal has no such hole.
+
+
+@probe("idempotency-key-on-every-non-get")
+def _p_idempotency_key(ctx: Ctx, a: dict):
+    """Every non-GET operation sends an `Idempotency-Key` header and no GET does;
+    where no parameter feeds it, the value is a generator-injected `Guid.NewGuid()`.
+
+    The skills tell the reader that seeing this header on the wire proves nothing —
+    only the *source* of its value does, and that is readable from the signature.
+    That advice is safe only while this emission rule holds, and the rule is the
+    generator's, not any API definition's. If a later template stops injecting, or
+    starts injecting over a spec-declared parameter, the guidance goes wrong in the
+    direction that costs money: a write that looks deduplicated and is not."""
+    get_with, nonget_without = [], []
+    total = injected = declared = 0
+    for rel, blk in _execute_blocks(ctx):
+        total += 1
+        mt = re.search(r"HttpMethod\.(\w+)|new HttpMethod\(\"(\w+)\"\)", blk)
+        meth = ((mt.group(1) or mt.group(2)) if mt else "?").upper()
+        has_inj = _IDEM_INJECTED in blk
+        has_dec = (not has_inj) and _IDEM_HEADER in blk
+        name = rel.split("/")[-1][:-3]
+        if meth == "GET":
+            if has_inj or has_dec:
+                get_with.append(name)
+        elif not (has_inj or has_dec):
+            nonget_without.append(name)
+        injected += has_inj
+        declared += has_dec
+    if total == 0:
+        return False, "no _rawClient.Execute calls under Api/ — wrong fixture?"
+    if get_with:
+        return False, "%d GET operation(s) carry an Idempotency-Key header: %s" % (
+            len(get_with), ", ".join(sorted(set(get_with))[:5]))
+    if nonget_without:
+        return False, "%d non-GET operation(s) carry no Idempotency-Key header: %s" % (
+            len(nonget_without), ", ".join(sorted(set(nonget_without))[:5]))
+    return True, "%d operations — %d injected, %d spec-declared, 0 on a GET" % (
+        total, injected, declared)
+
+
 @probe("no-converter-on-model-property")
 def _p_no_model_converter(ctx: Ctx, a: dict):
     """No model property carries a [JsonConverter], other than the generated
@@ -482,6 +544,15 @@ def run(root: str, surface: str, only: str | None) -> list[Result]:
 
 
 def main() -> int:
+    # Claims and defends lines carry em-dashes, arrows and section marks. On a Windows
+    # console that defaults to cp1252 those raise UnicodeEncodeError mid-report, so the
+    # runner dies on its own output and reports nothing about the SDK. Degrade the
+    # character instead of the run.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sdk_root")
