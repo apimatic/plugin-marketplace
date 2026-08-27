@@ -13,6 +13,7 @@
   "keywords": ["paypal", "payments", "orders", "subscriptions", "apimatic", "dotnet", "csharp", "sdk"],
   "skills": [
     "./skills/integrate-paypal",
+    "./skills/wait-for-agent-claude-code",
     "./skills/paypal-getting-started",
     "./skills/dotnet-client-initialization",
     "./skills/dotnet-authentication",

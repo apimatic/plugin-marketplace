@@ -22,6 +22,7 @@
   ],
   "skills": [
     "./skills/integrate-paypal",
+    "./skills/wait-for-agent-cursor",
     "./skills/paypal-getting-started",
     "./skills/dotnet-client-initialization",
     "./skills/dotnet-authentication",

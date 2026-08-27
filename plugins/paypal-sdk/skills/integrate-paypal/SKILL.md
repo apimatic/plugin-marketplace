@@ -132,8 +132,12 @@ questions.
 place, and its edits collide with yours. This holds for an agent you spawned AND one you
 resumed via a follow-up message (a resumed or backgrounded agent is still running). The one
 thing you may do during a wait is the **read-only** Step-1 prerequisite work (repo survey,
-restore, baseline build, env checks) — it touches no project file. When those are done and the
-agent is still running, wait.
+restore, baseline build, env checks) — it touches no project file.
+
+**How the completion actually reaches you differs by host.** Before your first spawn of
+`paypal-sdk`, load the `wait-for-agent` skill bundled with this plugin — it is host-specific
+and tells you exactly how and when you receive a subagent's reply in the tool you're running in
+right now. Follow it, not your own assumption about how waiting works.
 
 ## Anti-patterns — never do these
 
