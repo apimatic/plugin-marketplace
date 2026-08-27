@@ -1,33 +1,26 @@
 ---
 name: wait-for-agent
-description: Host-specific companion to integrate-paypal — how a completion from the paypal-sdk agent actually reaches you in Cursor. Load it before your first spawn of paypal-sdk, and again before sending it a follow-up message.
+description: Host-specific companion to integrate-paypal — how to wait for the paypal-sdk agent. Load it before your first spawn of paypal-sdk, and again before sending it a follow-up message.
 ---
 
 <!--
-Cursor's carrier of the wait-for-agent gate. Claude Code's carrier lives at
+One of two host-specific carriers of the wait-for-agent gate. The other lives at
 ../wait-for-agent-claude-code/SKILL.md — same name, different content, selected by which
-plugin.json lists it. The two gate paragraphs (never edit project files; how a notification
-arrives) must stay in sync in substance across both files even though the wording differs per
-host. Edit both in the same commit when the gate's requirements change.
+plugin.json lists it. Edit both in the same commit when the gate's requirements change.
 -->
 
-# Wait for your agent — Cursor
+# Wait for your agent
 
-**Cursor only delivers a subagent's completion notification at a turn boundary.** This is true
-whether you just spawned `paypal-sdk` or sent it a follow-up message: do not sit inside the
-current turn waiting for its reply. A blocking wait, a sleep, or a status-polling action you
-invent yourself will never actually receive the notification — it can only arrive once your
-turn has ended.
+Don't wait to be told the result is ready — **watch for `paypal-plan.md` on disk instead.** You
+dictated the path, so you can check for it yourself. Poll it: check the path, print one short
+line saying what you're still waiting for, sleep ~30s, repeat. Keep sleeps short and print every
+pass — a single long sleep looks hung.
 
-The one thing you may do first is the **read-only** Step-1 prerequisite work (repo survey,
-restore, baseline build, env checks) — it touches no project file. Once that is done and the
-agent is still running, end your turn with a brief status update rather than sitting inside the
-turn.
+**The file appearing isn't the file being finished.** It ends with a REQUIRED READING block;
+that's the completeness marker, so keep polling until that block is there.
 
-Ending the turn here is not handing back to the user, not deferring work, and not the kind of
-early stop that leaves the task unfinished — it is the mechanism for making progress on work
-that is genuinely running in the background. Treat it as continuing the task, not pausing it:
-the moment the notification arrives, pick the plan straight back up.
+If you're still waiting after ~30 minutes, the agent is gone, not slow — say so and re-spawn it
+once with the same scope and path. Never implement from a partial sheet or fill gaps yourself.
 
 **Never create or edit a project file while `paypal-sdk` is running or has an outstanding
 follow-up** — spawned, resumed, or backgrounded, it edits files in place, and its edits collide
