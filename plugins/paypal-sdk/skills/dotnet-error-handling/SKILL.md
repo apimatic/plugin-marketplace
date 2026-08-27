@@ -278,15 +278,32 @@ that boundary and rethrow the same error type you already use for API errors —
 code has a single failure type to handle instead of two unrelated ones:
 
 ```csharp
-catch (SdkException<RawError> ex)                // API error (non-2xx)
+catch (SdkException<{Operation}Error> ex)        // API error (non-2xx), Case A — 39 of 40 operations
 {
-    throw new {ProviderException}("...", ex);
+    // Carry Name and DebugId. The boundary ladder below is the only place they can be read back,
+    // and a Name dropped here cannot be recovered downstream — the typed body is the only thing
+    // that carries it, and it does not outlive this catch.
+    //
+    // Check the accessors in the SAME order as the Case A ladder above: every typed accessor
+    // this operation declares, then TryGetRawError LAST. Two accessors are shown; enumerate the
+    // class for the real set.
+    if (ex.Error.TryGetError(out Error e))
+        throw new {ProviderException}(e.Message, e.Name, e.DebugId, ex);
+
+    // The `_` arm — an UNDOCUMENTED status. This is the only branch where a status exists.
+    if (ex.Error.TryGetRawError(out RawError raw))
+        throw new {ProviderException}($"HTTP {(int)raw.StatusCode}", name: null, debugId: null, ex);
+
+    throw new {ProviderException}("unrecognised error shape", name: null, debugId: null, ex);
 }
 catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)  // connection failure
 {
-    throw new {ProviderException}("provider unreachable", ex);
+    throw new {ProviderException}("provider unreachable", name: null, debugId: null, ex);
 }
 ```
+
+(`SearchTransactions` is Case B — catch `SdkException<RawError>` there and read
+`ex.Error.StatusCode` directly; it has no `Name`.)
 
 **Guard every call site, not just the ones that change data.** It is easy to wrap the calls that
 create or modify something and overlook the calls that only read — especially reads that run
@@ -308,12 +325,65 @@ outcome and apply the identical catch ladder at every call site — same order, 
 When the same kind of failure (a validation rejection, say) becomes a different result on a
 different operation, callers can't reason about it. One shared ladder, not per-call improvisation.
 
-**Keep distinct failures distinct — carry the provider's status.** When you convert a provider
-error, carry its HTTP status on your own error type and map it back deliberately: a provider
-**4xx** (validation, conflict, not-found — the caller can act on it) should surface as that same
-client **4xx**; a transport failure or an unknown error has no meaningful client status and should
-surface as **5xx**. Collapsing every failure into one blanket status (e.g. 502 for everything)
-throws away the one signal that separates "you sent something invalid" from "the provider is down."
+**Keep distinct failures distinct — and on this SDK the discriminator is `Name`, not the status.** Your
+error type needs to carry something that separates "you sent something invalid" from "the provider is
+down". The reflex is to carry the HTTP status. On this SDK you mostly cannot:
+
+- **39 of 40 operations throw a typed `{Operation}Error`,** whose `TryGet…` accessors hand you a *model*
+  — `Error`, `Error1`, `SubscriptionError`, `DefaultError` — and none of those carries an HTTP status.
+  `SdkException<TError>` has exactly one member, `Error`. There is no `StatusCode` anywhere on that path.
+- **The typed arm swallows the distinction you wanted.** Each error class switches on the status and
+  routes every *documented* status into a single accessor — `PatchSubscriptionError` maps
+  `400/401/403/404/422/500` to one `TryGetError(out SubscriptionError)`. **29 of the 39** mix 4xx and 5xx
+  that way, so "caller's fault or provider's" is not answerable from the status even in principle.
+- **`TryGetRawError` is not a fallback for this.** It returns `true` only on the `_` arm — the statuses
+  the spec did *not* document. When a documented status arrives, the typed arm fires and
+  `TryGetRawError` is `false`.
+- **`SearchTransactions` is the one exception:** it throws `SdkException<RawError>`, and `RawError` does
+  carry `StatusCode`.
+
+**Use what the body gives you — it is better than the status anyway.** Every typed body carries a
+`required string Name`, the provider's own error identity, and `Details[].Issue`, a `required string` the
+parameter docs call *"the unique, fine-grained application-level error code"*. `INVALID_REQUEST` with
+`Issue = "MALFORMED_REQUEST_JSON"` says more than `422` does, and `INTERNAL_SERVER_ERROR` separates a
+provider outage from a bad request without a status at all. `DebugId` is `required` too — carry it, it is
+what PayPal support asks for first.
+
+```csharp
+static (int Status, string Message) Map(Exception ex) => ex switch
+{
+    // OUR credentials or OUR quota — the caller did nothing wrong and cannot fix it.
+    {ProviderException} p when p.Name is "AUTHENTICATION_FAILURE" or "NOT_AUTHORIZED"
+                                                              => (502, "Provider unavailable."),
+    {ProviderException} p when p.Name is "RATE_LIMIT_REACHED"   => (503, "Temporarily unavailable."),
+    {ProviderException} p when p.Name is "INTERNAL_SERVER_ERROR" => (502, "Provider unavailable."),
+
+    // The provider rejected THE CALLER'S request — they can act on it.
+    {ProviderException} p when p.Name is "INVALID_REQUEST" or "UNPROCESSABLE_ENTITY"
+                                                              => (400, p.Message),
+    {ProviderException} p when p.Name is "RESOURCE_NOT_FOUND"   => (404, p.Message),
+
+    // Transport, timeout, or a Name you have not mapped yet — no meaningful caller status.
+    {ProviderException} p                                       => (502, p.Message),
+    _                                                           => (500, "Unexpected error."),
+};
+```
+
+**Not every provider failure is the caller's fault.** An authentication or authorization failure means
+*your* credentials are wrong, and a rate-limit failure means *your* quota is spent — surfacing either
+straight through tells your caller they are unauthenticated or throttled when they are neither. Those
+belong in the 5xx bucket, which is why they sit above the 4xx arms in the ladder. Validation, conflict
+and not-found are the caller's to fix.
+
+Keep the ladder's default arm mapping to 5xx: a `Name` you have not seen is an unknown, not a caller
+error, and PayPal can add one without warning you.
+
+**If you genuinely need the transport status** — for metrics, or a provider-availability SLA — a
+`DelegatingHandler` is the only route that works on all 40 operations, because it sees the response
+before the SDK maps it. Two caveats before you reach for it: under retry it observes *N* responses for
+one logical call, so "the status" means the last attempt's; and it needs an `AsyncLocal` or a scoped
+service to reach the catch site, which is ambient state. Do not use it to drive ordinary error mapping —
+`Name` is the better key and needs none of that machinery.
 
 **An unreadable body is not one case but two — decide which before you map it.** An unreadable
 **success** body is genuinely unknown: 5xx. An unreadable **error** body is not — the provider
