@@ -216,6 +216,44 @@ not a PayPal parameter, PayPal documents `PayPal-Request-Id` instead, and the va
 `dotnet-configuration-resilience` § *Make the write idempotent at the provider* explains why a visible header
 is worse than an absent one.
 
+## Card data — `LogRequestBody` writes PANs to your logs
+
+This API carries raw card numbers in **request** bodies, and this SDK logs JSON request bodies
+**verbatim** — `HttpLogger` masks form bodies by deny-list and JSON bodies not at all
+(`dotnet-configuration-resilience` § *Logging*). The two facts together mean one configuration flag puts
+primary account numbers and CVVs into your log sink.
+
+Seven request models carry a raw `number`, four of them alongside the `security_code`:
+
+| Model | Raw fields |
+| --- | --- |
+| `CardRequest`, `PaymentTokenRequestCard`, `SetupTokenRequestCard`, `SubscriptionCardRequest` | `number`, `security_code`, `expiry` |
+| `ApplePayTokenizedCard`, `GooglePayCard` | `number`, `expiry` |
+| `NetworkToken` | `number`, `expiry`, `cryptogram` |
+
+They reach the wire through the payment-source branch of seven operations: `CreateOrder`,
+`AuthorizeOrder`, `CaptureOrder`, `ConfirmOrder`, `CreatePaymentToken`, `CreateSetupToken` and
+`CreateSubscription`. A card is optional on all of them — the same call with `paypal` or `token` as the
+payment source carries none — so whether an integration is in scope depends on the branch it uses, not on
+the operation it calls.
+
+**Rules that follow, and they are not stylistic:**
+
+- **Never enable `LogRequestBody` on a build that can take a card**, including locally against sandbox with
+  a real PAN. There is no redaction to fall back on and no `RedactedKeys` entry that helps, because the
+  deny-list applies only to form bodies.
+- **Set `options.Logging.LoggerFactory` explicitly in production**, even to `NullLoggerFactory.Instance`.
+  Leaving it null on a hand-built client arms the `PAYPALSERVERSDKCLIENT_LOG` environment variable, and its
+  `trace` level forces `LogRequestBody` on — a card leak that needs no code change and no deploy.
+- **Do not echo a request body into your own diagnostics** on these operations. The SDK's logger is not the
+  only way this data escapes; an exception handler that serialises the request it was building is the same
+  leak with your name on it.
+
+**Responses are materially safer** and it is worth knowing why, so the caution lands where it belongs:
+`CardResponse` carries `last_digits`, `brand` and `expiry` — no `number`, no `security_code`. Logging a
+*response* body on a card flow does not disclose a PAN. The asymmetry is the point: the risk is on the way
+out, not the way back.
+
 ## Integration workflow — load the companion skill at each step
 
 Before you write the code for each step, load the named companion skill — even if you've already read the

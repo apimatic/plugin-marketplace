@@ -358,6 +358,44 @@ def _p_idempotency_key(ctx: Ctx, a: dict):
         total, injected, declared)
 
 
+_PAN_MODELS = {
+    "ApplePayTokenizedCard", "CardRequest", "GooglePayCard", "NetworkToken",
+    "PaymentTokenRequestCard", "SetupTokenRequestCard", "SubscriptionCardRequest",
+}
+
+
+@probe("raw-pan-models-are-the-documented-set")
+def _p_pan_models(ctx: Ctx, a: dict):
+    """The models carrying a raw card `number` are exactly the set the
+    paypal-getting-started card-data section names, and no *response* model is
+    among them.
+
+    This one guards a hand-written list, which is the kind of fact this whole
+    suite exists to stop trusting. The section tells a reader that request bodies
+    disclose a PAN while response bodies carry only `last_digits` — safe advice
+    only while that asymmetry holds. If a regenerated spec adds `number` to a
+    response model, or adds an eighth card model nobody documented, the guidance
+    silently under-warns on a PCI boundary.
+
+    Skips on a fixture with no card models at all: absence of cards settles
+    nothing about an API that has them."""
+    found = set()
+    for rel in ctx.files("Models/*.cs"):
+        src = ctx.read(rel) or ""
+        if '[JsonPropertyName("number")]' in src:
+            found.add(rel.split("/")[-1][:-3])
+    if not found:
+        raise Unsettleable("no model carries a raw `number` field in this fixture")
+    extra, missing = sorted(found - _PAN_MODELS), sorted(_PAN_MODELS - found)
+    responses = sorted(m for m in found if m.endswith("Response"))
+    if responses:
+        return False, "response model(s) now carry a raw `number`: %s" % ", ".join(responses)
+    if extra or missing:
+        return False, "documented set is stale — undocumented: %s | documented but gone: %s" % (
+            ", ".join(extra) or "none", ", ".join(missing) or "none")
+    return True, "%d models, exactly the documented set, none of them a response" % len(found)
+
+
 @probe("no-converter-on-model-property")
 def _p_no_model_converter(ctx: Ctx, a: dict):
     """No model property carries a [JsonConverter], other than the generated

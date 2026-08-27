@@ -78,6 +78,14 @@ MUTATIONS = [
      '                new HeaderParam("PayPal-Auth-Assertion", payPalAuthAssertion),' + chr(10) +
      '                new HeaderParam("Idempotency-Key", Guid.NewGuid())],',
      "Idempotency-Key started being injected on reads too"),
+    ("Models/CardResponse.cs",
+     '[JsonPropertyName("last_digits")]',
+     '[JsonPropertyName("number")]',
+     "a response model started carrying a raw PAN"),
+    ("Models/ErrorDetails.cs",
+     '[JsonPropertyName("value")]',
+     '[JsonPropertyName("number")]',
+     "an eighth undocumented model started carrying a raw PAN"),
 ]
 
 
