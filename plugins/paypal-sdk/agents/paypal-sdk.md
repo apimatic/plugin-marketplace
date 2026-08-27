@@ -173,7 +173,11 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    > call and are **not** the timeout on the `HttpClient` you register. **MUST load
    > `dotnet-configuration-resilience`** before wiring the client.
 4. **REQUIRED READING** — close the sheet with the de-duplicated list of every `dotnet-*` skill
-   named above, one line each: skill · the step it governs. State that these are to be loaded
+   named above, one line each: skill · the step it governs. **Write each name plugin-qualified**
+   (`paypal-sdk:dotnet-error-handling`): five plugins in this marketplace ship these same seven
+   skill names with different content — 35 copies, 24 distinct versions — and a bare name gives
+   the implementer no way to tell which one they loaded. Where the harness has no qualified form,
+   say in the same line which plugin the copy must come from. State that these are to be loaded
    **before implementation starts**, and that the sheet deliberately does not carry their
    contents. This block is mandatory even when the trap notes are few — an integration always
    writes an error boundary, so `dotnet-error-handling` always appears here.

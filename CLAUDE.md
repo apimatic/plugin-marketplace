@@ -124,6 +124,21 @@ generator versions**. Before editing any `dotnet-*` skill, see the provenance st
 file — it names the generator surface the text was verified against. Copying a correction from one plugin
 to another without checking that stamp will introduce a falsehood.
 
+Measured: **35 copies, 24 distinct versions.** `dotnet-configuration-resilience` differs in all five
+plugins; `dotnet-error-handling` in four.
+
+That makes the seven names **ambiguous at install time**, because a bare `dotnet-error-handling` names
+five different documents. Two of this family installed together — a realistic pairing, since an
+integration can need both PayPal and Twilio — expose two different skills under one name, and nothing
+announces which one resolves. The consequence is concrete: twilio's `dotnet-error-handling` builds its
+boundary ladder on `ex.Error.StatusCode`, which is right there (858 of 887 operations are Case B) and
+unavailable on paypal (39 of 40 are Case A, carrying no status at all). A maxio copy would describe a
+pre-4.0.0 runtime entirely.
+
+Each plugin's getting-started skill now states this, and each agent's REQUIRED READING block is required
+to write skill names **plugin-qualified** (`paypal-sdk:dotnet-error-handling`) — or, where the harness has
+no qualified form, to name the owning plugin in the same line.
+
 ## Per-IDE manifest convention
 
 MCP-backed plugins carry one manifest per IDE, and each manifest points at its own MCP config file so it can send an IDE-specific `X-Apimatic-Mcp-Client` telemetry header:
