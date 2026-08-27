@@ -60,9 +60,17 @@ jobs:
       - id: read
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
+          import json, sys
           d = json.load(open("tools/assert-c1/fixtures.json"))
-          print("matrix=" + json.dumps({"include": d["fixtures"]}))
+          fx = d["fixtures"]
+          # An empty fixture list would make the `static` matrix empty, and a matrix job with
+          # no entries is SKIPPED, not failed — so the suite would report green having asserted
+          # nothing at all. That is the exact failure this whole tool exists to catch, so it is
+          # a hard error here rather than a quiet pass.
+          if not fx:
+              print("fixtures.json lists no fixtures — nothing would be asserted", file=sys.stderr)
+              raise SystemExit(1)
+          print("matrix=" + json.dumps({"include": fx}))
           PY
 
   static:
