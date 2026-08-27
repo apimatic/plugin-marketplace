@@ -85,7 +85,8 @@ The map's generated pages are never hand-edited — they are produced by the
 Same SDK and same bundled map as `maxio-sdk`, but the two agents are collapsed into **one** `maxio-sdk`
 agent that plans, answers narrow contract questions, and fixes build errors in place. Ships Claude Code,
 Cursor and Codex manifests; the Codex carrier is `codex/agents/maxio-sdk.toml`, whose
-`developer_instructions` is a verbatim copy of `agents/maxio-sdk.md` and must be kept in sync by hand.
+`developer_instructions` is a verbatim copy of `agents/maxio-sdk.md`. Regenerate it with
+`python tools/sync-codex-carrier.py` rather than editing it by hand; CI fails the PR if the two drift.
 
 > `skills/dotnet/` in this plugin is an empty directory skeleton — the folders exist locally but contain
 > no files and nothing under it is tracked by git. It is not referenced by any manifest. Treat the
@@ -137,4 +138,7 @@ add Cursor and Codex; `paypal-sdk` adds Cursor. None of the five ships a VS Code
 
 Codex is carried differently from the others: the agent body cannot live in a Markdown file with
 frontmatter, so it is duplicated into `codex/agents/<agent>.toml` under `developer_instructions`. That
-duplication is hand-maintained — edit the `.md` and the `.toml` in the same commit.
+duplication used to be hand-maintained, and drift was silent — Codex would run a different brief from
+Claude Code and Cursor with nothing to say so. Edit the `.md`, then run
+`python tools/sync-codex-carrier.py` to regenerate the `.toml`, and commit both together. The
+`codex-carrier-sync` workflow runs `--check` on any PR touching either.

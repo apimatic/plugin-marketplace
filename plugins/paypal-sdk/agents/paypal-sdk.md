@@ -191,9 +191,30 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    **MUST load `dotnet-error-handling`** before writing that boundary. These rows belong in the
    FIRST sheet, not a later revision: the boundary is written early, and a caveat that arrives
    afterwards arrives too late to shape it.
-5. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
+5. **PRODUCTION READINESS** — a fixed eight-row table, every row carrying a *decision*. Naming a
+   skill in REQUIRED READING does not address a concern; it defers it. `N/A` is a legitimate
+   answer where it is genuinely true, but it must carry its reason — "N/A: read-only scope, no
+   writes" is a decision a reviewer can grade, a blank cell is an omission they cannot.
+
+   | # | Concern | The decision the plan must record |
+   |---|---|---|
+   | 1 | **Credential fail-fast** | Where credentials are bound, and that the host refuses to start when one is missing or blank — rather than discovering it as a 401 on the first call in production. |
+   | 2 | **Secret sourcing & rotation** | Where the secret comes from, and that `AddPayPalServerSdkClient` builds the options object **once at registration** and captures it in the singleton — so a rotated secret does not take effect until the process restarts. If rotation without a restart is required, say how. |
+   | 3 | **Total timeout budget** | The number the caller actually gets, not the knob. `Timeout` is **per attempt**: under the defaults a hung `GET` costs ≈407s and a hung `POST` ≈100s. State the budget and where it is enforced — a `CancellationToken` deadline is the only thing that bounds a whole call. |
+   | 4 | **Write-retry ownership** | Which of the scope's writes the SDK may resend and which it may not. The default `HttpMethodsToRetry` is `GET, HEAD, PUT, OPTIONS`, so `POST`/`PATCH`/`DELETE` are never resent by the SDK — and `PUT` **is**. |
+   | 5 | **Idempotency & ambiguous writes** | For each write in scope: the key it uses, or that none exists. Name the real parameter — `payPalRequestId`, on 12 operations, nullable and positional. The injected `Idempotency-Key` header is **not** a key and must not be cited as one. Where no key exists, record the reconciliation path instead. |
+   | 6 | **Observability** | What is logged at which level, that **JSON request bodies are logged unredacted** when `LogRequestBody` is on, and which correlation id reaches your own logs — `DebugId` is `required` on every typed error body. |
+   | 7 | **Card data** | Whether the scope can carry a raw PAN — the payment-source branch of `CreateOrder`, `AuthorizeOrder`, `CaptureOrder`, `ConfirmOrder`, `CreatePaymentToken`, `CreateSetupToken`, `CreateSubscription`. If it can: `LogRequestBody` stays off **and** `LoggerFactory` is assigned explicitly, so `PAYPALSERVERSDKCLIENT_LOG=trace` cannot switch it on from outside the code. |
+   | 8 | **Environment selection** | Which base URL each deployment talks to. `ServerEnvironment` has exactly **one** member — `Sandbox` — and every call resolves through `Server.Default.Sandbox.BaseUrl`. Reaching production therefore means assigning the production URL to a property named `Sandbox`; setting `options.Environment` alone never leaves the sandbox host. Say which deployment sets what. |
+
+   A reviewer grades this from the table alone: each row either records a decision or records why
+   it does not apply. A row that points at a skill, restates the concern, or sits blank is **not
+   addressed**. Rows 5, 7 and 8 are the ones where "not addressed" costs something that cannot be
+   recovered afterwards — a duplicate charge, a PAN in a log, or production traffic sent to
+   sandbox (or worse, sandbox traffic sent to production).
+6. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
    that blocks planning. An empty section is a valid outcome; an invented fact is not.
-6. Every sheet row cites its map page (e.g. `operations/Orders.md`, `records-1-Ac-Pa.md`)
+7. Every sheet row cites its map page (e.g. `operations/Orders.md`, `records-1-Ac-Pa.md`)
    so the implementer can make one targeted lookup if a detail is ever in doubt.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the

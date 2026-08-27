@@ -233,9 +233,30 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    **MUST load `dotnet-error-handling`** before writing that boundary. These rows belong in the
    FIRST sheet, not a later revision: the boundary is written early, and a caveat that arrives
    afterwards arrives too late to shape it.
-5. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
+5. **PRODUCTION READINESS** — a fixed eight-row table, every row carrying a *decision*. Naming a
+   skill in REQUIRED READING does not address a concern; it defers it. `N/A` is a legitimate
+   answer where it is genuinely true, but it must carry its reason — "N/A: read-only scope, no
+   writes" is a decision a reviewer can grade, a blank cell is an omission they cannot.
+
+   | # | Concern | The decision the plan must record |
+   |---|---|---|
+   | 1 | **Credential fail-fast** | Where credentials are bound, and that the host refuses to start when one is missing or blank — rather than discovering it as a 401 on the first call in production. Basic auth needs **both** halves; a blank auth token is not a missing one. |
+   | 2 | **Secret sourcing & rotation** | Where the secret comes from, and that `AddTwilioSdkClient` builds the options object **once at registration** and captures it in the singleton — so a rotated auth token does not take effect until the process restarts. If rotation without a restart is required, say how. |
+   | 3 | **Total timeout budget** | The number the caller actually gets, not the knob. `Timeout` is **per attempt**: under the defaults a hung `GET` costs ≈407s and a hung `POST` ≈100s. State the budget and where it is enforced — a `CancellationToken` deadline is the only thing that bounds a whole call. |
+   | 4 | **Write-retry ownership** | Which of the scope's writes the SDK may resend and which it may not. The default `HttpMethodsToRetry` is `GET, HEAD, PUT, OPTIONS`, so `POST`/`PATCH`/`DELETE` are never resent by the SDK — and `PUT` **is**. |
+   | 5 | **Idempotency & ambiguous writes** | For each write in scope: the key it uses, or that none exists. Only **8 of 887** operations take one — `idempotencyKey` as a form field on `CreatePayments`, `UpdatePayments`, `CreateUserDefinedMessage`, `CreateUserDefinedMessageSubscription`, and as a caller-supplied header on the four `ConversationsV2` operations. The injected `Idempotency-Key` header on the other 430 writes is **not** a key and must not be cited as one. Where no key exists, record the reconciliation path instead. |
+   | 6 | **Observability** | What is logged at which level, that **JSON request bodies are logged unredacted** when `LogRequestBody` is on, and which correlation id reaches your own logs. |
+   | 7 | **Sensitive data** | Whether the scope carries data you would not want in a log — phone numbers, message bodies, recording URLs, call metadata. If it does: `LogRequestBody` stays off **and** `LoggerFactory` is assigned explicitly, so `TWILIOSDKCLIENT_LOG=trace` cannot switch it on from outside the code. Form bodies are masked only by deny-list, so a key you have not listed prints in the clear. |
+   | 8 | **Environment selection** | Which base URL each deployment talks to — and note that there is only one. `ServerEnvironment` has exactly **one** member, `Production`, and every call resolves through `Server.Default.Production.BaseUrl` (`https://api.twilio.com`). **This SDK has no sandbox.** A dev run, an integration test and a production deployment all reach live Twilio unless you point `BaseUrl` somewhere else yourself: real messages sent, real charges. Say what each environment does about that. |
+
+   A reviewer grades this from the table alone: each row either records a decision or records why
+   it does not apply. A row that points at a skill, restates the concern, or sits blank is **not
+   addressed**. Rows 5, 7 and 8 are the ones where "not addressed" costs something that cannot be
+   recovered afterwards — a duplicate charge, personal data in a log, or a test suite that sends
+   real SMS to real numbers.
+6. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
    that blocks planning. An empty section is a valid outcome; an invented fact is not.
-6. Every sheet row cites its map page (e.g. `operations/Api20100401Message.md`, `records-1-Ac-Ca.md`)
+7. Every sheet row cites its map page (e.g. `operations/Api20100401Message.md`, `records-1-Ac-Ca.md`)
    so the implementer can make one targeted lookup if a detail is ever in doubt.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the
