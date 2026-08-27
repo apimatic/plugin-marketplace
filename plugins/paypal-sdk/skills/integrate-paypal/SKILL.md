@@ -133,14 +133,13 @@ place, and its edits collide with yours. This holds for an agent you spawned AND
 resumed via a follow-up message (a resumed or backgrounded agent is still running). The one
 thing you may do during a wait is the **read-only** Step-1 prerequisite work (repo survey,
 restore, baseline build, env checks) — it touches no project file. When those are done and the
-agent is still running, end your turn with a brief status update rather than sitting inside the
-turn: a subagent's completion notification can only reach you at a turn boundary, so ending the
-turn is how you actually receive it.
+agent is still running, poll the path you dictated rather than wait to be told — check it,
+print one line, sleep about thirty seconds, repeat. **Keep the sleeps short and print every
+pass**: a long silent sleep is indistinguishable from a hung process.
 
-Ending the turn here is not handing back to the user, not deferring work, and not the kind of
-early stop that leaves the task unfinished — it is the mechanism for making progress on work
-that is genuinely running in the background. Treat it as continuing the task, not pausing it:
-the moment the notification arrives, pick the plan straight back up.
+The sheet ends with its REQUIRED READING block, so poll until that block is present, not just
+the file. If it is still incomplete after about thirty minutes the agent is gone — say so and
+re-spawn it once with the same scope and path.
 
 ## Anti-patterns — never do these
 
