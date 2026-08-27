@@ -11,13 +11,22 @@
 # briefs, and a cross-agent comparison silently becomes a cross-brief comparison with no error
 # to warn you. Edit both files in the same commit, always.
 #
-# TWO SILENT FAILURES on Codex, verified 2026-08-25 (see docs/cross-platform-agents.md):
-#   1. Named custom-agent invocation is NOT exposed in tool-backed sessions - the spawn_agent
-#      surface offers generic spawning only (openai/codex#15250, open, bug + tool-calls). The
-#      child then starts with no developer_instructions and nothing errors, so the brief below
-#      simply never arrives. Interactive CLI binding by name does work.
-#   2. Project-scoped .codex/agents/ loads ONLY in a trusted project; an untrusted one skips
-#      the .codex/ layer entirely. ~/.codex/agents/ and $CODEX_HOME/agents/ are unaffected.
+# CODEX SUBAGENT STATUS, rechecked 2026-08-27 (see docs/cross-platform-agents.md):
+#   1. Named custom-agent invocation from tool-backed sessions used to be broken:
+#      openai/codex#15250, "Custom subagents in .codex/agents are not accessible from
+#      tool-backed Codex sessions as docs imply". That issue is CLOSED as completed
+#      (2026-08-05T03:53:06Z); the maintainer's closing note reads, in full, "Tool-backed
+#      sessions expose and apply configured agent roles."
+#      An earlier revision of this file recorded it as OPEN. It had been closed for three
+#      weeks by then - the claim was wrong when written, not merely stale.
+#      Residual risk is version skew, not the bug: bundled builds lag, and the VS Code
+#      extension was still shipping codex-cli 0.144.5 in July 2026. On a build older than
+#      the fix a child still starts with no developer_instructions and nothing errors.
+#   2. Project-scoped .codex/agents/ loads ONLY in a TRUSTED project. An untrusted one skips
+#      the .codex/ layer entirely and says nothing. ~/.codex/agents/ and $CODEX_HOME/agents/
+#      are unaffected - which is why the install order names $CODEX_HOME/agents/ first.
+#
+# codex-cli at the time of writing: rust-v0.149.0 (2026-08-20).
 # Confirm the brief actually arrived before treating any codex run as a data point.
 # The benchmark harness copies this into the per-run $CODEX_HOME/agents/ at provision, so runs
 # need no manual install. A human working by hand copies it to .codex/agents/ and restarts Codex.

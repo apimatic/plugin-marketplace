@@ -34,6 +34,8 @@ PAIRS = [
      "plugins/twilio-sdk/codex/agents/twilio-sdk.toml"),
     ("plugins/maxio-sdk-merged/agents/maxio-sdk.md",
      "plugins/maxio-sdk-merged/codex/agents/maxio-sdk.toml"),
+    ("plugins/paypal-sdk/agents/paypal-sdk.md",
+     "plugins/paypal-sdk/codex/agents/paypal-sdk.toml"),
 ]
 
 OPEN = "developer_instructions = '''\n"

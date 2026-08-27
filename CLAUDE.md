@@ -13,7 +13,7 @@ This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Cla
 | `maxio-sdk` | skills + map, .NET | Claude Code |
 | `maxio-sdk-merged` | skills + map, .NET | Claude Code, Cursor, Codex |
 | `maxio-sdk-lean` | skills + map-in-SDK, .NET | Claude Code |
-| `paypal-sdk` | skills + map, .NET | Claude Code, Cursor |
+| `paypal-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
 | `twilio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
 
 No plugin currently ships to all four harnesses.
@@ -133,8 +133,8 @@ MCP-backed plugins carry one manifest per IDE, and each manifest points at its o
 - VS Code: root `plugin.json` (Copilot format) → `.mcp.json` (header `VSCode`)
 
 (The five SDK plugins are the exception: they have no MCP server, so their manifests point at no MCP config.
-`maxio-sdk` and `maxio-sdk-lean` ship only the Claude Code manifest; `maxio-sdk-merged` and `twilio-sdk`
-add Cursor and Codex; `paypal-sdk` adds Cursor. None of the five ships a VS Code manifest.)
+`maxio-sdk` and `maxio-sdk-lean` ship only the Claude Code manifest; `maxio-sdk-merged`, `twilio-sdk`
+and `paypal-sdk` add Cursor and Codex. None of the five ships a VS Code manifest.)
 
 Codex is carried differently from the others: the agent body cannot live in a Markdown file with
 frontmatter, so it is duplicated into `codex/agents/<agent>.toml` under `developer_instructions`. That

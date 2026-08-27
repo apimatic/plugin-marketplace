@@ -68,24 +68,39 @@ directory:
 That is why each Codex-targeting plugin carries codex/agents/<name>.toml holding the .md
 body verbatim under developer_instructions, kept in sync by hand.
 
-⚠ TWO SILENT FAILURES, both verified 2026-08-25:
+⚠ ONE STANDING SILENT FAILURE, and one that was fixed before we wrote it down
+   (rechecked 2026-08-27):
 
-1. Named custom-agent invocation is NOT available in tool-backed sessions. The spawn_agent
-   tool surface exposes generic spawning only, with no parameter for "spawn the agent defined
-   in .codex/agents/x.toml" — openai/codex#15250, open, labelled bug + tool-calls. Interactive
-   CLI binding by name does work: confirmed live on codex-cli 0.147.0 (gpt-5.6-sol,
-   2026-08-20) for the maxio carrier, agent_path=/root/maxio_sdk, brief arriving as a
-   `developer` role message. So whether our router's "spawn the <api>-sdk agent" instruction
-   reaches the brief depends on the session type, and when it does not, the child spawns
-   generically with no developer_instructions and nothing errors.
+1. FIXED — and this entry was wrong when it was written. Named custom-agent invocation from
+   tool-backed sessions was genuinely broken: openai/codex#15250, "Custom subagents in
+   .codex/agents are not accessible from tool-backed Codex sessions as docs imply". This
+   document and all three carriers described that issue as **open**. It was closed as
+   completed on **2026-08-05T03:53:06Z** — twenty days before the 2026-08-25 stamp above —
+   with the maintainer's closing note, in full: "Tool-backed sessions expose and apply
+   configured agent roles."
+
+   The verification that produced this entry checked that the issue existed and read its
+   labels. It did not check `state`, and an issue's number and labels survive its closure
+   unchanged, so nothing about the evidence looked stale. That is the failure mode worth
+   keeping: a citation that is real, specific and current-looking, and wrong about the one
+   field that mattered.
+
+   What survives is version skew rather than the bug. The fix ships in a codex-cli build;
+   bundled builds lag, and the VS Code extension was still shipping codex-cli 0.144.5 in July
+   2026. On a build older than the fix, a child still spawns with no developer_instructions
+   and nothing errors. Interactive CLI binding by name was confirmed live on codex-cli 0.147.0
+   (gpt-5.6-sol, 2026-08-20) for the maxio carrier — agent_path=/root/maxio_sdk, brief
+   arriving as a `developer` role message. Current release at the time of writing:
+   rust-v0.149.0 (2026-08-20).
 
 2. Project-scoped .codex/agents/ loads ONLY in a trusted project. An untrusted project skips
    the .codex/ layer entirely — deliberate, it blocks supply-chain injection of agent
    definitions — so a user who clones the repo and declines the trust prompt gets no agent,
    silently. ~/.codex/agents/ and $CODEX_HOME/agents/ are unaffected.
 
-Treat any Codex result as unverified until the brief is confirmed to have arrived. The
-carriers' headers carry the same warning.
+Treat any Codex result as unverified until the brief is confirmed to have arrived — on an
+older bundled build the delivery failure is still silent, and item 2 is unaffected by the fix.
+The carriers' headers carry the same warning.
 
 CLAIMS CHECKED AND REJECTED  (2026-08-25)
 ─────────────────────────────────────────
