@@ -396,6 +396,30 @@ def _p_pan_models(ctx: Ctx, a: dict):
     return True, "%d models, exactly the documented set, none of them a response" % len(found)
 
 
+@probe("signature-verifier-has-no-callers")
+def _p_verifier_unused(ctx: Ctx, a: dict):
+    """`SignatureVerifier` is referenced nowhere but its own file.
+
+    The skills tell a reader that inbound-webhook signature verification is
+    theirs to write. That is only true while nothing generated calls the
+    verifier — an `internal` type is exactly what you would expect generated
+    code to use, so the day a concrete parser starts calling it, the guidance
+    is telling people to hand-roll a check the SDK already performs."""
+    own, callers = None, []
+    for rel in ctx.files("**/*.cs"):
+        if rel.endswith("SignatureVerifier.cs"):
+            own = rel
+            continue
+        if "SignatureVerifier" in (ctx.read(rel) or ""):
+            callers.append(rel)
+    if own is None:
+        raise Unsettleable("no SignatureVerifier.cs in this fixture")
+    if callers:
+        return False, "%d file(s) now reference SignatureVerifier: %s" % (
+            len(callers), ", ".join(sorted(callers)[:5]))
+    return True, "referenced only by %s" % own
+
+
 @probe("no-converter-on-model-property")
 def _p_no_model_converter(ctx: Ctx, a: dict):
     """No model property carries a [JsonConverter], other than the generated

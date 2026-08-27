@@ -169,6 +169,12 @@ fixture that exercises them exists:
 - **Pagination and SSE at the operation level** — neither SDK generates a paginated or a
   streaming operation, so `Pageable<TPage,TItem>` and `Task<IAsyncEnumerable<T>>` are
   verified as Core types but inferred as method signatures.
+- **Webhook events at the operation level** — neither spec declares webhook events, so no concrete
+  `WebhookEventParser`/`WebhookEvent` subclass is generated and the `Signing/` verifier has zero callers.
+  Whether a spec that *does* declare events generates a parser, and whether that parser calls the internal
+  `SignatureVerifier`, is unsettled here. The four `webhooks.*` assertions pin what is true on a fixture
+  with no events; they cannot speak for one that has them.
+
 - **OAuth2 grants other than client-credentials** — the authorization-code and password
   paths are read from Core and from compiled probes, never from a live exchange.
 

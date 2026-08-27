@@ -86,6 +86,18 @@ MUTATIONS = [
      '[JsonPropertyName("value")]',
      '[JsonPropertyName("number")]',
      "an eighth undocumented model started carrying a raw PAN"),
+    ("Core/Webhooks/Signing/SignatureVerifier.cs",
+     "internal sealed class SignatureVerifier",
+     "public sealed class SignatureVerifier",
+     "the webhook signature verifier became public"),
+    ("Core/Webhooks/WebhookEventParser.cs",
+     "return CreateEvent(root, request);",
+     "return Verify(request) ? CreateEvent(root, request) : default!;",
+     "the webhook parser started verifying signatures"),
+    ("Core/Webhooks/WebhookRequest.cs",
+     "public sealed class WebhookRequest",
+     "public sealed class WebhookRequest // paired with SignatureVerifier",
+     "something outside its own file started referencing the verifier"),
 ]
 
 

@@ -203,6 +203,33 @@ public sealed class MyService({Api}Client client)
 }
 ```
 
+## Inbound webhooks — what `Core/Webhooks/` does and does not give you
+
+Every emitted SDK ships a `Core/Webhooks/` tree: `WebhookRequest`, `WebhookEvent<…>`,
+`WebhookEventParser<…>`, and a `Signing/` folder holding `SignatureVerifier`. Three facts about it, verified
+on both sampled 4.0.0 SDKs, decide whether any of it is usable:
+
+- **`SignatureVerifier` is `internal sealed`, with no `InternalsVisibleTo`.** You cannot call it, construct
+  it, or subclass it from your code. It is fully implemented — HMAC, digest encodings, replay tolerance —
+  and on both samples it has **zero callers**.
+- **`WebhookEventParser<TEvent>.Parse` verifies nothing.** It parses the body with `JsonDocument.Parse`,
+  checks the root is a JSON object, and hands off to an abstract `CreateEvent`. The name reads like a
+  security boundary; it is a deserializer.
+- **`WebhookEventParser` and `WebhookEvent` are `public abstract`, and neither sampled SDK generates a
+  concrete subclass**, because neither spec declares webhook events. The public machinery has nothing to
+  instantiate — a base class waiting on generated code that was never emitted.
+
+So on an SDK with no generated events, signature verification is yours to write, against the provider's
+published scheme. `WebhookRequest` remains useful on its own — `FromStream`, `FromBytes`, `TryGetHeader`
+give you a body-and-headers holder to verify against — but it computes nothing for you.
+
+> **Not settled by either sample.** Whether a spec that *does* declare webhook events generates a concrete
+> parser, and whether that generated parser calls the internal `SignatureVerifier`, is unknown here — no
+> sampled SDK exercises it. An `internal` verifier is exactly what you would expect if generated code is
+> its intended caller, so do not read "verification happens outside the SDK" as a property of the
+> generator. It is what is true when no events were generated. Look for a `WebhookEvent` subclass in the
+> emitted tree before assuming either way.
+
 ## Next
 
 - Configure authentication → **dotnet-authentication**

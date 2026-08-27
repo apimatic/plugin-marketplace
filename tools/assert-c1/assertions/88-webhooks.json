@@ -1,0 +1,37 @@
+{
+  "group": "webhooks",
+  "note": "Core/Webhooks/ ships on every emitted SDK, and the skills tell a reader that inbound signature verification is theirs to write. Three things have to stay true for that to be safe advice: the verifier stays unreachable, nothing generated starts calling it, and the parser keeps not verifying. All three are Core facts, so they are checked on the generator template too - which is the run that would catch the generator wiring verification up.",
+  "assertions": [
+    {
+      "id": "webhooks.verifier-is-internal",
+      "kind": "present",
+      "file": "Core/Webhooks/Signing/SignatureVerifier.cs",
+      "pattern": "internal\\s+sealed\\s+class\\s+SignatureVerifier",
+      "claim": "SignatureVerifier is `internal sealed`, so no caller code can construct or subclass it.",
+      "defends": "dotnet-client-initialization - Inbound webhooks, first bullet"
+    },
+    {
+      "id": "webhooks.no-internalsvisibleto",
+      "kind": "absent",
+      "glob": "**/*.cs",
+      "pattern": "InternalsVisibleTo",
+      "claim": "No InternalsVisibleTo is emitted, so the internal verifier stays unreachable even from a friend assembly.",
+      "defends": "dotnet-client-initialization - Inbound webhooks, first bullet"
+    },
+    {
+      "id": "webhooks.parser-does-not-verify",
+      "kind": "absent",
+      "file": "Core/Webhooks/WebhookEventParser.cs",
+      "pattern": "SignatureVerifier|\\bVerify\\s*\\(",
+      "claim": "WebhookEventParser.Parse performs no signature verification - it parses JSON and delegates to CreateEvent.",
+      "defends": "dotnet-client-initialization - Inbound webhooks, second bullet"
+    },
+    {
+      "id": "webhooks.verifier-has-no-callers",
+      "kind": "probe",
+      "probe": "signature-verifier-has-no-callers",
+      "claim": "SignatureVerifier is referenced nowhere but its own file - nothing generated calls it.",
+      "defends": "dotnet-client-initialization - Inbound webhooks, first bullet"
+    }
+  ]
+}
