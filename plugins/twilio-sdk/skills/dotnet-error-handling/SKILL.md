@@ -10,7 +10,14 @@ description: Error and exception handling for an APIMatic-generated .NET SDK in 
      RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
      BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
      for retry-ineligible requests.
-     verified-this-file: 2026-08-25 — namespace layout and the four Case-A usings, against Errors/*.cs and Core/ErrorResponse. Per-operation accessor claims are NOT covered by this stamp (they are spec-derived, not Core).
+     verified-this-file: 2026-08-28 — UNIFIED, API-PORTABLE copy, byte-identical in paypal-sdk and
+     twilio-sdk and verified against both sampled SDKs at once (checkout-sample-sdk@v1.0.1: 39/40
+     Case A, typed bodies with no status; twilio-csharp-sdk@main: 858 of the 887 mapped operations Case B, RawError with
+     StatusCode). It states no API-definition-dependent fact unconditionally — error-case mix,
+     discriminators and accessor names come from the contract sheet / map at use time. Do NOT add
+     per-API counts, provider names or accessor censuses here: that is exactly what drifted the
+     copies apart before. Namespace layout and the four Case-A usings verified against Errors/*.cs
+     and Core/ErrorResponse; per-operation accessor claims are spec-derived, not Core.
      CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
      (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
      differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
@@ -23,6 +30,12 @@ description: Error and exception handling for an APIMatic-generated .NET SDK in 
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{Operation}`,
 > `{ApiGroup}`, `{RootNamespace}`) — replace it with the concrete identifier from the source.
+>
+> **One skill, every error shape.** This file covers every shape the 4.0.0 generator can emit.
+> Which shapes YOUR SDK uses — which case each operation is, whether typed bodies carry a status,
+> which `TryGet…` accessors exist — are facts of the API definition, not of this skill: take them
+> from the operation's map row or the contract sheet, and **apply only the guidance that
+> matches**. An API can be all Case B, nearly all Case A, or a mix.
 
 Endpoint methods **throw on non-success responses** by default (for a non-throwing alternative, see the
 **`ApiResult`** section below). The thrown type is always the generic `SdkException<TError>` — but `TError`
@@ -32,8 +45,8 @@ comes in **two shapes**, depending on the operation:
   `Errors/` for the operation; `TError` is that type and you read it with typed `TryGet*` accessors.
 - **`RawError` (Case B)** — when the operation has no `{Operation}Error` type, `TError` is `RawError`
   *directly*. `RawError` is **not** an `ApiError` and has **no** `TryGet*` / `TryGetRawError` accessors; you
-  read the status and body straight off `ex.Error`. This is common — many operations have no typed error
-  model and so throw `SdkException<RawError>`.
+  read the status and body straight off `ex.Error`. How common this is, is an API fact — some APIs are almost
+  entirely Case B, others almost entirely Case A; each operation's map row says which it is.
 
 `SdkException<TError>` is declared `public sealed class SdkException<TError> : Exception` with **no**
 `where TError : ApiError` constraint — which is exactly why `TError` can be either an `ApiError` model or a
@@ -124,11 +137,11 @@ memory:
 1. **List *every* `TryGet...` accessor the operation's `{Operation}Error` declares.** The operation's map
    row already lists them (with the HTTP status each maps to); take them from the contract sheet.
    They are the `public bool TryGet...(out ...)` methods on the `{Operation}Error` type (grounded
-   from the SDK map/source). These accessors are generated per operation — one per response the operation maps —
+   from the SDK map/source). These accessors are generated per operation — one per distinct error body the operation maps —
    and their names embed the body type. Expect a mix of:
    - **typed-body accessors** named after a model or scalar — `TryGetValidationErrors`, `TryGetProblemDetails`,
      `TryGetString`, `TryGetLong`, …;
-   - **status-specific `RawError` accessors** — e.g. `TryGetNotFound(out RawError)`, `TryGetNoContent(out RawError)`;
+   - **status-specific `RawError` accessors** — e.g. `TryGetNoContent(out RawError)` — the names on your operation come from its map row;
    - the inherited **`TryGetRawError(out RawError)`**, which every `{Operation}Error` exposes.
 2. **Write one `if` / `else if` branch per `TryGet*` method — cover them all, and put `TryGetRawError`
    *last*.** Each public `TryGet*` corresponds to a status/body the operation can return; skip one and you
@@ -210,8 +223,8 @@ catch (SdkException<RawError> ex)
 
 Case B needs no `.Errors` using — `RawError` lives under `{RootNamespace}.Core.ErrorResponse`. Its public
 members are `StatusCode`, `ReadAsBytes`/`ReadAsString`/`ReadAsJson<T>`; note
-`ReadAsJson<T>()` **throws `JsonException`** when the body isn't valid JSON — and a `RawError` body often
-isn't (this is the no-typed-error-model case), so prefer `ReadAsString()` unless you know it's JSON.
+`ReadAsJson<T>()` **throws `JsonException`** when the body isn't valid JSON — and a `RawError` body may not be
+(a gateway or proxy can answer with HTML or plain text), so prefer `ReadAsString()` unless you know it's JSON.
 
 ## Result-style alternative — `ApiResult<TResponse, TError>` (no throwing)
 
@@ -277,7 +290,21 @@ that boundary and rethrow the same error type you already use for API errors —
 code has a single failure type to handle instead of two unrelated ones:
 
 ```csharp
-catch (SdkException<RawError> ex)                // API error (non-2xx)
+// Keep the arms the operations you call actually need — each operation's map row names its case.
+catch (SdkException<{Operation}Error> ex)        // a Case A operation — typed error; may carry NO status
+{
+    // Carry the body's identity fields (the provider's own error code or name, any correlation
+    // id) — the typed body is the only thing that carries them, and it does not outlive this
+    // catch. Check the accessors in the SAME order as the Case A ladder above: every typed
+    // accessor this operation declares (names from its map row), then the RawError-yielding
+    // arms LAST — those are the typed-path branches that DO carry a status.
+    if (ex.Error.TryGet{Body}(out {Body} e))
+        throw new {ProviderException}(e.{MessageField}, /* + identity fields — names from the model's map row */, ex);
+    if (ex.Error.TryGetRawError(out RawError raw))
+        throw new {ProviderException}($"HTTP {(int)raw.StatusCode}", ex);
+    throw new {ProviderException}("unrecognised error shape", ex);
+}
+catch (SdkException<RawError> ex)                // a Case B operation — RawError carries the status
 {
     // Carry the status. The boundary ladder below is the only place it can be read back, and a
     // status dropped here cannot be recovered anywhere downstream.
@@ -309,16 +336,37 @@ outcome and apply the identical catch ladder at every call site — same order, 
 When the same kind of failure (a validation rejection, say) becomes a different result on a
 different operation, callers can't reason about it. One shared ladder, not per-call improvisation.
 
-**Keep distinct failures distinct — carry the provider's status.** When you convert a provider
-error, carry its HTTP status on your own error type and map it back deliberately: a provider
-**4xx** (validation, conflict, not-found — the caller can act on it) should surface as that same
-client **4xx**; a transport failure or an unknown error has no meaningful client status and should
-surface as **5xx**. Collapsing every failure into one blanket status (e.g. 502 for everything)
-throws away the one signal that separates "you sent something invalid" from "the provider is down."
+**Keep distinct failures distinct — and pick the discriminator from what the error path actually
+delivers.** Your error type needs to carry something that separates "you sent something invalid"
+from "the provider is down". The reflex is the HTTP status; whether you *can* carry one is an API
+fact, settled from the contract sheet before the boundary is written:
+
+- **Operations that throw `SdkException<RawError>`** (Case B) hand you `StatusCode` directly —
+  carry the status and key the ladder on it. A provider **4xx** the caller can act on surfaces as
+  that same client **4xx**; transport failures and unknowns surface as **5xx**.
+- **Operations with a typed `{Operation}Error`** (Case A) need checking before you assume a
+  status: `SdkException<TError>` itself has exactly one member, `Error`, with no `StatusCode` on
+  it, and on some APIs the typed bodies carry no status either. There the discriminator is the
+  body's own **identity fields** — the provider's error code or name, fine-grained issue
+  codes, a correlation id — which usually say more than a status would anyway (whether each field is `required` or nullable
+  is on the model's map row). And if the typed body itself declares a status field, that
+  body-carried status qualifies for the status-keyed ladder below — read it from the body and
+  key on it. A typed error
+  class can also route several documented statuses into ONE accessor (so "caller's fault or
+  provider's" may not be answerable from a status even in principle), while some operations add
+  status-specific `TryGet…(out RawError)` accessors — typed-path branches that DO carry one. The
+  operation's map row lists all of it.
+- **Accessor names differ per operation** — they embed the body type (`TryGet{Body}`), so a
+  guessed name is a compile error (`CS1061`), not a runtime surprise. Take each name from the
+  operation's own map row every time.
+
+Whichever discriminator applies, collapsing every failure into one blanket status (e.g. 502 for
+everything) throws away the one signal that separates "you sent something invalid" from "the
+provider is down."
 
 One ladder, in the single place where your error type becomes a caller-facing status. This is where
-the status you carried gets read back — a `{ProviderException}` arm with **no status branch** is
-incomplete, and is the most common way this rule is lost:
+the discriminator you carried gets read back — a ladder with **no branch reading it** is
+incomplete, and is the most common way this rule is lost. The status-keyed form (Case B):
 
 ```csharp
 static (int Status, string Message) Map(Exception ex) => ex switch
@@ -337,10 +385,34 @@ static (int Status, string Message) Map(Exception ex) => ex switch
 };
 ```
 
-**Not every provider 4xx is the caller's fault.** A `401`/`403` means *your* credentials are wrong
-and a `429` means *your* quota is spent — passing either straight through tells the caller they are
-unauthenticated or throttled when they are neither. Those two belong in the 5xx bucket; the rest of
-the 4xx range is the caller's to fix.
+When the discriminator is a body field rather than a status, the **same ladder keys on that
+field** — identical arms, different `when` clauses (illustrative — your provider's codes may be strings or
+ints; use the ones it documents):
+
+```csharp
+    // OUR credentials or OUR quota — the caller did nothing wrong and cannot fix it.
+    {ProviderException} p when p.Code is "AUTH_FAILURE" or "RATE_LIMITED" => (502, "Provider unavailable."),
+    // The provider rejected THE CALLER'S request — they can act on it.
+    {ProviderException} p when p.Code is "INVALID_REQUEST"                => (400, p.Message),
+    {ProviderException} p when p.Code is "NOT_FOUND"                      => (404, p.Message),
+    // A code you have not mapped yet — an unknown, not a caller error.
+    {ProviderException} p                                                 => (502, p.Message),
+```
+
+**Not every provider failure is the caller's fault.** An authentication or authorization failure
+(`401`/`403`, or the equivalent body code) means *your* credentials are wrong, and a rate-limit
+failure (`429`, or its code) means *your* quota is spent — passing either straight through tells
+the caller they are unauthenticated or throttled when they are neither. Those belong in the 5xx
+bucket; validation, conflict and not-found are the caller's to fix. And keep the default arm at
+5xx: a status or code you have not mapped is an unknown, not a caller error — the provider can add
+one without warning you.
+
+**If typed errors on your SDK carry no status and you genuinely need the transport status** — for
+metrics, or a provider-availability SLA — a `DelegatingHandler` is the only route that sees every
+response before the SDK maps it. Two caveats: under retry it observes *N* responses for one
+logical call, so "the status" means the last attempt's; and it needs an `AsyncLocal` or a scoped
+service to reach the catch site, which is ambient state. Do not use it to drive ordinary error
+mapping — the body's identity fields are the better key and need none of that machinery.
 
 **An unreadable body is not one case but two — decide which before you map it.** An unreadable
 **success** body is genuinely unknown: 5xx. An unreadable **error** body is not — the provider

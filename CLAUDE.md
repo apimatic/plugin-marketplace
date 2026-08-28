@@ -131,26 +131,39 @@ If a portable agent format emerges, the agent can come back — its content is a
 ## The `dotnet-*` companion skills are shared, but not uniform
 
 Three plugins (`maxio-sdk`, `paypal-sdk`, `twilio-sdk`) each carry their own copy of the seven
-`dotnet-*` skills. The copies have **drifted**, and the drift is not
-accidental: they describe the emitted `Core/`, and the SDKs behind these plugins come from **two different
-generator versions**. Before editing any `dotnet-*` skill, see the provenance stamp at the top of that
-file — it names the generator surface the text was verified against. Copying a correction from one plugin
-to another without checking that stamp will introduce a falsehood.
+`dotnet-*` skills, describing the emitted `Core/` of **two different generator versions**. Before editing
+any `dotnet-*` skill, see the provenance stamp at the top of that file — it names the generator surface
+the text was verified against. Copying a correction from one plugin to another without checking that
+stamp will introduce a falsehood.
 
-Measured: **21 copies, 16 distinct versions.** `dotnet-configuration-resilience` and
-`dotnet-error-handling` differ in all three.
+Measured: **21 copies, 14 distinct versions.** The paypal-sdk and twilio-sdk copies are **byte-identical
+for all seven — deliberately**. They are API-portable: no API-definition-dependent fact is stated
+unconditionally (error-shape mix, discriminators, key parameters and pagination strategies come from the
+contract sheet / map at use time, and each file opens by saying so), which is what lets a plugin
+generator ship them as verbatim static files for the 4.0.0 surface. Where the two APIs genuinely need
+opposite advice — twilio's errors carry `ex.Error.StatusCode`, paypal's typed errors carry none — the
+skill teaches both strategies and keys the choice on the operation's map row, instead of hardcoding
+either. The maxio-sdk copies differ in all seven because they describe the pre-4.0.0 surface: that
+difference is a surface fact, not drift.
 
-That makes the seven names **ambiguous at install time**, because a bare `dotnet-error-handling` names
-three different documents. Two of this family installed together — a realistic pairing, since an
-integration can need both PayPal and Twilio — expose two different skills under one name, and nothing
-announces which one resolves. The consequence is concrete: twilio's `dotnet-error-handling` builds its
-boundary ladder on `ex.Error.StatusCode`, which is right there (858 of 887 operations are Case B) and
-unavailable on paypal (39 of 40 are Case A, carrying no status at all). A maxio copy would describe a
-pre-4.0.0 runtime entirely.
+The seven names are therefore **ambiguous at install time** only when a pairing includes `maxio-sdk`: a
+bare `dotnet-error-handling` then names two different documents — one per generator surface — and
+nothing announces which resolves.
 
 Each plugin's getting-started skill now states this, and each `integrate-*` skill's plan format requires
 the REQUIRED READING block to write skill names **plugin-qualified** (`paypal-sdk:dotnet-error-handling`)
 — or, where the harness has no qualified form, to name the owning plugin in the same line.
+
+### integrate-* and *-getting-started are rendered from templates
+
+The two heavily API-specific skills are generated: `templates/plugin/` holds their template forms
+(frame + slots) with the per-API content in `values/{api}.json`, extracted from the paypal/twilio
+pair — same generator surface, so every difference between those two copies was by definition an
+API slot. `python templates/plugin/render.py --check` proves the shipped copies match the
+templates; a failing check means someone edited a shipped copy directly — move the edit into the
+frame or the values file and re-render. maxio-sdk is not a rendering target (pre-4.0.0 frame
+facts), and `templates/plugin/README.md` records the map-location change the frames must absorb
+when generator-emitted SDKs start carrying the map in the SDK repo.
 
 ### The claims are executable — run them before you trust them
 

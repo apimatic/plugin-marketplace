@@ -49,7 +49,7 @@ C#/.NET — do nothing; this skill does not apply.
   though you knew it exists — unless you have read that code. Name configuration by its binding
   key, never by a raw environment variable, and give the default the map documents where there is
   one: a setting you invent a name for is a setting no deployment will supply. Both rules hold for
-  every sheet row, every answer, and every fix.
+  every sheet row, every answer, and every line of code.
 
 ## Workflow
 

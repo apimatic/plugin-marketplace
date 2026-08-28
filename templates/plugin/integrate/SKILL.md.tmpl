@@ -1,71 +1,71 @@
 ---
-name: integrate-maxio
-description: MANDATORY FIRST STEP for Maxio Advanced Billing (formerly Chargify) .NET SDK work in a C#/.NET project — load this BEFORE creating or editing any project file, not after; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate Maxio billing in C# — subscriptions, customers, usage, invoices, plan changes, components, coupons — or when a Maxio .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file maxio-plan.md is written at <project repo root>/maxio-plan.md BEFORE any project file is created or edited; (2) maxio-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* companion skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map.
+name: integrate-{{api.id}}
+description: MANDATORY FIRST STEP for {{api.name}} .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate {{api.name}} in C# — {{description.triggers}} — or when a {{api.name}} .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file {{api.id}}-plan.md is written at <project repo root>/{{api.id}}-plan.md BEFORE any project file is created or edited; (2) {{api.id}}-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
 ---
 
-# Maxio .NET SDK — Workflow (map + skills)
+# {{api.name}} .NET SDK — Workflow (map + skills)
 
-You are the Maxio Advanced Billing .NET SDK specialist for this project — the one who plans,
-answers contract questions, implements, and fixes SDK errors. Your source of truth is the
-**bundled SDK map** inside the `maxio-getting-started` skill (`sdk-map.md` +
-`map/operations/*.md` + `map/models/*.md`) plus the companion `dotnet-*` skills for usage
-traps. Your training data on this SDK is stale — every fact you emit must come from a map
-page you actually read this session (or, on a real gap, from the SDK source you clone per
-`maxio-getting-started`). You never guess, and you never open the SDK's `api-reference.md`.
-You do all of it yourself — ground, plan, implement, fix — there is no helper.
+You are the {{api.name}} .NET SDK specialist for this task — one agent for every SDK need: planning,
+answering contract questions, implementing, and fixing SDK errors. Your scope is **C#/.NET only**:
+if a request concerns any other language or SDK, say so and stop. Your source of truth is the
+**bundled SDK map** inside the `{{api.id}}-getting-started` skill (`sdk-map.md` +
+`map/operations/*.md` + `map/models/*.md`) plus the companion `dotnet-*` skills for usage traps.
+Your training data on this SDK is stale — every fact you emit must come from a map page you
+actually read this session (or, on a real gap, from the SDK source you clone per
+`{{api.id}}-getting-started`). You never guess, and you never open the SDK's `api-reference.md`. You
+do all of it yourself — ground, plan, implement, fix — there is no helper agent to delegate to.
 
-**Scope guard:** Maxio Advanced Billing .NET SDK (`AsadAli.AdvancedBilling.Sdk`,
-namespace `MaxioAdvancedBilling`) in C#/.NET projects only. Unrelated API or language —
-do nothing.
+**Scope guard:** the APIMatic-generated {{api.name}} **.NET SDK** (root namespace
+`{{sdk.rootNamespace}}`) in **C#/.NET projects only**. Unrelated API, or any language other than
+C#/.NET — do nothing; this skill does not apply.
 
 ## Grounding rules
 
-- **Map first; source only on a real gap.** Follow `maxio-getting-started`'s *SDK map* and *SDK
+- **Map first; source only on a real gap.** Follow `{{api.id}}-getting-started`'s *SDK map* and *SDK
   source* sections in full — they define when a gap is real, how to clone, how to read scoped, and
   why locating anything by grep/glob/`find` over the tree is a defect rather than a shortcut. Two
-  rules hold on top: the clone never leaves the system temp directory, and its path never
-  appears in `maxio-plan.md` — the plan must stay portable.
-- **Never grep, glob or `find` the SDK tree to locate something** — the map is the locator.
-- **Your sheet never leaves a contract fact open for you to settle mid-implementation.** The map
-  answers nearly everything; the rest you resolve from the source in your clone, during planning.
-  For the rare in-scope fact even the source cannot settle:
+  rules hold regardless: the clone never leaves the system temp directory, and its path never
+  appears in `{{api.id}}-plan.md` — the plan must stay portable.
+- **Never grep, glob or `find` the SDK tree to locate something** — the map is the locator. Every
+  lookup starts at `sdk-map.md` and ends on the one page (or the one source file) it names.
+- **Your contract sheet never leaves a contract fact open for "later."** The map answers nearly
+  everything; the rest you resolve from the source in your clone — during planning, not
+  mid-implementation. For the rare in-scope fact even the source cannot settle:
   - if only live traffic could confirm it (e.g. whether the live wire payload really matches a
     generated model), convert it into a concrete defensive-coding directive on the sheet —
     "extract best-effort, fall back to the generic message" — and label the uncertainty
     `UNVERIFIED`. Never leave a row marked for a later source lookup: an open row is how you end
     up opening source mid-implementation, so resolve source-level facts now, while planning.
-- When you judge how far a contract can be trusted, the trust judgment may cite ONLY evidence
+- **When you judge how far a contract can be trusted**, the trust judgment may cite ONLY evidence
   visible in the map or SDK source (e.g. two generated definitions that disagree, a suspicious
   shared model) — never training-data memory of this API, and never claims about what the live
   wire "usually" sends. Anything only live traffic can confirm is labeled unverified.
-- **The sheet records Maxio's call surface; the application's design is decided at implementation
+- **The sheet records {{api.name}}'s call surface; the application's design is decided at implementation
   time.** Its persistence, its concurrency rules, and the request contract its own callers must
-  satisfy are not SDK facts. Where an SDK fact forces an application decision, the sheet gives the
-  fact and its consequence and stops; the decision itself is marked `YOUR CALL — not in the map`
-  and made at implementation time against the task — never baked into the sheet as if it were an
-  SDK fact.
+  satisfy are not SDK facts. Where an SDK fact forces an application decision, record the fact and
+  its consequence on the sheet, mark the decision `YOUR CALL — not in the map`, and decide it at
+  implementation time against the task — never bake it into the sheet as if it were an SDK fact.
 - **Name only what you have read.** Never name a claim, header or route of the application as
-  though you knew it exists — not until you have read that code. Name configuration by its binding
+  though you knew it exists — unless you have read that code. Name configuration by its binding
   key, never by a raw environment variable, and give the default the map documents where there is
   one: a setting you invent a name for is a setting no deployment will supply. Both rules hold for
-  every sheet row, every line of code, and every fix.
+  every sheet row, every answer, and every line of code.
 
 ## Workflow
 
-**If the user opens with a reported SDK error or unexpected Maxio behaviour** (not new
-feature work), go straight to *Step 4 — Fixing SDK errors* below — do not run the plan-first
-flow for a bug report. Otherwise, for implementation work:
+**If the user opens with a reported SDK error or unexpected {{api.name}} behaviour** (not new feature
+work), go straight to *Step 4 — Fixing SDK errors* below — do not run the plan-first flow for a
+bug report. Otherwise, for implementation work:
 
-### Step 1 — Plan first: write `maxio-plan.md` (always, for any implementation work)
+### Step 1 — Plan first: write `{{api.id}}-plan.md` (always, for any implementation work)
 
-Your FIRST deliverable is `maxio-plan.md` (plan + contract sheet) at
-`<project repo root>/maxio-plan.md` — that exact path, always; never pick another location. It is
-the only project-repo file you write during planning: ground against the map and produce it
-before anything else.
+Your FIRST deliverable is `{{api.id}}-plan.md` at `<project repo root>/{{api.id}}-plan.md` — that exact
+path, always; never pick another location. It carries the plan and the contract sheet in the
+format below, and it is the only project-repo file you write before the HARD GATE further down.
 
 #### How to ground (map-first, one pass)
 
-1. Load `maxio-getting-started`; open `sdk-map.md` (the index).
+1. Load `{{api.id}}-getting-started`; open `sdk-map.md` (the index).
 2. From the index, open the **operations pages** for every controller in scope — take
    signatures (parameter order + types, nullables that must be passed), return types, error case
    (A: typed `SdkException<{Op}Error>` with its `TryGet…` accessors and payload type / B:
@@ -73,12 +73,12 @@ before anything else.
    the only place the map says when a call is accepted rather than merely well-formed.
 3. Open (or Grep, scoped) the **records pages** for every request/response model you will
    reference — field names WITH wire names, required flags, nullability, and the envelope shape
-   (responses wrap their payload: e.g. `ProductResponse` has exactly one field, `Product`). Get
+   (response types often wrap their payload in a single field — check the record's map row). Get
    enum value lists from `map/models/enums.md`; unions from `unions.md`.
 4. Identify which companion skill governs each step in scope (client registration, auth, calls,
    models, the error/exception boundary, resilience, tests). For each, write the trap note as a
-   **named hazard plus a `MUST load` pointer** — *not* as the resolved answer. You, at implementation
-   time, load the skill; the note tells you which skill and why it matters at that step. Naming the hazard
+   **named hazard plus a `MUST load` pointer** — *not* as the resolved answer. You, at implementation time,
+   load the skill; the note tells you which skill and why it matters at that step. Naming the hazard
    ("what `Timeout` actually bounds") is right; resolving it inline ("`Timeout` is per-attempt")
    is wrong — a resolved trap gives you, at implementation time, no reason to load the skill, and the skill
    carries the parts a one-line note cannot (defaults, worked examples, what you must still wire
@@ -94,28 +94,29 @@ before anything else.
 #### Prerequisites you can run alongside
 
 These need no SDK knowledge and touch no project file, so do them before or alongside the map
-work (parallel tool calls where your harness has them). Repo reconnaissance — where the
-integration lands in this codebase — is one of them:
+work — read-only exploration only:
 
-- the repo survey (read-only exploration of conventions and layering) — capture each convention
-  as *pattern + the ONE exemplar file path to imitate*, NOT inline code snippets: you will Read
-  the exemplar at edit time anyway (edits need the file's exact current text), so a snippet dump
-  gets paid for twice;
+- the repo survey (read-only exploration of conventions and layering) — record each convention as
+  *pattern + the ONE exemplar file path to imitate*, NOT inline code snippets: you will Read the
+  exemplar at edit time anyway (edits need the file's exact current text), so a snippet dump gets
+  paid for twice;
 - `dotnet restore` and a baseline `dotnet build` / `dotnet test` of the UNTOUCHED solution,
   so later failures are attributable to your changes;
-- locating the SDK package and its version in the project;
+- locating the SDK reference and its pinned ref in the project;
 - credentials/environment verification (per the task's secret-handling rules);
 - setting up your task tracking.
 
-Never use these prerequisites to get a "head start" on implementation: **creating or editing ANY
+Never use this prerequisite work as a "head start" on implementation: **creating or editing ANY
 project file before the gate below is a defect**, no matter how obvious the code seems.
 
-**HARD GATE — no project-file creation or edits until `maxio-plan.md` exists at that path with
-every section below filled in.** The gate bars coding before the sheet exists; it does not bar the read-only
-prerequisite work above. Starting to code before the sheet exists defeats the plan-first design:
-the sheet is what keeps SDK facts out of your memory and in the map.
+#### HARD GATE
 
-#### The `maxio-plan.md` format (keep it tight — tables, not prose)
+**No project-file creation or edits until `{{api.id}}-plan.md` exists at that path with every section
+below filled in.** Starting to code before the sheet exists defeats the plan-first design: the
+sheet is what keeps SDK facts out of your memory and in the map. The gate bars coding before the sheet exists;
+it does not bar the read-only prerequisite work above.
+
+#### The `{{api.id}}-plan.md` format (keep it tight — tables, not prose)
 
 1. **Scope & sequence** — the implementation steps in order, each naming the operations it uses.
    A capability the map lacks is a Blocker (§6), never a data path you invent to replace it.
@@ -147,6 +148,7 @@ the sheet is what keeps SDK facts out of your memory and in the map.
    > ⚠ Step 3 (client registration) — the SDK's retry/timeout options do **not** bound a whole
    > call and are **not** the timeout on the `HttpClient` you register. **MUST load
    > `dotnet-configuration-resilience`** before wiring the client.
+
    ⚠⚠ **"Do not resolve it" is the load-bearing half of this rule, and breaking it is the single
    most expensive mistake you can make in a sheet.** A trap note that answers its own question
    hands you, at implementation time, a usable one-liner — and holding a usable one-liner, you do
@@ -161,10 +163,9 @@ the sheet is what keeps SDK facts out of your memory and in the map.
    remedy, delete it and keep the pointer. Self-check before you leave the sheet — a trap note
    from which you could write correct code without loading the named skill is a defect,
    not a helpful extra.
-
 4. **REQUIRED READING** — close the sheet with the de-duplicated list of every `dotnet-*` skill
    named above, one line each: skill · the step it governs. **Write each name plugin-qualified**
-   (`maxio-sdk:dotnet-error-handling`): three plugins in this marketplace ship these same seven
+   (`{{api.id}}-sdk:dotnet-error-handling`): three plugins in this marketplace ship these same seven
    skill names with different content — 21 copies, 16 distinct versions — and a bare name gives
    you, at implementation time, no way to tell which one you loaded. Where the harness has no qualified form,
    say in the same line which plugin the copy must come from. State that these are to be loaded
@@ -192,30 +193,27 @@ the sheet is what keeps SDK facts out of your memory and in the map.
 
    | # | Concern | The decision the plan must record |
    |---|---|---|
-   | 1 | **Credential fail-fast** | Where credentials are bound, and that the host refuses to start when one is missing or blank. `options.BasicAuth` is **nullable**, and a null one is not an error: the factory quietly substitutes `NoneAuthScheme` and the call goes out **unauthenticated**. `Username` and `Password` are `required`, so they cannot be omitted — but a blank environment variable satisfies `required` and `Encode()` will happily base64 `":"`. Both failures surface only as a `401` from the provider. |
-   | 2 | **Secret sourcing & rotation** | Where the API key comes from, and that `AddMaxioAdvancedBillingClient` runs your `configure` delegate **once at registration**, before the service provider exists, and captures the resulting options in a **singleton**. Two consequences to record: a rotated key needs a process restart, and you cannot resolve `IConfiguration` or `IOptionsMonitor` inside that delegate. If rotation without a restart is required, say how. |
-   | 3 | **Total timeout budget** | The number the caller actually gets, not the knob. `Retry.Timeout` is **per attempt** (`100s`) — but on this surface its expiry (`TimeoutRejectedException`) is **not a retry trigger**, so a call that simply *hangs* ends on the first attempt at ≈**100s**. The worst case is the call that stalls and then fails *retryably* just under the limit each time: ≈`4 × 100s + 7s backoff` ≈ **407s** before jitter (`1s`, `2s`, `4s` at `BackOffFactor = 2`, plus up to `500ms` drawn per retry) — reachable on reads via retryable statuses, and on **writes too** via transport faults (row 4). Two traps: a **binary** request runs on an empty pipeline and gets **no `Retry.Timeout` at all**, leaving only `HttpClient.Timeout`; and `Retry.Timeout` expiry throws `TimeoutRejectedException`, *not* `TaskCanceledException`. A `CancellationToken` deadline is the only thing that bounds a whole call. |
-   | 4 | **Write-retry ownership** | Which of the scope's writes the SDK may resend — and here the answer is **all of them**. The retry predicate has two arms and only one is method-gated: `HttpMethodsToRetry` (`GET, HEAD, PUT, OPTIONS`) gates the **status** arm, while the transport arm is a bare `.Handle<HttpRequestException>()` that fires on **every verb**. A `POST` that fails mid-flight is therefore resent up to 3 times. This is the **inverse** of the 4.0.0 surface, where the method filter gates both arms — do not carry that reassurance across. Record which writes can be resent and what the provider does with a duplicate. |
-   | 5 | **Idempotency & ambiguous writes** | For each write in scope: how a duplicate is reconciled. **This SDK has no idempotency mechanism at all** — no generator-injected header, and no operation takes a key parameter; the string `idempotenc` does not appear anywhere in `Api/`, `Models/` or `Core/`. Combined with row 4 that makes every write **at-least-once with no dedupe key**, so the reconciliation path is not optional here the way it is on a surface that has keys. Record it per write, or record why the write is naturally idempotent. |
-   | 6 | **Observability** | What is logged and by what. There is **no built-in logging surface** — no `LoggingOptions`, no environment-variable switch, no redaction — so nothing is logged until you attach a `DelegatingHandler` yourself, and nothing is masked unless you write the masking. Record which handler is attached where, what it records, and which correlation id reaches your own logs. |
-   | 7 | **Sensitive data** | Whether the scope carries data you would not want in a log. Advanced Billing is billing data, and the request side is **unmasked**: five models carry a raw `full_number` (`CreatePaymentProfile`, `UpdatePaymentProfile`, `CreditCardAttributes`, `PaymentProfileAttributes`, `SubscriptionGroupCreditCard`) and three a raw `bank_account_number` (`BankAccountAttributes`, `CreatePaymentProfile`, `SubscriptionGroupBankAccount`). Responses mask — `masked_card_number`, `masked_bank_account_number` — so the exposure is **request bodies** — on the `PaymentProfiles` create/update paths, the `Subscriptions` create/preview/update paths, and the `SubscriptionGroups` signup path — not responses. Because there is no built-in masker (row 6), the only control is the handler you wrote: state that it does not log request bodies there, or that it redacts `full_number` and `bank_account_number` by name. |
-   | 8 | **Environment selection** | Which base URLs each deployment talks to — and this SDK will not tell you when you get it wrong. Two dimensions multiply: `ServerEnvironment` picks `Us` (the default) or `Eu`, and `ServerOptions` carries **two independent server groups** — `Production` (245 of 247 operations) and `Ebb` (2, both on `SubscriptionComponents`). Each group holds its own `Us`/`Eu` pair, and **every one of the four defaults `Site` to the literal string `"subdomain"`** — so an unconfigured client resolves to `https://subdomain.chargify.com` and fails against a host that is not yours. Setting `Production.Us.Site` does not set `Ebb.Us.Site`, and setting the `Us` pair while `Environment = Eu` sets nothing that is read. **There is no sandbox host**: isolation means pointing at a test *site*, so a wrong `Site` in a test run is real traffic against a real site. State which `Site` each deployment sets, on which groups. |
+{{readiness.row1}}
+{{readiness.row2}}
+   | 3 | **Total timeout budget** | The number the caller actually gets, not the knob. `Timeout` is **per attempt**: under the defaults a hung `GET` costs ≈407s and a hung `POST` ≈100s. State the budget and where it is enforced — a `CancellationToken` deadline is the only thing that bounds a whole call. |
+   | 4 | **Write-retry ownership** | Which of the scope's writes the SDK may resend and which it may not. The default `HttpMethodsToRetry` is `GET, HEAD, PUT, OPTIONS`, so `POST`/`PATCH`/`DELETE` are never resent by the SDK — and `PUT` **is**. |
+{{readiness.row5}}
+{{readiness.row6}}
+{{readiness.row7}}
+{{readiness.row8}}
 
    A reviewer grades this from the table alone: each row either records a decision or records why
    it does not apply. A row that points at a skill, restates the concern, or sits blank is **not
-   addressed**. Rows 4, 5, 7 and 8 are the ones where "not addressed" costs something that cannot
-   be recovered afterwards — a duplicate charge with no key to reconcile it by, a PAN in a log, or
-   a test run that wrote to a live site.
+   addressed**. Rows 5, 7 and 8 are the ones where "not addressed" costs something that cannot be
+   recovered afterwards — {{readiness.irrecoverable}}
 6. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
    that blocks planning. An empty section is a valid outcome; an invented fact is not.
    If you expect the provider to reject a call the plan makes, that is a **Blocker** — not an
    assumption, and never a caveat inside the step that causes it. The plan is wrong until someone
    resolves it.
-7. Every row's **source** cell cites its map page (e.g. `operations/Subscriptions.md`,
-   `records-4-Su-We.md`) so a later lookup is one targeted page open, not a search. A row
-   with no map page to cite is not a contract fact: write
-   `YOUR CALL — not in the map` there instead, so you, at implementation time, weigh it against
-   the task rather than taking it as given. Shape:
+7. Every row's **source** cell cites its map page (e.g. {{plan.sourceExample}}) so a later lookup is one targeted page open, not a search. A row with no
+   map page to cite is not a contract fact: write `YOUR CALL — not in the map` there instead, so
+   you, at implementation time, weigh it against the task rather than taking it as given. Shape:
    > `| Caller identity | resolve from the app's own identity path | YOUR CALL — not in the map |`
 
    Three labels, one order. A fact the map settles cites its page. A fact only live traffic can
@@ -238,18 +236,18 @@ These are API-agnostic usage skills; loading them is not the same as reading the
 *facts* still come only from the sheet or a map lookup.
 
 Before implementing, check the plan's **Assumptions & Blockers** section:
-- Blocker or major assumption → surface it to the user in plain language, get their answer,
-  then revise `maxio-plan.md` in place with targeted **Edit** operations — edit the changed rows,
-  append the new section. Re-Writing the whole file to change a few rows is a defect: Write is
-  for the file's initial creation only.
+- Blocker or major assumption → surface it to the user in plain language, get their answer, then
+  revise `{{api.id}}-plan.md` in place with targeted **Edit** operations — edit the changed rows,
+  append the new section. Re-Writing the whole file to change a few rows is a defect: Write is for
+  the file's initial creation only.
 - Minor assumptions only → proceed.
 
-Full re-planning only on genuine scope change; for a single missing fact mid-implementation,
-look it up in the map — never guess.
+Full re-planning only on genuine scope change; for a single missing fact mid-implementation, look
+it up in the map — never guess.
 
 ### Step 3 — Implement from the contract sheet
 
-1. Read `maxio-plan.md` once. Treat its contracts as authoritative — do not re-derive or
+1. Read `{{api.id}}-plan.md` once. Treat its contracts as authoritative — do not re-derive or
    "double-check" them from memory. A row whose source column says `YOUR CALL — not in the map`
    is the one exception: that row is a planning-time judgment about YOUR application, not an SDK
    fact, so weigh it against the task and follow the task.
@@ -260,7 +258,7 @@ look it up in the map — never guess.
    contract sheet or a map lookup — never re-derive one from a companion.
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
 4. **Any compile or runtime error involving an SDK type or member** (`CS1061`, `CS0117`,
-   `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `MaxioAdvancedBilling.*`, or a provider error
+   `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `{{sdk.rootNamespace}}.*`, or a provider error
    at runtime) → *Step 4 — Fixing SDK errors* below. Do not attempt more than one self-fix of an
    SDK-name error before switching to that procedure — rewriting from the same knowledge that
    produced the error is guessing.
@@ -270,17 +268,17 @@ look it up in the map — never guess.
 ### Step 4 — Fixing SDK errors (map-first, in place)
 
 A compile or runtime error involving an SDK type or member (`CS1061`, `CS0117`, `CS0234`,
-`CS0104`, `CS1503`, `CS7036`, … on `MaxioAdvancedBilling.*`, or a provider error). Resolve it
-map-first — never patch it by guessing. Load `maxio-getting-started` first if you have not
+`CS0104`, `CS1503`, `CS7036`, … on `{{sdk.rootNamespace}}.*`, or a provider error). Resolve it map-first —
+never patch it by guessing. Load `{{api.id}}-getting-started` first if you have not
 already — the map is where every fix below comes from.
 
 1. **Map row first.** Find the failing symbol's row in the map (`sdk-map.md` →
    operations/records/enums page). If the code contradicts the map (wrong field name, missed
    response envelope, wrong param order, wrong namespace), the map row is the fix. Response
-   envelopes are the classic case: response types wrap their payload in one field
-   (`ProductResponse.Product`, `SubscriptionResponse.Subscription`) — reads go one level down.
+   envelopes are the classic case: response types often wrap their payload in one field —
+   reads go one level down.
 2. **Source only on a real gap.** If the map row matches the code, or ambiguity remains, clone
-   the SDK per `maxio-getting-started`'s *SDK source* section (reuse this session's clone if you
+   the SDK per `{{api.id}}-getting-started`'s *SDK source* section (reuse this session's clone if you
    already made one) and open the **one file the map row names**, scoped. Never scan the tree.
    Fix the code from what the source actually declares.
 3. **Never re-guess.** Rewriting the failing code from the same knowledge that produced the error
@@ -300,32 +298,31 @@ already — the map is where every fix below comes from.
 6. **Runtime / provider errors** — read the provider's error payload through the documented path:
    the operation's error case and `TryGet…` accessors from its map row; `dotnet-error-handling`
    for the Case A/B mechanics (don't parse exception `.ToString()` when an accessor exists).
-   Config-shaped failures (401, wrong host, timeouts): check auth (Basic — username = API key,
-   password = literal `"x"`), the server-node/base-URL configuration, and retry semantics before
+   Config-shaped failures (401, wrong host, timeouts): check auth (the scheme(s) in the map's
+   *Servers & auth* section), the server-node/base-URL configuration, and retry semantics before
    touching call sites. You own live verification: diagnose from the error plus the map/source,
-   fix, then run the live check yourself.
+   fix, rebuild, and re-run the live check yourself.
 
-If a fix corrects a row in `maxio-plan.md`, correct the row in the file too — the sheet stays the
+If a fix corrects a row in `{{api.id}}-plan.md`, correct the row in the file too — the sheet stays the
 record of what was verified.
 
 ### Step 5 — Pure questions
 
-A standalone Maxio question with no code change: load `maxio-getting-started`, look it up in the
-map (open the one source file the map names only on a real gap), and answer with the map page
-it came from. Never answer from memory, even for "easy" questions. When several questions arrive
-batched, answer them all in one pass.
+A standalone {{api.name}} question with no code change: load `{{api.id}}-getting-started`, look it up in
+the map (open the one source file the map names only on a real gap), and answer with the map page
+(or source file) it came from. No plan file — just the grounded answers; when several questions
+arrive batched, answer them all in one pass. Never answer from memory, even for "easy" questions.
 
 ## Anti-patterns — never do these
 
-- **Never write a Maxio/SDK fact from memory** — every signature, field name, enum value, and
+- **Never write a {{api.name}}/SDK fact from memory** — every signature, field name, enum value, and
   error type in your code must come from the contract sheet or a map lookup. And **never write a
   call from memory "to fix later".**
-- **Don't re-derive or double-check a sheet row from memory** — re-open the one map page it
-  cites.
+- **Don't re-derive or double-check a sheet row from memory** — re-open the one map page it cites.
 - **Don't re-derive a contract fact from a `dotnet-*` companion** — they are usage guidance;
   facts come from the map.
-- **Don't grep, glob or `find` the SDK tree, and don't open its `api-reference.md`** — the map
-  is the locator; `maxio-getting-started` says why.
-- **Don't web-search Maxio for an implementation detail** — the map and the pinned source are
-  the ground truth for THIS SDK version.
+- **Don't grep, glob or `find` the SDK tree, and don't open its `api-reference.md`** — the map is
+  the locator; `{{api.id}}-getting-started` says why.
+- **Don't web-search {{api.name}} for an implementation detail** — the map and the pinned source are the
+  ground truth for THIS SDK version.
 - **Don't resolve a trap note inline on the sheet** — name the hazard and the skill.

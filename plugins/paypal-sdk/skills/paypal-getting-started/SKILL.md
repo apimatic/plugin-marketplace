@@ -1,6 +1,6 @@
 ---
 name: paypal-getting-started
-description: PayPal .NET SDK identity and lookup layer (.NET/C# only), loaded directly by the agent doing the work — install, root namespace, environments, auth pattern, and the bundled SDK map of every operation signature, model, enum, union and error type. Every contract fact comes from this map, never from memory; integrate-paypal is the workflow that uses it.
+description: PayPal .NET SDK identity and lookup layer (.NET/C# only) you load directly — install, root namespace, environments, auth pattern, and the bundled SDK map of every operation signature, model, enum, union and error type. Load it for every contract fact, never memory; integrate-paypal is the workflow that uses it.
 ---
 
 # Getting started with the PayPal .NET SDK
@@ -115,10 +115,10 @@ Keep lookups cheap — the rules that keep a session's context small:
   on the one symbol — never dump a whole file into the conversation with `cat`/`sed`.
 - Never open the SDK's `api-reference.md` — the map supersedes it.
 
-Staleness check: `sdk-map.md` records the release tag and source commit it was generated from
-(provenance). The map documents that pinned release, while `dotnet add package` installs the latest —
-so if a name from the map ever fails to compile, trust the compiler, re-read the source file the map's
-row names, and report the drift; never patch around it from memory.
+Staleness check: `sdk-map.md` records the source ref and commit it was generated from
+(provenance). The map documents that pinned ref, while `dotnet add package` installs the latest
+release — so if a name from the map ever fails to compile, trust the compiler, re-read the
+source file the map's row names, and report the drift; never patch around it from memory.
 
 ## SDK source — clone only on a map-side issue; don't reflect or fetch files
 
@@ -132,8 +132,8 @@ reference, **not** a build dependency (never add a project reference to *this* c
 SDK from the NuGet package in the *Install* section).
 
 **Clone only on a real map-side issue.** Clone once this session — shallow, at tag `v1.0.1` (the exact
-release the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder
-under `<temp>/paypal-sdk-src/`, and reuse that folder for the rest of your session:
+release the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder under `<temp>/paypal-sdk-src/`, and reuse
+that folder for the rest of your session:
 
 ```bash
 # Linux/macOS:
@@ -285,24 +285,25 @@ need it — `DebugId` is `required` on every typed error body and is what PayPal
 ## The `dotnet-*` skill names are not unique in this marketplace
 
 Three plugins in this marketplace — `maxio-sdk`, `paypal-sdk` and `twilio-sdk` — each ship their own copy
-of the same seven `dotnet-*` skill names. The 21 copies are **not interchangeable**: they resolve to
-**16 distinct versions**, and `dotnet-configuration-resilience` and `dotnet-error-handling` differ in all
-three. Two of them installed side by side therefore expose two different skills under one name, and nothing
-announces which one a bare name resolves to.
+of the same seven `dotnet-*` skill names. The 21 copies are **not interchangeable**: paypal-sdk and
+twilio-sdk ship byte-identical, API-portable copies of all seven, but maxio-sdk's describe a different
+(pre-4.0.0) generator surface — so the seven names resolve to **14 distinct versions**, and any pairing
+that includes maxio-sdk exposes two different skills under one name, with nothing announcing which one
+a bare name resolves to.
 
 **Load the copy that ships with THIS plugin.** Where your harness supports plugin-qualified skill names,
 write them out — `paypal-sdk:dotnet-error-handling`, `paypal-sdk:dotnet-configuration-resilience`, and so on. Where it does not, and more than one of those three plugins is installed,
 confirm you have this plugin's copy before you rely on it: check the `core-surface:` stamp at the top of
 the file, where it must name generator **4.0.0**.
 
-The drift is not cosmetic, and it is not safe to shrug at:
+The difference is not cosmetic, and it is not safe to shrug at:
 
 - `maxio-sdk` documents a **pre-4.0.0** generator surface — 88 `Core/*.cs` against 122, with 28 of the 87
-  shared files differing. Loading its copy here would describe a runtime this SDK does not have.
-- `paypal-sdk` and `twilio-sdk` are both 4.0.0 but still differ where the *API definition* differs. The
-  clearest case is `dotnet-error-handling`: twilio's boundary ladder reads `ex.Error.StatusCode`, which
-  works there because 858 of its 887 operations are Case B — and is unavailable on paypal, where 39 of 40
-  are Case A and carry no status at all.
+  shared files differing. Loading its copy here would describe a runtime this SDK does not have — its
+  retry predicate, timeout behaviour and logging surface are all different.
+- The `paypal-sdk` and `twilio-sdk` copies are byte-identical and API-portable, so between those two the
+  collision is harmless — but only because neither copy states an API fact: which error case an operation
+  is, and what its errors carry, still comes from THIS plugin's map, never from the skill text.
 
 ## Integration workflow — load the companion skill at each step
 

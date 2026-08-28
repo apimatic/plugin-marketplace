@@ -10,7 +10,9 @@ description: Client configuration and resilience for an APIMatic-generated .NET 
      RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
      BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
      for retry-ineligible requests.
-     verified-this-file: 2026-08-25 - PARTIAL on pagination AND SSE: `Pageable<TPage,TItem> :
+     verified-this-file: 2026-08-28 — UNIFIED, API-PORTABLE copy, byte-identical in paypal-sdk and
+     twilio-sdk; states no API-definition-dependent fact unconditionally. Samples pass the cancellation token
+     by name (ct:) — the generated parameter is literally named ct on this surface. PARTIAL on pagination AND SSE: `Pageable<TPage,TItem> :
      IAsyncEnumerable<TItem>` with `.AsPages()` is verified from Core/Pagination +
      RawClient.ExecutePaged, but neither sampled SDK generates a paginated or a streaming operation,
      so both operation-level signatures are inferred from Core rather than observed.
@@ -24,6 +26,12 @@ description: Client configuration and resilience for an APIMatic-generated .NET 
      both files first. -->
 
 # Configuration & resilience for an APIMatic .NET SDK
+
+> **One skill, every shape.** This file covers every configuration surface the 4.0.0 generator
+> emits. Which parts YOUR SDK exercises — which pagination strategy an operation gets, whether any
+> operation declares an idempotency-key parameter, which server variables exist — are facts of the
+> API definition, not of this skill: take them from the contract sheet or the map, and **apply
+> only the guidance that matches**.
 
 Most types below live under `{RootNamespace}.Core.Configuration` and `{RootNamespace}.Servers`; the SSE
 exceptions sit under `.Core.Exceptions` and the per-call `RequestOptions` under `.Core`. Each section names
@@ -151,6 +159,25 @@ Notes:
   nullable: set `Timeout = null` to disable the per-attempt timeout entirely.
 - `OnRetry`'s `RetryAttempt` also carries `Reason` — `RetryReason.Status(HttpStatusCode)` or
   `RetryReason.Failure(Exception)` — log it to record *why* each retry fired.
+
+⚠▶▶ **A per-attempt timeout does not bound a REQUEST.** If one handler makes more than one SDK call —
+a loop over recipients or invoices, a fan-out, a send-then-schedule pair — the per-call timeouts **add up**, and
+they add up *faster* when each failure is caught so the work can continue: every swallowed timeout
+costs its full bound and the next call still runs. Two calls at 30s is a 60s request; three is 90s.
+Put one deadline on the whole handler and pass its token to every call inside it:
+
+```csharp
+using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+cts.CancelAfter(TimeSpan.FromSeconds(20));    // the REQUEST's budget, not one call's
+var deadline = cts.Token;
+// pass `deadline` — not `ct` — to every SDK call in this handler
+```
+
+**The check, and it is arithmetic, not judgement:** `calls in this handler × per-call timeout` must
+sit under the budget you are willing to make a caller wait. If it does not, the per-call timeout is
+not a bound on anything the caller can perceive. Count the calls in the loop, not the calls in the
+snippet — a handler that processes every record on file makes as many calls as there are
+records.
 
 ### Making a write safe under retries
 
@@ -336,22 +363,27 @@ own token is **not** retried (see Notes above), so the token cuts the call clean
 Operations the API marks as paginated return **`Pageable<{PageResponse}, {Item}>`**, and the shape catches
 people out: `Pageable<TPage, TItem>` implements `IAsyncEnumerable<`**`TItem`**`>`, so a plain `await foreach`
 walks **individual items**, not pages. The SDK fetches each page and advances the paging state for you —
-one of five strategies (offset, cursor, keyset, `Link`-header, or page-number), chosen per operation. Seed
-the first page with the paging arguments, then `await foreach` the items:
+one of five strategies (offset, cursor, keyset, `Link`-header, or page-number), chosen per operation.
+
+The sample below walks **pages**, via `.AsPages(ct)`, because bounding the enumeration is the point it is
+making and a page cap is the cheapest bound. For the item-at-a-time form, drop `.AsPages(ct)` and
+`await foreach` the operation directly.
 
 ```csharp
 // The paging args (e.g. offset/limit, cursor/limit, or page/size) seed the FIRST page;
 // the SDK advances them and stops when the API signals the end.
-// Bound it either way — see "Never leave a page loop unbounded" below.
-const int MaxItems = 10_000;
-int seen = 0;
+// Pages, not items: a bare `await foreach` over a Pageable walks items. Bound it either way —
+// see "Never leave a page loop unbounded" below.
+const int MaxPages = 100;
+int pages = 0;
 
-await foreach ({Item} item in
-    client.{ApiGroup}.{Operation}(/* offset: 0, limit: 100, ... */, ct: ct).WithCancellation(ct))
+await foreach ({PageResponse} page in
+    client.{ApiGroup}.{Operation}(/* offset: 0, limit: 100, ... */, ct: ct).AsPages(ct))
 {
-    Process(item);
+    foreach (var item in page.{Items})
+        Process(item);
 
-    if (++seen >= MaxItems)
+    if (++pages >= MaxPages)
         break;          // or log + throw: silently truncating a result set is its own defect
 }
 ```
@@ -418,7 +450,7 @@ await foreach (var result in client.{ApiGroup}.{Operation}Result(/* ... */, ct: 
     }
     else if (result.TryGetError(out var error))
     {
-        // handle the failed page; break to stop early
+        // handle the failed page — a failure is always the LAST element the SDK yields
     }
 }
 ```
@@ -426,6 +458,9 @@ await foreach (var result in client.{ApiGroup}.{Operation}Result(/* ... */, ct: 
 > Not every list endpoint is paginated. An operation with no pagination metadata is a plain list call
 > (returns a list or a wrapper — see **dotnet-calling-endpoints**); to page one of those, drive its own
 > `page`/`perPage` query params yourself and stop when a page returns fewer than `perPage` items.
+> **A hand-driven loop needs the same bound as an auto-paginated one** — "fewer than `perPage`" and
+> "no next-page link" are both provider-supplied stop conditions, and neither is a bound. Carry a page
+> cap alongside it (see *Never leave a page loop unbounded* above).
 
 ## Streaming (Server-Sent Events)
 

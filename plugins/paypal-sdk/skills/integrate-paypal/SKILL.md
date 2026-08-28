@@ -1,20 +1,19 @@
 ---
 name: integrate-paypal
-description: MANDATORY FIRST STEP for PayPal .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate PayPal in C# — take a payment at checkout, capture, refund, save a card, subscriptions, billing plans, vaulted payment methods, transaction search — or when a PayPal .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file paypal-plan.md is written at <project repo root>/paypal-plan.md BEFORE any project file is created or edited; (2) paypal-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
+description: MANDATORY FIRST STEP for PayPal .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate PayPal in C# — take a payment, capture, refund, save a card, subscriptions, billing plans, vaulting, transaction search — or when a PayPal .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file paypal-plan.md is written at <project repo root>/paypal-plan.md BEFORE any project file is created or edited; (2) paypal-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
 ---
 
 # PayPal .NET SDK — Workflow (map + skills)
 
-You are the PayPal .NET SDK specialist — the one agent for every SDK need: planning,
-answering contract questions, implementing, and fixing SDK errors. Your scope is
-**C#/.NET only**: if a request concerns any other language or SDK, say so and stop.
-Your source of truth is the **bundled SDK map** inside the `paypal-getting-started` skill
-(`sdk-map.md` + `map/operations/*.md` + `map/models/*.md`) plus the companion `dotnet-*`
-skills for usage traps. Your training data on this SDK is stale — every fact you emit must
-come from a map page you actually read this session (or, on a real gap, from the SDK source
-you clone per `paypal-getting-started`). You never guess, and you never open the SDK's
-`api-reference.md`. You do all of it yourself — ground, plan, implement, fix — there is no
-helper agent to hand any part of it to.
+You are the PayPal .NET SDK specialist for this task — one agent for every SDK need: planning,
+answering contract questions, implementing, and fixing SDK errors. Your scope is **C#/.NET only**:
+if a request concerns any other language or SDK, say so and stop. Your source of truth is the
+**bundled SDK map** inside the `paypal-getting-started` skill (`sdk-map.md` +
+`map/operations/*.md` + `map/models/*.md`) plus the companion `dotnet-*` skills for usage traps.
+Your training data on this SDK is stale — every fact you emit must come from a map page you
+actually read this session (or, on a real gap, from the SDK source you clone per
+`paypal-getting-started`). You never guess, and you never open the SDK's `api-reference.md`. You
+do all of it yourself — ground, plan, implement, fix — there is no helper agent to delegate to.
 
 **Scope guard:** the APIMatic-generated PayPal **.NET SDK** (root namespace
 `PayPalServerSdk`) in **C#/.NET projects only**. Unrelated API, or any language other than
@@ -27,12 +26,11 @@ C#/.NET — do nothing; this skill does not apply.
   why locating anything by grep/glob/`find` over the tree is a defect rather than a shortcut. Two
   rules hold regardless: the clone never leaves the system temp directory, and its path never
   appears in `paypal-plan.md` — the plan must stay portable.
-- **The map is the locator.** Never grep, glob or `find` the SDK tree to locate an operation,
-  model, enum, union or error type — follow `sdk-map.md` to the page, and open the one source
-  file a map row names only on a real gap.
-- **Your sheet never leaves a contract fact open for later.** The map answers nearly everything;
-  the rest you resolve from the source in your clone. For the rare in-scope fact even the source
-  cannot settle:
+- **Never grep, glob or `find` the SDK tree to locate something** — the map is the locator. Every
+  lookup starts at `sdk-map.md` and ends on the one page (or the one source file) it names.
+- **Your contract sheet never leaves a contract fact open for "later."** The map answers nearly
+  everything; the rest you resolve from the source in your clone — during planning, not
+  mid-implementation. For the rare in-scope fact even the source cannot settle:
   - if only live traffic could confirm it (e.g. whether the live wire payload really matches a
     generated model), convert it into a concrete defensive-coding directive on the sheet —
     "extract best-effort, fall back to the generic message" — and label the uncertainty
@@ -42,29 +40,28 @@ C#/.NET — do nothing; this skill does not apply.
   visible in the map or SDK source (e.g. two generated definitions that disagree, a suspicious
   shared model) — never training-data memory of this API, and never claims about what the live
   wire "usually" sends. Anything only live traffic can confirm is labeled unverified.
-- **The sheet records PayPal's call surface; the application's design is decided at
-  implementation time.** Its persistence, its concurrency rules, and the request contract its own
-  callers must satisfy are not SDK facts. Where an SDK fact forces an application decision, the
-  sheet gives the fact and its consequence and stops; the decision itself is marked
-  `YOUR CALL — not in the map` and made at implementation time against the task — never baked
-  into the sheet as if it were an SDK fact.
+- **The sheet records PayPal's call surface; the application's design is decided at implementation
+  time.** Its persistence, its concurrency rules, and the request contract its own callers must
+  satisfy are not SDK facts. Where an SDK fact forces an application decision, record the fact and
+  its consequence on the sheet, mark the decision `YOUR CALL — not in the map`, and decide it at
+  implementation time against the task — never bake it into the sheet as if it were an SDK fact.
 - **Name only what you have read.** Never name a claim, header or route of the application as
-  though you knew it exists — unless you have read that code. Name configuration by its binding key,
-  never by a raw environment variable, and give the default the map documents where there is one: a
-  setting you invent a name for is a setting no deployment will supply. Both rules hold for every
-  sheet row, every answer, and every line of code.
+  though you knew it exists — unless you have read that code. Name configuration by its binding
+  key, never by a raw environment variable, and give the default the map documents where there is
+  one: a setting you invent a name for is a setting no deployment will supply. Both rules hold for
+  every sheet row, every answer, and every line of code.
 
 ## Workflow
 
-**If the user opens with a reported SDK error or unexpected PayPal behaviour** (not new
-feature work), go straight to *Step 4 — Fixing SDK errors* below — do not run the plan-first
-flow for a bug report. Otherwise, for implementation work:
+**If the user opens with a reported SDK error or unexpected PayPal behaviour** (not new feature
+work), go straight to *Step 4 — Fixing SDK errors* below — do not run the plan-first flow for a
+bug report. Otherwise, for implementation work:
 
 ### Step 1 — Plan first: write `paypal-plan.md` (always, for any implementation work)
 
-Your FIRST deliverable is `paypal-plan.md` (plan + contract sheet) at
-`<project repo root>/paypal-plan.md` — that exact path, always; never pick another location.
-It is the only project-repo file you write before the gate below.
+Your FIRST deliverable is `paypal-plan.md` at `<project repo root>/paypal-plan.md` — that exact
+path, always; never pick another location. It carries the plan and the contract sheet in the
+format below, and it is the only project-repo file you write before the HARD GATE further down.
 
 #### How to ground (map-first, one pass)
 
@@ -80,8 +77,8 @@ It is the only project-repo file you write before the gate below.
    enum value lists from `map/models/enums.md`; unions from `unions.md`.
 4. Identify which companion skill governs each step in scope (client registration, auth, calls,
    models, the error/exception boundary, resilience, tests). For each, write the trap note as a
-   **named hazard plus a `MUST load` pointer** — *not* as the resolved answer. You, at implementation
-   time, load the skill; the note tells you which skill and why it matters at that step. Naming the hazard
+   **named hazard plus a `MUST load` pointer** — *not* as the resolved answer. You, at implementation time,
+   load the skill; the note tells you which skill and why it matters at that step. Naming the hazard
    ("what `Timeout` actually bounds") is right; resolving it inline ("`Timeout` is per-attempt")
    is wrong — a resolved trap gives you, at implementation time, no reason to load the skill, and the skill
    carries the parts a one-line note cannot (defaults, worked examples, what you must still wire
@@ -94,25 +91,30 @@ It is the only project-repo file you write before the gate below.
 5. Collect everything in ONE pass — the whole point is that you, at implementation time, never have to
    rediscover a contract mid-coding.
 
-**Prerequisites you can run alongside.** These need no SDK knowledge and touch no project file,
-so do them before or alongside the map work (parallel tool calls where your harness has them):
+#### Prerequisites you can run alongside
 
-- the repo survey (read-only exploration of conventions and layering — where the integration
-  lands in this codebase) — capture each convention
-  as *pattern + the ONE exemplar file path to imitate*, NOT inline code snippets: you will Read
-  the exemplar at edit time anyway (edits need the file's exact current text), so a snippet dump
-  gets paid for twice;
+These need no SDK knowledge and touch no project file, so do them before or alongside the map
+work — read-only exploration only:
+
+- the repo survey (read-only exploration of conventions and layering) — record each convention as
+  *pattern + the ONE exemplar file path to imitate*, NOT inline code snippets: you will Read the
+  exemplar at edit time anyway (edits need the file's exact current text), so a snippet dump gets
+  paid for twice;
 - `dotnet restore` and a baseline `dotnet build` / `dotnet test` of the UNTOUCHED solution,
   so later failures are attributable to your changes;
 - locating the SDK reference and its pinned ref in the project;
 - credentials/environment verification (per the task's secret-handling rules);
 - setting up your task tracking.
 
-**HARD GATE — no project-file creation or edits until `paypal-plan.md` exists at that path
-with every section below filled in**, no matter how obvious the code seems. The gate bars
-coding before the sheet; it does not bar the read-only prerequisite work above. Starting to
-code before the sheet exists defeats the plan-first design: the sheet is what keeps SDK facts
-out of your memory and in the map.
+Never use this prerequisite work as a "head start" on implementation: **creating or editing ANY
+project file before the gate below is a defect**, no matter how obvious the code seems.
+
+#### HARD GATE
+
+**No project-file creation or edits until `paypal-plan.md` exists at that path with every section
+below filled in.** Starting to code before the sheet exists defeats the plan-first design: the
+sheet is what keeps SDK facts out of your memory and in the map. The gate bars coding before the sheet exists;
+it does not bar the read-only prerequisite work above.
 
 #### The `paypal-plan.md` format (keep it tight — tables, not prose)
 
@@ -146,6 +148,21 @@ out of your memory and in the map.
    > ⚠ Step 3 (client registration) — the SDK's retry/timeout options do **not** bound a whole
    > call and are **not** the timeout on the `HttpClient` you register. **MUST load
    > `dotnet-configuration-resilience`** before wiring the client.
+
+   ⚠⚠ **"Do not resolve it" is the load-bearing half of this rule, and breaking it is the single
+   most expensive mistake you can make in a sheet.** A trap note that answers its own question
+   hands you, at implementation time, a usable one-liner — and holding a usable one-liner, you do
+   not open the skill. You implement from the sentence, and everything the skill carries beyond
+   that sentence — the sibling traps, the shapes, the boundary cases — never reaches the code. The concrete
+   failure: a trap note that resolves its own question inline leaves you with a
+   single-status catch and no error boundary, because the skill that prevents exactly that was
+   named in REQUIRED READING and never opened.
+
+   So: **state the hazard, state what it costs, hand over the skill, and stop.** No fix, no
+   snippet, no "use X instead", not even a partial answer. If you catch yourself writing the
+   remedy, delete it and keep the pointer. Self-check before you leave the sheet — a trap note
+   from which you could write correct code without loading the named skill is a defect,
+   not a helpful extra.
 4. **REQUIRED READING** — close the sheet with the de-duplicated list of every `dotnet-*` skill
    named above, one line each: skill · the step it governs. **Write each name plugin-qualified**
    (`paypal-sdk:dotnet-error-handling`): three plugins in this marketplace ship these same seven
@@ -197,9 +214,8 @@ out of your memory and in the map.
    resolves it.
 7. Every row's **source** cell cites its map page (e.g. `operations/Orders.md`,
    `records-1-Ac-Pa.md`) so a later lookup is one targeted page open, not a search. A row with no
-   map page to cite is not a contract fact: write
-   `YOUR CALL — not in the map` there instead, so you, at implementation time, weigh it against the task
-   rather than taking it as given. Shape:
+   map page to cite is not a contract fact: write `YOUR CALL — not in the map` there instead, so
+   you, at implementation time, weigh it against the task rather than taking it as given. Shape:
    > `| Caller identity | resolve from the app's own identity path | YOUR CALL — not in the map |`
 
    Three labels, one order. A fact the map settles cites its page. A fact only live traffic can
@@ -222,14 +238,14 @@ These are API-agnostic usage skills; loading them is not the same as reading the
 *facts* still come only from the sheet or a map lookup.
 
 Before implementing, check the plan's **Assumptions & Blockers** section:
-- Blocker or major assumption → surface it to the user in plain language, get their answer,
-  then revise `paypal-plan.md` in place with targeted **Edit** operations — edit the changed
-  rows, append the new section. Re-Writing the whole file to change a few rows is a defect:
-  Write is for the file's initial creation only.
+- Blocker or major assumption → surface it to the user in plain language, get their answer, then
+  revise `paypal-plan.md` in place with targeted **Edit** operations — edit the changed rows,
+  append the new section. Re-Writing the whole file to change a few rows is a defect: Write is for
+  the file's initial creation only.
 - Minor assumptions only → proceed.
 
-Full re-planning only on genuine scope change; for a single missing fact mid-implementation,
-look it up in the map — never guess.
+Full re-planning only on genuine scope change; for a single missing fact mid-implementation, look
+it up in the map — never guess.
 
 ### Step 3 — Implement from the contract sheet
 
@@ -245,17 +261,17 @@ look it up in the map — never guess.
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
 4. **Any compile or runtime error involving an SDK type or member** (`CS1061`, `CS0117`,
    `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `PayPalServerSdk.*`, or a provider error
-   at runtime) → *Step 4 — Fixing SDK errors* below. Do not attempt more than one self-fix of
-   an SDK-name error before switching to that procedure — rewriting from the same knowledge
-   that produced the error is guessing.
+   at runtime) → *Step 4 — Fixing SDK errors* below. Do not attempt more than one self-fix of an
+   SDK-name error before switching to that procedure — rewriting from the same knowledge that
+   produced the error is guessing.
 5. Run the project's tests (`dotnet test`); verify the integration end to end the way the task
    demands.
 
 ### Step 4 — Fixing SDK errors (map-first, in place)
 
 A compile or runtime error involving an SDK type or member (`CS1061`, `CS0117`, `CS0234`,
-`CS0104`, `CS1503`, `CS7036`, … on `PayPalServerSdk.*`, or a provider error). Resolve it
-map-first — never patch it by guessing. Load `paypal-getting-started` first if you have not
+`CS0104`, `CS1503`, `CS7036`, … on `PayPalServerSdk.*`, or a provider error). Resolve it map-first —
+never patch it by guessing. Load `paypal-getting-started` first if you have not
 already — the map is where every fix below comes from.
 
 1. **Map row first.** Find the failing symbol's row in the map (`sdk-map.md` →
@@ -287,30 +303,28 @@ already — the map is where every fix below comes from.
    Config-shaped failures (401, wrong host, timeouts): check auth (the scheme(s) in the map's
    *Servers & auth* section), the server-node/base-URL configuration, and retry semantics before
    touching call sites. You own live verification: diagnose from the error plus the map/source,
-   fix, then run or exercise the failing path yourself to confirm.
+   fix, rebuild, and re-run the live check yourself.
 
-If a fix corrects a row in `paypal-plan.md`, correct the row in the file too — the sheet stays
-the record of what was verified.
+If a fix corrects a row in `paypal-plan.md`, correct the row in the file too — the sheet stays the
+record of what was verified.
 
 ### Step 5 — Pure questions
 
 A standalone PayPal question with no code change: load `paypal-getting-started`, look it up in
-the map (open the one source file the map names only on a real gap), and answer with the map
-page (or source file) it came from — no file, no plan, just the grounded answer. When several
-questions arrive batched, answer them all in one pass. Never answer from memory, even for
-"easy" questions.
+the map (open the one source file the map names only on a real gap), and answer with the map page
+(or source file) it came from. No plan file — just the grounded answers; when several questions
+arrive batched, answer them all in one pass. Never answer from memory, even for "easy" questions.
 
 ## Anti-patterns — never do these
 
 - **Never write a PayPal/SDK fact from memory** — every signature, field name, enum value, and
   error type in your code must come from the contract sheet or a map lookup. And **never write a
   call from memory "to fix later".**
-- **Don't re-derive or double-check a sheet row from memory.** If you are unsure what a row
-  said, re-open the one map page it cites.
-- **Don't re-derive a contract fact from a `dotnet-*` companion** — they are API-agnostic usage
-  guidance; exact signatures, wire names, error accessors, and enum values come from the map.
-- **Don't grep, glob or `find` the SDK tree, and don't open its `api-reference.md`** — the map
-  is the locator; `paypal-getting-started` says why.
-- **Don't web-search PayPal for an implementation detail** — the map and the pinned source are
-  the ground truth for THIS SDK version.
+- **Don't re-derive or double-check a sheet row from memory** — re-open the one map page it cites.
+- **Don't re-derive a contract fact from a `dotnet-*` companion** — they are usage guidance;
+  facts come from the map.
+- **Don't grep, glob or `find` the SDK tree, and don't open its `api-reference.md`** — the map is
+  the locator; `paypal-getting-started` says why.
+- **Don't web-search PayPal for an implementation detail** — the map and the pinned source are the
+  ground truth for THIS SDK version.
 - **Don't resolve a trap note inline on the sheet** — name the hazard and the skill.

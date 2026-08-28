@@ -179,10 +179,11 @@ temp directory on its own; a future session simply makes its own timestamped clo
 ## The `dotnet-*` skill names are not unique in this marketplace
 
 Three plugins in this marketplace — `maxio-sdk`, `paypal-sdk` and `twilio-sdk` — each ship their own copy
-of the same seven `dotnet-*` skill names. The 21 copies are **not interchangeable**: they resolve to
-**16 distinct versions**, and `dotnet-configuration-resilience` and `dotnet-error-handling` differ in all
-three. Two of them installed side by side therefore expose two different skills under one name, and nothing
-announces which one a bare name resolves to.
+of the same seven `dotnet-*` skill names. The 21 copies are **not interchangeable**: paypal-sdk and
+twilio-sdk ship byte-identical, API-portable copies of all seven, but maxio-sdk's describe a different
+(pre-4.0.0) generator surface — so the seven names resolve to **14 distinct versions**, and any pairing
+that includes maxio-sdk exposes two different skills under one name, with nothing announcing which one
+a bare name resolves to.
 
 **Load the copy that ships with THIS plugin.** Where your harness supports plugin-qualified skill names,
 write them out — `maxio-sdk:dotnet-error-handling`, `maxio-sdk:dotnet-configuration-resilience`, and so on. Where it does not, and more than one of those three plugins is installed,
@@ -195,10 +196,9 @@ The drift is not cosmetic, and it is not safe to shrug at:
   28 of the 87 shared files differing. Loading either copy here would describe a runtime this SDK does not
   have: it would promise you `RetryOptions.Disabled()`, `LoggingOptions` on the options class and a
   `RequestOptions` argument on every operation, none of which exist on a pre-4.0.0 surface.
-- Those two also differ from each other where the *API definition* differs, so neither is a safe stand-in
-  for the other either. The clearest case is `dotnet-error-handling`: twilio's boundary ladder reads
-  `ex.Error.StatusCode`, which works there because 858 of its 887 operations are Case B, and is unavailable
-  on paypal, where 39 of 40 are Case A and carry no status at all.
+- Those two now ship byte-identical, API-portable copies — but that makes them no safer here: both
+  describe the 4.0.0 runtime, and this SDK's is pre-4.0.0. The surface, not the API, is what makes
+  their copies wrong for this plugin.
 
 ## Integration workflow — load the companion skill at each step
 

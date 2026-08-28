@@ -10,7 +10,9 @@ description: Client configuration and resilience for an APIMatic-generated .NET 
      RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
      BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
      for retry-ineligible requests.
-     verified-this-file: 2026-08-25 - PARTIAL on pagination AND SSE: `Pageable<TPage,TItem> :
+     verified-this-file: 2026-08-28 — UNIFIED, API-PORTABLE copy, byte-identical in paypal-sdk and
+     twilio-sdk; states no API-definition-dependent fact unconditionally. Samples pass the cancellation token
+     by name (ct:) — the generated parameter is literally named ct on this surface. PARTIAL on pagination AND SSE: `Pageable<TPage,TItem> :
      IAsyncEnumerable<TItem>` with `.AsPages()` is verified from Core/Pagination +
      RawClient.ExecutePaged, but neither sampled SDK generates a paginated or a streaming operation,
      so both operation-level signatures are inferred from Core rather than observed.
@@ -24,6 +26,12 @@ description: Client configuration and resilience for an APIMatic-generated .NET 
      both files first. -->
 
 # Configuration & resilience for an APIMatic .NET SDK
+
+> **One skill, every shape.** This file covers every configuration surface the 4.0.0 generator
+> emits. Which parts YOUR SDK exercises — which pagination strategy an operation gets, whether any
+> operation declares an idempotency-key parameter, which server variables exist — are facts of the
+> API definition, not of this skill: take them from the contract sheet or the map, and **apply
+> only the guidance that matches**.
 
 Most types below live under `{RootNamespace}.Core.Configuration` and `{RootNamespace}.Servers`; the SSE
 exceptions sit under `.Core.Exceptions` and the per-call `RequestOptions` under `.Core`. Each section names
@@ -153,7 +161,7 @@ Notes:
   `RetryReason.Failure(Exception)` — log it to record *why* each retry fired.
 
 ⚠▶▶ **A per-attempt timeout does not bound a REQUEST.** If one handler makes more than one SDK call —
-a loop over recipients, a fan-out, a send-then-schedule pair — the per-call timeouts **add up**, and
+a loop over recipients or invoices, a fan-out, a send-then-schedule pair — the per-call timeouts **add up**, and
 they add up *faster* when each failure is caught so the work can continue: every swallowed timeout
 costs its full bound and the next call still runs. Two calls at 30s is a 60s request; three is 90s.
 Put one deadline on the whole handler and pass its token to every call inside it:
@@ -168,7 +176,8 @@ var deadline = cts.Token;
 **The check, and it is arithmetic, not judgement:** `calls in this handler × per-call timeout` must
 sit under the budget you are willing to make a caller wait. If it does not, the per-call timeout is
 not a bound on anything the caller can perceive. Count the calls in the loop, not the calls in the
-snippet — a handler that messages every number on file has as many calls as there are numbers.
+snippet — a handler that processes every record on file makes as many calls as there are
+records.
 
 ### Making a write safe under retries
 
@@ -441,7 +450,7 @@ await foreach (var result in client.{ApiGroup}.{Operation}Result(/* ... */, ct: 
     }
     else if (result.TryGetError(out var error))
     {
-        // handle the failed page; break to stop early
+        // handle the failed page — a failure is always the LAST element the SDK yields
     }
 }
 ```
