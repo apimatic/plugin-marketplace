@@ -31,7 +31,9 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # (file, find, replace, what this pretends the generator did)
-MUTATIONS = [
+# `find` of None means DELETE the file — the only way to break a count assertion,
+# since every other mutation here is a string replacement.
+MUTATIONS_4_0_0 = [
     ("Core/Configuration/RetryOptions.cs",
      "MaxRetries = 3,", "MaxRetries = 5,",
      "the default retry count changed"),
@@ -131,11 +133,106 @@ MUTATIONS = [
      "the success window widened past 2xx"),
 ]
 
+# The pre-4.0.0 set. Each of these makes the surface look MORE like 4.0.0 — which is the
+# realistic direction of drift (the SDK gets regenerated) and also the direction that
+# would silently invalidate maxio-sdk's skills, since their whole premise is "this surface
+# is not that one".
+#
+# Five of the fourteen pre400.* assertions are `absent` regexes, and an `absent` regex that
+# matches nothing is indistinguishable from an `absent` regex that is simply wrong. This
+# repo has shipped that bug twice — a \b that a heredoc turned into a literal backspace,
+# and an OAuth2 check that was vacuously true on a fixture with no OAuth2 at all. Those
+# five are why this set exists; the rest is coverage.
+MUTATIONS_PRE_4_0_0 = [
+    # --- the five `absent` assertions, each made false on purpose ---
+    ("Core/RawClient.cs",
+     "        }, cancellationToken).ConfigureAwait(false);",
+     "        }, cancellationToken).ConfigureAwait(false);\n"
+     "        try { GC.KeepAlive(httpResponseMessage); }\n"
+     "        catch (TimeoutRejectedException ex)\n"
+     "        {\n"
+     "            throw new TaskCanceledException(\"timeout\", new TimeoutException(ex.Message, ex));\n"
+     "        }",
+     "RawClient started translating the timeout (the 4.0.0 shim)"),
+    ("Core/ResiliencePipelineFactory.cs",
+     "        var builder = new ResiliencePipelineBuilder<HttpResponseMessage>()",
+     "        var builder = new ResiliencePipelineBuilder<HttpResponseMessage>();\n"
+     "        if (options.MaxRetries > 0)\n"
+     "            builder = builder",
+     "a zero-guard appeared, so MaxRetries = 0 stopped throwing"),
+    ("Core/ResiliencePipelineFactory.cs",
+     "TimeSpan.FromMilliseconds(delayMs + jitterMs)",
+     "TimeSpan.FromMilliseconds(Math.Min(delayMs + jitterMs, 60000))",
+     "a delay ceiling appeared where there was none"),
+    ("Core/Configuration/RetryOptions.cs",
+     "    public required TimeSpan MaxJitter { get; init; }",
+     "    public required TimeSpan MaxJitter { get; init; }\n"
+     "    public TimeSpan MaxDelay { get; init; } = TimeSpan.FromMinutes(1);",
+     "RetryOptions gained a MaxDelay knob"),
+    ("Core/Configuration/RetryOptions.cs",
+     "    public static RetryOptions Default() => new()",
+     "    public static RetryOptions Disabled() => Default() with { MaxRetries = 0 };\n\n"
+     "    public static RetryOptions Default() => new()",
+     "a Disabled() factory appeared, so retries became switchable"),
 
-def run_suite(root: str) -> set[str]:
-    """Return the ids of the assertions that fail against `root`."""
+    # --- the retry predicate: the claim that decides whether writes are resent ---
+    ("Core/ResiliencePipelineFactory.cs",
+     "                    .Handle<HttpRequestException>()\n                    .HandleResult(",
+     "                    .Handle<HttpRequestException>(_ => "
+     "options.HttpMethodsToRetry.Count > 0)\n                    .HandleResult(",
+     "the transport arm picked up a gate of its own"),
+    ("Core/ResiliencePipelineFactory.cs",
+     "                        msg.RequestMessage?.Method is { } method &&\n"
+     "                        options.HttpMethodsToRetry.Contains(method)),",
+     "                        true),",
+     "the method filter left the status arm entirely"),
+    ("Core/ResiliencePipelineFactory.cs",
+     "msg.RequestMessage?.Method is { } method",
+     "args.Context.Properties.TryGetValue(MethodKey, out var method)",
+     "the verb stopped being read off response.RequestMessage"),
+
+    # --- the rest of the pipeline shape ---
+    ("Core/ResiliencePipelineFactory.cs",
+     "                MaxRetryAttempts = options.MaxRetries,",
+     "                MaxRetryAttempts = Math.Max(1, options.MaxRetries),",
+     "MaxRetries stopped reaching Polly unguarded"),
+    ("Core/ResiliencePipelineFactory.cs",
+     "request.CanRetry ? _pipeline : ResiliencePipeline<HttpResponseMessage>.Empty;",
+     "request.CanRetry ? _pipeline : _timeoutOnly;",
+     "a retry-ineligible request stopped losing its timeout"),
+    ("Core/ResiliencePipelineFactory.cs",
+     "Jitterer.Value!.Next((int)options.MaxJitter.TotalMilliseconds)",
+     "Jitterer.Value!.NextDouble() * options.MaxJitter.TotalMilliseconds",
+     "jitter became a proportional double draw"),
+    ("Core/ResiliencePipelineFactory.cs",
+     "builder.AddTimeout(new TimeoutStrategyOptions { Timeout = timeout });",
+     "builder.AddTimeout(timeout);",
+     "the timeout strategy stopped being configured inline"),
+    ("Core/Request/BinaryRequest.cs",
+     "    public bool CanRetry => false;",
+     "    public bool CanRetry => true;",
+     "a binary body became replayable, so nothing opts out any more"),
+
+    # --- the count, which no string replacement can break ---
+    ("Core/AsyncLock.cs", None, None,
+     "a Core file disappeared, moving the surface off 88"),
+]
+
+MUTATION_SETS = {
+    "4.0.0": MUTATIONS_4_0_0,
+    "pre-4.0.0": MUTATIONS_PRE_4_0_0,
+}
+
+
+def run_suite(root: str, surface: str) -> set[str]:
+    """Return the ids of the assertions that fail against `root`.
+
+    The surface has to be passed through. Without it every assertion carrying a
+    `surfaces` key is filtered out as not-applicable, and a mutation aimed at one of
+    those would report as uncaught for a reason that has nothing to do with the suite.
+    """
     out = subprocess.run(
-        [sys.executable, os.path.join(HERE, "assert_c1.py"), root],
+        [sys.executable, os.path.join(HERE, "assert_c1.py"), root, "--surface", surface],
         capture_output=True, text=True, encoding="utf-8", errors="replace")
     return {line.split()[1] for line in out.stdout.splitlines()
             if line.startswith("FAIL ") and len(line.split()) > 1}
@@ -145,21 +242,43 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sdk_root")
+    ap.add_argument("--surface", default="4.0.0",
+                    help="which mutation set to apply, and the surface to run the suite at "
+                         "(4.0.0 or pre-4.0.0)")
+    ap.add_argument("--expect-failures", metavar="FILE",
+                    help="ids that already fail on this fixture, one per line — the same "
+                         "baseline assert_c1.py takes. On a fixture that is deliberately a "
+                         "different surface, a mutation is caught when the failing set CHANGES "
+                         "against this, not when it becomes non-empty.")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
-    baseline = run_suite(args.sdk_root)
-    if baseline:
-        print("the fixture already fails %d assertion(s) — fix those before mutation testing:"
-              % len(baseline))
-        for f in sorted(baseline):
-            print("   " + f)
+    mutations = MUTATION_SETS.get(args.surface)
+    if mutations is None:
+        print("no mutation set for surface %r — have %s"
+              % (args.surface, ", ".join(sorted(MUTATION_SETS))), file=sys.stderr)
+        return 2
+
+    expected = set()
+    if args.expect_failures:
+        with open(args.expect_failures, encoding="utf-8") as fh:
+            expected = {ln.split("#")[0].strip() for ln in fh}
+        expected.discard("")
+
+    baseline = run_suite(args.sdk_root, args.surface)
+    if baseline != expected:
+        print("the fixture's failing set does not match the baseline — reconcile that before "
+              "mutation testing, or the results are meaningless:")
+        for f in sorted(baseline - expected):
+            print("   + " + f + "   (failing, not baselined)")
+        for f in sorted(expected - baseline):
+            print("   - " + f + "   (baselined, not failing)")
         return 2
 
     tmp = tempfile.mkdtemp(prefix="assert-c1-mutant-")
     missed, skipped_muts = [], []
     try:
-        for rel, find, repl, label in MUTATIONS:
+        for rel, find, repl, label in mutations:
             root = os.path.join(tmp, "sdk")
             shutil.rmtree(root, ignore_errors=True)
             shutil.copytree(args.sdk_root, root,
@@ -170,16 +289,27 @@ def main() -> int:
                 print("SKIP %-58s (no %s in this fixture)" % (label, rel))
                 skipped_muts.append(label)
                 continue
-            src = open(target, encoding="utf-8-sig").read()
-            if find not in src:
-                print("SKIP %-58s (pattern absent — fixture may be a different surface)" % label)
-                skipped_muts.append(label)
-                continue
-            open(target, "w", encoding="utf-8").write(src.replace(find, repl, 1))
+            if find is None:
+                os.remove(target)
+            else:
+                src = open(target, encoding="utf-8-sig").read()
+                if find not in src:
+                    print("SKIP %-58s (pattern absent — fixture may be a different surface)" % label)
+                    skipped_muts.append(label)
+                    continue
+                open(target, "w", encoding="utf-8").write(src.replace(find, repl, 1))
 
-            caught = run_suite(root)
-            if caught:
-                print("ok   %-58s caught by %s" % (label, ", ".join(sorted(caught))))
+            after = run_suite(root, args.surface)
+            # On a baselined fixture the question is whether the failing set MOVED, not
+            # whether it is non-empty. A mutation that installs 4.0.0 behaviour can make a
+            # pre-4.0.0 assertion start failing, a baselined 4.0.0 assertion stop failing,
+            # or both — all three are the suite noticing.
+            started, stopped = sorted(after - expected), sorted(expected - after)
+            if started or stopped:
+                note = ", ".join(started)
+                if stopped:
+                    note += (" | " if started else "") + "no longer failing: " + ", ".join(stopped)
+                print("ok   %-58s caught by %s" % (label, note))
             else:
                 print("MISS %-58s NOTHING CAUGHT IT" % label)
                 missed.append(label)
@@ -187,7 +317,7 @@ def main() -> int:
         shutil.rmtree(tmp, ignore_errors=True)
 
     print()
-    applied = len(MUTATIONS) - len(skipped_muts)
+    applied = len(mutations) - len(skipped_muts)
     if missed:
         print("%d mutation(s) went unnoticed — the suite has a gap there:" % len(missed))
         for m in missed:
@@ -197,13 +327,13 @@ def main() -> int:
         # Reporting "every mutation was caught" here would be the same hollow pass the
         # suite itself is built to avoid: nothing was caught, because nothing was tried.
         print("%d of %d mutation(s) could not be applied to this fixture:" % (
-            len(skipped_muts), len(MUTATIONS)))
+            len(skipped_muts), len(mutations)))
         for m in skipped_muts:
             print("   " + m)
         print()
         print("%d applied, %d caught — but coverage here is PARTIAL, not proven." % (applied, applied))
         return 1
-    print("every mutation was caught (%d/%d applied)" % (applied, len(MUTATIONS)))
+    print("every mutation was caught (%d/%d applied)" % (applied, len(mutations)))
     return 0
 
 

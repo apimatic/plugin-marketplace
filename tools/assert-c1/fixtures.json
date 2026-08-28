@@ -42,7 +42,7 @@
       "usedBy": [
         "maxio-sdk"
       ],
-      "mutationTest": false,
+      "mutationTest": true,
       "expectFailures": "maxio-pre-4.0.0-drift.txt",
       "note": [
         "The pre-4.0.0 surface — 88 Core/*.cs against 4.0.0's 122. 100 of the general assertions",
@@ -51,8 +51,12 @@
         "the suite ran against two 4.0.0 SDKs only, so no assertion had ever been tried on a second",
         "surface and the C1-vs-C2 split the skills rest on was itself unverified.",
         "",
-        "No mutation test yet: mutation_test.py's edits are written against 4.0.0 Core/ files, so it",
-        "would fail to apply rather than prove anything. A pre-4.0.0 mutation set is worth writing."
+        "mutationTest runs the pre-4.0.0 mutation set (MUTATIONS_PRE_4_0_0), which is selected by",
+        "--surface. Every mutation there makes this surface look MORE like 4.0.0 — the realistic",
+        "direction of drift, and the one that would silently invalidate maxio-sdk's skills, whose",
+        "whole premise is that this surface is not that one. Five of the fourteen pre400.*",
+        "assertions are `absent` regexes, and an `absent` regex matching nothing looks exactly like",
+        "one that is simply wrong; this is what rules that out."
       ]
     }
   ],

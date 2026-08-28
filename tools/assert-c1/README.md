@@ -86,16 +86,19 @@ produce — but it does mean the static tier is the one that generalises.
 ## Proving the suite still has teeth
 
 ```
-python mutation_test.py <sdk-root>
+python mutation_test.py <sdk-root>                                    # 4.0.0, 23 mutations
+python mutation_test.py <sdk-root> --surface pre-4.0.0     --expect-failures maxio-pre-4.0.0-drift.txt                       # pre-4.0.0, 14
 ```
 
 A suite that passes everywhere proves nothing, and the failure mode is quiet: a regex gets
 loosened during a refactor until it matches anything, and the report stays green while the
 claim rots. `mutation_test.py` copies the fixture, breaks one documented fact at a time —
 the retry default, the method filter, the redaction direction, the expiry buffer — and
-checks that something notices. Twenty-three mutations, twenty-three caught, no false positives. Two of them
-target `Api/` rather than `Core/`, because the idempotency claim is about an emission rule and the emitted
-operations are the only place it is visible.
+checks that something notices. **37 mutations across the two surfaces, 37 caught, no false
+positives.** Two of the 4.0.0 ones target `Api/` rather than `Core/`, because the idempotency
+claim is about an emission rule and the emitted operations are the only place it is visible.
+One of the pre-4.0.0 ones deletes a file outright, which is the only way to break a `count`
+assertion when every other mutation is a string replacement.
 
 Run it after any change that loosens a pattern. A `MISS` means either the claim has no
 assertion or the one defending it has stopped discriminating.
@@ -221,10 +224,23 @@ or this directory. Fixtures are listed in `fixtures.json`; the refs there must t
 plugins themselves pin, or CI reports green about a surface nobody ships any more. A fixture that
 names an `expectFailures` baseline is graded against it; one that does not must come back clean.
 
-maxio has no mutation test yet — `mutation_test.py`'s edits are written against 4.0.0 `Core/`
-files and would fail to apply rather than prove anything. Until a pre-4.0.0 mutation set exists,
-that fixture's assertions are unproven in the one way the others are proven: nothing yet
-demonstrates they can still fail.
+Both surfaces have a mutation set, selected by `--surface`: 23 for 4.0.0 and 14 for pre-4.0.0.
+Every pre-4.0.0 mutation makes that surface look **more like 4.0.0** — the realistic direction of
+drift, and the one that would silently invalidate maxio-sdk's skills, whose entire premise is that
+this surface is not that one. All 14 of the `pre400.*` assertions are exercised by at least one.
+
+On a baselined fixture "caught" means the failing set **moved** against the baseline, not that it
+became non-empty — a mutation installing 4.0.0 behaviour can make a pre-4.0.0 assertion start
+failing, a baselined 4.0.0 assertion stop failing, or both. The report shows both directions, which
+is how you can see a mutation really did install the behaviour it claims to: adding the timeout
+shim to `RawClient` resolves `retry.timeout-rejection-is-translated` and
+`rawclient.timeout.inner-is-timeoutexception` at the same moment it trips
+`pre400.rawclient.nothing-is-caught`.
+
+Five of the fourteen `pre400.*` assertions are `absent` regexes, and this is the only thing that
+can tell an `absent` regex matching nothing from one that is simply wrong. That bug has shipped
+here twice — a `` a heredoc turned into a literal backspace byte, and an OAuth2 check that was
+vacuously true on a fixture with no OAuth2 scheme at all.
 
 **behavioural** — runs the compiled checks against the published package. PayPal-specific by
 construction (see above), so it does not fan out over fixtures the way the static job does.

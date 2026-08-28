@@ -114,9 +114,18 @@ jobs:
       # it matches anything leaves every assertion green over a rotted claim —
       # this is the only thing that catches that. It also fails when a mutation
       # cannot be applied, since nothing caught is not the same as all caught.
+      # The mutation set is chosen by --surface, and on a baselined fixture "caught"
+      # means the failing set MOVED against that baseline, not that it became non-empty.
       - name: Mutation test
         if: matrix.mutationTest
-        run: python tools/assert-c1/mutation_test.py "$RUNNER_TEMP/sdk"
+        env:
+          EXPECT: ${{ matrix.expectFailures }}
+        run: |
+          if [ -n "$EXPECT" ]; then
+            python tools/assert-c1/mutation_test.py "$RUNNER_TEMP/sdk"               --surface "${{ matrix.surface }}"               --expect-failures "tools/assert-c1/$EXPECT"
+          else
+            python tools/assert-c1/mutation_test.py "$RUNNER_TEMP/sdk"               --surface "${{ matrix.surface }}"
+          fi
 
       - uses: actions/upload-artifact@v4
         if: always()
