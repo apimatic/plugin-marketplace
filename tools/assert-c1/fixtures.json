@@ -27,12 +27,19 @@
     {
       "name": "twilio",
       "repo": "https://github.com/context-plugins/twilio-csharp-sdk",
-      "ref": "main",
+      "ref": "51fdf48c0d657f717642ada229682ef234db9ead",
       "surface": "4.0.0",
       "usedBy": [
         "twilio-sdk"
       ],
-      "mutationTest": false
+      "mutationTest": false,
+      "note": [
+        "Pinned to the commit sdk-map.md documents. This ref was `main` until 2026-08-28, when the",
+        "SDK repo's main was regenerated with a v4-beta generator (3d2efed, 'Regenerate SDK (v4 beta",
+        "codegen)') and this job correctly failed 17 surface assertions nine minutes later — the",
+        "drift-detection system firing on a live generator move. A branch is not a pin. When the",
+        "twilio plugin is regenerated against the new SDK, update this SHA together with the map."
+      ]
     },
     {
       "name": "maxio",

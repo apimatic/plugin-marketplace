@@ -38,7 +38,7 @@ confirm names against the map.
 | --- | --- |
 | API | Twilio |
 | NuGet package | `AsadAli.TwilioSdk` (install version-less — see *Install* below) |
-| Source repo | https://github.com/context-plugins/twilio-csharp-sdk (branch `main`) |
+| Source repo | https://github.com/context-plugins/twilio-csharp-sdk (commit `51fdf48` — the commit this map documents; `main` has since been regenerated with a newer generator) |
 | Root namespace | `TwilioSdk` (the `using` namespace) |
 | Client class | `TwilioSdkClient` |
 | Options class | `TwilioSdkClientOptions` |
@@ -131,21 +131,21 @@ repo — navigated via the SDK map above, a read-only
 reference, **not** a build dependency (never add a project reference to *this* clone; the build takes the
 SDK from the NuGet package in the *Install* section).
 
-**Clone only on a real map-side issue.** Clone once this session — shallow, from branch `main` (the
-branch the map was generated from) — into a fresh timestamped folder under `<temp>/twilio-sdk-src/`, and reuse
+**Clone only on a real map-side issue.** Clone once this session — shallow, at commit `51fdf48` (the exact
+commit the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder under `<temp>/twilio-sdk-src/`, and reuse
 that folder for the rest of your session:
 
 ```bash
 # Linux/macOS:
 dir="${TMPDIR:-/tmp}/twilio-sdk-src/$(date +%Y%m%d-%H%M%S)"
-git clone --depth 1 --branch main https://github.com/context-plugins/twilio-csharp-sdk "$dir"
+git clone --filter=blob:none https://github.com/context-plugins/twilio-csharp-sdk "$dir" && git -C "$dir" checkout --quiet 51fdf48c0d657f717642ada229682ef234db9ead
 # Reuse "$dir" for the rest of your session (it is your clone path).
 ```
 
 ```powershell
 # Windows (PowerShell):
 $dir = "$env:TEMP\twilio-sdk-src\$(Get-Date -Format yyyyMMdd-HHmmss)"
-git clone --depth 1 --branch main https://github.com/context-plugins/twilio-csharp-sdk $dir
+git clone --filter=blob:none https://github.com/context-plugins/twilio-csharp-sdk $dir; git -C $dir checkout --quiet 51fdf48c0d657f717642ada229682ef234db9ead
 # Reuse $dir for the rest of your session (it is your clone path).
 ```
 

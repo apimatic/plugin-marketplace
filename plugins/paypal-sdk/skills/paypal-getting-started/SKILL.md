@@ -138,14 +138,14 @@ that folder for the rest of your session:
 ```bash
 # Linux/macOS:
 dir="${TMPDIR:-/tmp}/paypal-sdk-src/$(date +%Y%m%d-%H%M%S)"
-git clone --depth 1 --branch v1.0.1 https://github.com/asadali214/checkout-sample-sdk "$dir"
+git clone --filter=blob:none https://github.com/asadali214/checkout-sample-sdk "$dir" && git -C "$dir" checkout --quiet v1.0.1
 # Reuse "$dir" for the rest of your session (it is your clone path).
 ```
 
 ```powershell
 # Windows (PowerShell):
 $dir = "$env:TEMP\paypal-sdk-src\$(Get-Date -Format yyyyMMdd-HHmmss)"
-git clone --depth 1 --branch v1.0.1 https://github.com/asadali214/checkout-sample-sdk $dir
+git clone --filter=blob:none https://github.com/asadali214/checkout-sample-sdk $dir; git -C $dir checkout --quiet v1.0.1
 # Reuse $dir for the rest of your session (it is your clone path).
 ```
 

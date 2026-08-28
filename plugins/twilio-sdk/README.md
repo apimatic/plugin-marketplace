@@ -26,7 +26,7 @@ plus `map/` branch pages):
 source, which remains the ground truth; the SDK repo and the map regenerate together). The workflow
 **navigates by map lookup instead of grepping**: most questions are answered from the map directly —
 field lists with JSON wire names, error accessors, enum values — and only when the map can't settle
-a fact is the SDK source cloned (branch `main`, the ref the map was generated from) and the one
+a fact is the SDK source cloned (commit `51fdf48`, the ref the map was generated from) and the one
 file the map names opened. Grepping / globbing / `find`-ing the tree to locate something is a defect —
 the map is the locator.
 

@@ -137,14 +137,14 @@ that folder for the rest of your session:
 ```bash
 # Linux/macOS:
 dir="${TMPDIR:-/tmp}/{{api.id}}-sdk-src/$(date +%Y%m%d-%H%M%S)"
-git clone --depth 1 --branch {{sdk.cloneRef}} {{sdk.repoUrl}} "$dir"
+git clone --filter=blob:none {{sdk.repoUrl}} "$dir" && git -C "$dir" checkout --quiet {{sdk.cloneRef}}
 # Reuse "$dir" for the rest of your session (it is your clone path).
 ```
 
 ```powershell
 # Windows (PowerShell):
 $dir = "$env:TEMP\{{api.id}}-sdk-src\$(Get-Date -Format yyyyMMdd-HHmmss)"
-git clone --depth 1 --branch {{sdk.cloneRef}} {{sdk.repoUrl}} $dir
+git clone --filter=blob:none {{sdk.repoUrl}} $dir; git -C $dir checkout --quiet {{sdk.cloneRef}}
 # Reuse $dir for the rest of your session (it is your clone path).
 ```
 

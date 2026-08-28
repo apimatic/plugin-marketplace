@@ -87,10 +87,17 @@ jobs:
         with:
           python-version: '3.12'
 
+      # init+fetch instead of clone --branch: a fixture ref may be a branch, a tag, or a
+      # bare commit SHA. It has to support SHAs, because a branch is not a pin — on
+      # 2026-08-28 the twilio SDK's main was regenerated with a v4-beta generator and this
+      # job correctly went red 9 minutes later; the fixture now pins the commit its map
+      # documents, which no tag names.
       - name: Clone the SDK fixture
         run: |
-          git clone --depth 1 --branch "${{ matrix.ref }}" \
-            "${{ matrix.repo }}.git" "$RUNNER_TEMP/sdk"
+          git init "$RUNNER_TEMP/sdk"
+          git -C "$RUNNER_TEMP/sdk" remote add origin "${{ matrix.repo }}.git"
+          git -C "$RUNNER_TEMP/sdk" fetch --depth 1 origin "${{ matrix.ref }}"
+          git -C "$RUNNER_TEMP/sdk" checkout FETCH_HEAD
 
       # A fixture on a different core surface carries a baseline of assertions that
       # cannot hold there, so the run is graded against that baseline: red when the

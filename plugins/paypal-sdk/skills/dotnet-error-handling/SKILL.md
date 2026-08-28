@@ -5,14 +5,14 @@ description: Error and exception handling for an APIMatic-generated .NET SDK in 
 
 <!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
      Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
-     context-plugins/twilio-csharp-sdk@main: 122 Core/*.cs, byte-identical modulo the root namespace.
+     context-plugins/twilio-csharp-sdk@51fdf48: 122 Core/*.cs, byte-identical modulo the root namespace.
      This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
      RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
      BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
      for retry-ineligible requests.
      verified-this-file: 2026-08-28 — UNIFIED, API-PORTABLE copy, byte-identical in paypal-sdk and
      twilio-sdk and verified against both sampled SDKs at once (checkout-sample-sdk@v1.0.1: 39/40
-     Case A, typed bodies with no status; twilio-csharp-sdk@main: 858 of the 887 mapped operations Case B, RawError with
+     Case A, typed bodies with no status; twilio-csharp-sdk@51fdf48: 858 of the 887 mapped operations Case B, RawError with
      StatusCode). It states no API-definition-dependent fact unconditionally — error-case mix,
      discriminators and accessor names come from the contract sheet / map at use time. Do NOT add
      per-API counts, provider names or accessor censuses here: that is exactly what drifted the

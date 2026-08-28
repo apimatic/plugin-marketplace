@@ -5,7 +5,7 @@ description: Client configuration and resilience for an APIMatic-generated .NET 
 
 <!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
      Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
-     context-plugins/twilio-csharp-sdk@main: 122 Core/*.cs, byte-identical modulo the root namespace.
+     context-plugins/twilio-csharp-sdk@51fdf48: 122 Core/*.cs, byte-identical modulo the root namespace.
      This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
      RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
      BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
