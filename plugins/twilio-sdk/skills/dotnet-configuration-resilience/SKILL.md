@@ -388,8 +388,9 @@ await foreach ({PageResponse} page in
 }
 ```
 
-**When you want the page rather than the items, call `.AsPages(ct)`** — that is where any cursor, link or
-total-count metadata on the page response lives:
+**`.AsPages(ct)` is also where any cursor, link or
+total-count metadata on the page response lives** — the sample above uses it to bound; use it
+equally when you need that metadata:
 
 ```csharp
 await foreach ({PageResponse} page in client.{ApiGroup}.{Operation}(/* ... */, ct: ct).AsPages(ct))

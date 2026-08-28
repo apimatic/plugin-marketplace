@@ -131,7 +131,7 @@ repo — navigated via the SDK map above, a read-only
 reference, **not** a build dependency (never add a project reference to *this* clone; the build takes the
 SDK from the NuGet package in the *Install* section).
 
-**Clone only on a real map-side issue.** Clone once this session — shallow, at commit `51fdf48` (the exact
+**Clone only on a real map-side issue.** Clone once this session — at commit `51fdf48` (the exact
 commit the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder under `<temp>/twilio-sdk-src/`, and reuse
 that folder for the rest of your session:
 
@@ -161,8 +161,8 @@ Then confirm the SDK shape **only** from that local clone — not by either of t
 - **Don't fetch GitHub files one at a time** as your way in — `…/blob/…` pages return HTML (not source) and
   guessed paths fail, which is exactly how ad-hoc fetching breaks. Clone once and read locally instead. Only
   if you truly cannot clone (`git` is unavailable) fetch a **raw** URL
-  (`https://raw.githubusercontent.com/<owner>/<repo>/main/…`, derived from the source repo above —
-  never a `…/blob/…` page), e.g. `…/main/Api/Api20100401Message.cs`.
+  (`https://raw.githubusercontent.com/<owner>/<repo>/51fdf48c0d657f717642ada229682ef234db9ead/…`, derived from the source repo above —
+  never a `…/blob/…` page), e.g. `…/51fdf48c0d657f717642ada229682ef234db9ead/Api/Api20100401Message.cs`.
 
 Layout — where the SDK map's file references resolve (open these directly; don't scan for them):
 
@@ -293,9 +293,9 @@ them in this order:
    (*The signature won't tell you:* unions are built with factory methods and read via `TryGet…` (no `new`),
    enums are `StringEnum<T>` not C# enums, and unmodeled JSON fields are dropped on deserialize.)
 5. **Error handling** — load **dotnet-error-handling** before you write any `try/catch`. (*The signature won't
-   tell you:* many read/list/find/delete ops are Case B (`SdkException<RawError>`, no typed
-   accessors) while others are Case A typed `{Operation}Error`s — confirm each operation's case in its map
-   row; and `TryGetRawError` is not a catch-all on the typed errors. Each operation's map row also says
+   tell you:* an operation is either Case B (`SdkException<RawError>`, no typed accessors) or
+   Case A (a typed `{Operation}Error`) — how the API mixes them is its own fact, so confirm each
+   operation's case in its map row; and `TryGetRawError` is not a catch-all on the typed errors. Each operation's map row also says
    whether a no-throw `…Result` variant exists — never assume one does.)
 6. **Configuration & resilience** — load **dotnet-configuration-resilience** when you tune retries, timeouts,
    the base URL, pagination, or logging. (*The signature won't tell you:* `HttpMethodsToRetry` gates **every**

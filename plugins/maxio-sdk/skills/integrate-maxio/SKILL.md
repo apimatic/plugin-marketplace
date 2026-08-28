@@ -147,6 +147,7 @@ the sheet is what keeps SDK facts out of your memory and in the map.
    > ⚠ Step 3 (client registration) — the SDK's retry/timeout options do **not** bound a whole
    > call and are **not** the timeout on the `HttpClient` you register. **MUST load
    > `dotnet-configuration-resilience`** before wiring the client.
+
    ⚠⚠ **"Do not resolve it" is the load-bearing half of this rule, and breaking it is the single
    most expensive mistake you can make in a sheet.** A trap note that answers its own question
    hands you, at implementation time, a usable one-liner — and holding a usable one-liner, you do
@@ -165,7 +166,8 @@ the sheet is what keeps SDK facts out of your memory and in the map.
 4. **REQUIRED READING** — close the sheet with the de-duplicated list of every `dotnet-*` skill
    named above, one line each: skill · the step it governs. **Write each name plugin-qualified**
    (`maxio-sdk:dotnet-error-handling`): three plugins in this marketplace ship these same seven
-   skill names with different content — 21 copies, 16 distinct versions — and a bare name gives
+   skill names — 21 copies, 14 distinct versions (a plugin from a different generator version
+   differs in all seven; same-version copies are byte-identical) — and a bare name gives
    you, at implementation time, no way to tell which one you loaded. Where the harness has no qualified form,
    say in the same line which plugin the copy must come from. State that these are to be loaded
    **before implementation starts**, and that the sheet deliberately does not carry their

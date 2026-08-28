@@ -53,7 +53,8 @@ map-grounding rules in the frame are what keep authored values honest.
 ## Two things to know before rendering a third API
 
 - **maxio-sdk is not a rendering target.** Its SDK is the pre-4.0.0 generator surface, and these
-  frames state 4.0.0 facts (RequestOptions, LoggingOptions, the retry predicate). A pre-4.0.0
+  frames state 4.0.0 facts (the readiness rows' retry and timeout numbers, the injected
+  Idempotency-Key mechanics). A pre-4.0.0
   frame would be a separate extraction.
 - **These frames describe the bundled-map era** — today's shipped plugins, whose SDK repos
   carry no map. The generator's blueprint for FUTURE SDKs, where the map lives inside the SDK

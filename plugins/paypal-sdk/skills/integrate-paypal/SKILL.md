@@ -1,6 +1,6 @@
 ---
 name: integrate-paypal
-description: MANDATORY FIRST STEP for PayPal .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate PayPal in C# — take a payment, capture, refund, save a card, subscriptions, billing plans, vaulting, transaction search — or when a PayPal .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file paypal-plan.md is written at <project repo root>/paypal-plan.md BEFORE any project file is created or edited; (2) paypal-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
+description: MANDATORY FIRST STEP for PayPal .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate PayPal in C# — take a payment at checkout, capture, refund, save a card, subscriptions, billing plans, vaulting, transaction search — or when a PayPal .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file paypal-plan.md is written at <project repo root>/paypal-plan.md BEFORE any project file is created or edited; (2) paypal-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
 ---
 
 # PayPal .NET SDK — Workflow (map + skills)
@@ -94,7 +94,7 @@ format below, and it is the only project-repo file you write before the HARD GAT
 #### Prerequisites you can run alongside
 
 These need no SDK knowledge and touch no project file, so do them before or alongside the map
-work — read-only exploration only:
+work — none of them creates or edits a project file:
 
 - the repo survey (read-only exploration of conventions and layering) — record each convention as
   *pattern + the ONE exemplar file path to imitate*, NOT inline code snippets: you will Read the
@@ -166,7 +166,8 @@ it does not bar the read-only prerequisite work above.
 4. **REQUIRED READING** — close the sheet with the de-duplicated list of every `dotnet-*` skill
    named above, one line each: skill · the step it governs. **Write each name plugin-qualified**
    (`paypal-sdk:dotnet-error-handling`): three plugins in this marketplace ship these same seven
-   skill names with different content — 21 copies, 16 distinct versions — and a bare name gives
+   skill names — 21 copies, 14 distinct versions (a plugin from a different generator version
+   differs in all seven; same-version copies are byte-identical) — and a bare name gives
    you, at implementation time, no way to tell which one you loaded. Where the harness has no qualified form,
    say in the same line which plugin the copy must come from. State that these are to be loaded
    **before implementation starts**, and that the sheet deliberately does not carry their

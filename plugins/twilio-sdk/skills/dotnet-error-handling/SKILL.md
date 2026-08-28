@@ -299,9 +299,9 @@ catch (SdkException<{Operation}Error> ex)        // a Case A operation — typed
     // accessor this operation declares (names from its map row), then the RawError-yielding
     // arms LAST — those are the typed-path branches that DO carry a status.
     if (ex.Error.TryGet{Body}(out {Body} e))
-        throw new {ProviderException}(e.{MessageField}, /* + identity fields — names from the model's map row */, ex);
+        throw new {ProviderException}(e.{MessageField} /* + identity fields — names from the model's map row */, ex);
     if (ex.Error.TryGetRawError(out RawError raw))
-        throw new {ProviderException}($"HTTP {(int)raw.StatusCode}", ex);
+        throw new {ProviderException}($"HTTP {(int)raw.StatusCode}", raw.StatusCode, ex);
     throw new {ProviderException}("unrecognised error shape", ex);
 }
 catch (SdkException<RawError> ex)                // a Case B operation — RawError carries the status
@@ -386,7 +386,7 @@ static (int Status, string Message) Map(Exception ex) => ex switch
 ```
 
 When the discriminator is a body field rather than a status, the **same ladder keys on that
-field** — identical arms, different `when` clauses (illustrative — your provider's codes may be strings or
+field** — the same your-fault / caller's-fault / unknown arms, different `when` clauses (illustrative — your provider's codes may be strings or
 ints; use the ones it documents):
 
 ```csharp

@@ -131,7 +131,7 @@ repo — navigated via the SDK map above, a read-only
 reference, **not** a build dependency (never add a project reference to *this* clone; the build takes the
 SDK from the NuGet package in the *Install* section).
 
-**Clone only on a real map-side issue.** Clone once this session — shallow, {{sdk.cloneRefPhrase}} — into a fresh timestamped folder under `<temp>/{{api.id}}-sdk-src/`, and reuse
+**Clone only on a real map-side issue.** Clone once this session — {{sdk.cloneRefPhrase}} — into a fresh timestamped folder under `<temp>/{{api.id}}-sdk-src/`, and reuse
 that folder for the rest of your session:
 
 ```bash
@@ -160,8 +160,8 @@ Then confirm the SDK shape **only** from that local clone — not by either of t
 - **Don't fetch GitHub files one at a time** as your way in — `…/blob/…` pages return HTML (not source) and
   guessed paths fail, which is exactly how ad-hoc fetching breaks. Clone once and read locally instead. Only
   if you truly cannot clone (`git` is unavailable) fetch a **raw** URL
-  (`https://raw.githubusercontent.com/<owner>/<repo>/main/…`, derived from the source repo above —
-  never a `…/blob/…` page), e.g. `…/main/{{map.exampleApiFile}}`.
+  (`https://raw.githubusercontent.com/<owner>/<repo>/{{sdk.cloneRef}}/…`, derived from the source repo above —
+  never a `…/blob/…` page), e.g. `…/{{sdk.cloneRef}}/{{map.exampleApiFile}}`.
 
 Layout — where the SDK map's file references resolve (open these directly; don't scan for them):
 
@@ -178,7 +178,30 @@ Layout — where the SDK map's file references resolve (open these directly; don
 keeping it is what lets every later step in this session reuse it instead of cloning again. The OS reaps the
 temp directory on its own; a future session simply makes its own timestamped clone.
 
-{{sections.idempotency}}{{sections.sensitiveData}}{{sections.responseMetadata}}{{sections.nameCollision}}## Integration workflow — load the companion skill at each step
+{{sections.idempotency}}{{sections.sensitiveData}}{{sections.responseMetadata}}## The `dotnet-*` skill names are not unique in this marketplace
+
+Three plugins in this marketplace — `maxio-sdk`, `paypal-sdk` and `twilio-sdk` — each ship their own copy
+of the same seven `dotnet-*` skill names. The 21 copies are **not interchangeable**: paypal-sdk and
+twilio-sdk ship byte-identical, API-portable copies of all seven, but maxio-sdk's describe a different
+(pre-4.0.0) generator surface — so the seven names resolve to **14 distinct versions**, and any pairing
+that includes maxio-sdk exposes two different skills under one name, with nothing announcing which one
+a bare name resolves to.
+
+**Load the copy that ships with THIS plugin.** Where your harness supports plugin-qualified skill names,
+write them out — `{{api.id}}-sdk:dotnet-error-handling`, `{{api.id}}-sdk:dotnet-configuration-resilience`, and so on. Where it does not, and more than one of those three plugins is installed,
+confirm you have this plugin's copy before you rely on it: check the `core-surface:` stamp at the top of
+the file, where it must name generator **4.0.0**.
+
+The difference is not cosmetic, and it is not safe to shrug at:
+
+- `maxio-sdk` documents a **pre-4.0.0** generator surface — 88 `Core/*.cs` against 122, with 28 of the 87
+  shared files differing. Loading its copy here would describe a runtime this SDK does not have — its
+  retry predicate, timeout behaviour and logging surface are all different.
+- The `paypal-sdk` and `twilio-sdk` copies are byte-identical and API-portable, so between those two the
+  collision is harmless — but only because neither copy states an API fact: which error case an operation
+  is, and what its errors carry, still comes from THIS plugin's map, never from the skill text.
+
+## Integration workflow — load the companion skill at each step
 
 You loaded every companion the sheet named before starting (per `integrate-{{api.id}}`); before you write the
 code for each step, re-read the one that governs it — even if you've already read the
@@ -203,9 +226,9 @@ them in this order:
    (*The signature won't tell you:* unions are built with factory methods and read via `TryGet…` (no `new`),
    enums are `StringEnum<T>` not C# enums, and unmodeled JSON fields are dropped on deserialize.)
 5. **Error handling** — load **dotnet-error-handling** before you write any `try/catch`. (*The signature won't
-   tell you:* many read/list/find/delete ops are Case B (`SdkException<RawError>`, no typed
-   accessors) while others are Case A typed `{Operation}Error`s — confirm each operation's case in its map
-   row; and `TryGetRawError` is not a catch-all on the typed errors. Each operation's map row also says
+   tell you:* an operation is either Case B (`SdkException<RawError>`, no typed accessors) or
+   Case A (a typed `{Operation}Error`) — how the API mixes them is its own fact, so confirm each
+   operation's case in its map row; and `TryGetRawError` is not a catch-all on the typed errors. Each operation's map row also says
    whether a no-throw `…Result` variant exists — never assume one does.)
 6. **Configuration & resilience** — load **dotnet-configuration-resilience** when you tune retries, timeouts,
    the base URL, pagination, or logging. (*The signature won't tell you:* `HttpMethodsToRetry` gates **every**
