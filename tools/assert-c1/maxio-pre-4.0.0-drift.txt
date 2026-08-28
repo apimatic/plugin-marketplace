@@ -1,0 +1,166 @@
+# Known failures for the PRE-4.0.0 core surface (maxio-sdk's SDK).
+#
+# assert-c1's 328 general assertions describe generator 4.0.0. Run against a pre-4.0.0
+# fixture, 100 of them fail BY CONSTRUCTION — the surface really is different, and maxio's
+# own dotnet-* skills already say so in their provenance stamps. Baselining them here means
+# the job goes red when this delta CHANGES rather than sitting red forever, which is the only
+# way a known-failing check stays worth reading.
+#
+# Two things this catches that a plain 'skip maxio' would not:
+#   - a 4.0.0 behaviour APPEARING here (the SDK was regenerated) shows up as a resolved entry;
+#   - a baselined failure going UNSETTLEABLE shows up separately, because 'the fixture can no
+#     longer answer this' is not the same as 'this was fixed'.
+#
+# The positive claims for this surface live in assertions/15-pre-4.0.0.json and are expected
+# to PASS. This file is only the 4.0.0-shaped half that cannot hold here.
+#
+# Regenerate with:  python tools/assert-c1/assert_c1.py <maxio-sdk> --surface pre-4.0.0
+
+# --- auth (6) -----------------------------------------------------
+# The OAuth2 and composite-scheme internals differ; the credential/strategy split that 4.0.0
+# emits is not the shape here.
+auth.any-skips-unconfigured
+auth.compose.any-throws-only-when-a-configured-scheme-failed
+auth.compose.unconfigured-means-noneauthscheme
+auth.oauth2.ac.form-body-omits-client-secret-when-absent
+auth.oauth2.ac.guard.pkce-disabled-requires-secret
+auth.oauth2.cc.scope-dropped-when-null-or-empty
+
+# --- client (1) ---------------------------------------------------
+# The generated root client's construction differs.
+client.ctor-builds-pipelines-logger-auth
+
+# --- di (1) -------------------------------------------------------
+# The DI extension's shape differs.
+di.fills-logger-factory-from-container
+
+# --- diclient (2) -------------------------------------------------
+# The options class carries four knobs, not the 4.0.0 set.
+diclient.client.gen-version-header-value
+diclient.options.fixed-knobs-with-defaults
+
+# --- errors (3) ---------------------------------------------------
+# The generated Errors/*.cs accessor-naming rules differ from the 4.0.0 emission.
+errors.generated.accessors-take-one-out-parameter
+errors.generated.typed-accessor-name-mirrors-its-body-type
+errors.rawerror.body-buffered-before-construction
+
+# --- idempotency (1) ----------------------------------------------
+# No Idempotency-Key is injected on this surface — 158 non-GET operations carry none. There is
+# no generator-injected key to warn about, which is why maxio's skills do not mention one.
+idempotency.header.every-non-get-and-no-get
+
+# --- logging (36) -------------------------------------------------
+# No built-in logging surface at all: no Core/Configuration/LoggingOptions.cs, no Core/Logging/.
+# maxio's dotnet-configuration-resilience documents a DelegatingHandler instead, which is
+# correct for this surface.
+logging.category.client-passes-its-own-type-name
+logging.category.is-client-name-dot-http
+logging.env-var.accepted-values-are-exactly-three
+logging.env-var.debug-forces-headers-not-body
+logging.env-var.name-shape
+logging.env-var.only-when-factory-null
+logging.env-var.trace-forces-body
+logging.env-var.writes-to-stderr
+logging.factory.null-falls-back-to-nulllogger
+logging.gated-by-ilogger-isenabled
+logging.hot-path.scope-opens-before-the-send
+logging.known-safe-query-keys
+logging.levels.body-trace
+logging.levels.request-line-information
+logging.levels.response-line-warning-on-failure
+logging.levels.retry-warning
+logging.levels.terminal-failure-carries-the-exception
+logging.namespace.options-in-core-configuration
+logging.namespace.request-options-in-core-not-configuration
+logging.options.assignable-on-the-client-options
+logging.options.body-size-limit
+logging.options.defaults-off
+logging.options.loggable-content-types
+logging.options.logger-factory-nullable-with-no-default
+logging.options.redacted-headers-empty-by-default
+logging.options.redacted-keys
+logging.options.redaction-placeholder-default
+logging.per-call-options.read-only-by-the-logger
+logging.plan.lines-on-by-default
+logging.redaction.form-body-is-denylisted
+logging.redaction.headers-are-allowlisted
+logging.redaction.json-body-not-masked
+logging.redaction.query-is-allowlisted
+logging.redaction.redacted-keys-are-additive
+logging.redaction.unmask-beats-redacted-beats-known-safe
+logging.redaction.url-path-is-not-masked
+
+# --- other (5) ----------------------------------------------------
+# Pagination is PaginationModels.cs (ExecutePaged*), not Pageable<TPage,TItem>; the core file
+# count is 88, not 122.
+other.pagination.aspages-yields-pages
+other.pagination.enumerates-items-not-pages
+other.pagination.pageable-namespace
+other.stamp.core-file-count
+other.status.default-success-window-is-2xx
+
+# --- rawclient (18) -----------------------------------------------
+# RawClient here is a much smaller file: no try/catch, no logging scope, no ExecuteResult hook,
+# no Pageable. Nothing is translated on the way out.
+rawclient.attempt.headers-read-and-ctx-token
+rawclient.attempt.request-built-inside-pipeline
+rawclient.attempt.send-inside-pipeline
+rawclient.auth.401-invalidates-without-resend
+rawclient.cancel.caller-token-excluded-from-failure-log
+rawclient.context.caller-token-seeds-pipeline
+rawclient.context.method-set-before-pipeline
+rawclient.execute.getresponseorthrow-only-on-throwing-paths
+rawclient.execute.result-hook-is-public
+rawclient.outcome.status-and-headers-on-both-branches
+rawclient.pagination.failed-page-throws
+rawclient.pagination.state-advances-per-page
+rawclient.request.content-disposed-in-finally
+rawclient.seam.single-send-site
+rawclient.stream.success-mapper-gated-by-status
+rawclient.timeout.inner-is-timeoutexception
+rawclient.timeout.translated-message
+rawclient.transport.rethrows-unwrapped
+
+# --- retry (20) ---------------------------------------------------
+# The retry pipeline is materially different — see 15-pre-4.0.0.json for what it does instead.
+# The method filter gates only the status arm, MaxRetries goes straight to Polly, a
+# retry-ineligible request gets an EMPTY pipeline, and there is no delay clamp.
+retry.backoff.constant-when-exponential-off
+retry.backoff.exponential-arm-uses-attempt-number
+retry.backoff.jitter-is-uniform-over-maxjitter
+retry.backoff.sum-clamped-to-maxdelay
+retry.delay-clamped-at-60s
+retry.disabled-factory-exists
+retry.ineligible-keeps-timeout
+retry.pipeline.empty-only-when-nothing-to-do
+retry.pipeline.selected-per-request-by-canretry
+retry.predicate.method-filter-gates-both-arms
+retry.predicate.never-reads-response-requestmessage
+retry.predicate.reads-method-from-context
+retry.predicate.status-arm
+retry.predicate.timeout-is-a-trigger
+retry.retry-after-overrides-backoff
+retry.retry-after.clamped-at-both-ends
+retry.retry-after.delta-and-date-forms
+retry.timeout-rejection-is-translated
+retry.timeout.retry-registered-outside-timeout
+retry.zero-is-skipped-not-passed-to-polly
+
+# --- signature (2) ------------------------------------------------
+# Types the 4.0.0 signature assertions inspect (RequestOptions) do not exist here.
+signature.request-options-single-property
+signature.requestoptions-before-ct
+
+# --- surface (4) --------------------------------------------------
+# The four surface discriminators — LoggingOptions, RequestOptions, Pageable, and the
+# gen-version header — are exactly what tells the two surfaces apart, so they SHOULD fail here.
+# If one of them stops failing, this fixture has become a 4.0.0 SDK.
+surface.gen-version-header
+surface.logging-options.exists
+surface.pageable.exists
+surface.request-options.exists
+
+# --- webhooks (1) -------------------------------------------------
+# No Core/Webhooks/ at all — no signature verifier, no parser.
+webhooks.verifier-is-internal

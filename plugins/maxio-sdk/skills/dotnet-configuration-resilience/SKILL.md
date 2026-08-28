@@ -199,13 +199,19 @@ There are three places a bound can live, and **two of the three are per-attempt*
 
 | Layer | Scope | Default | Bounds a whole call? |
 | --- | --- | --- | --- |
-| `options.Retry.Timeout` | one attempt | `100s` | **No** — a retryable failure just under it repeats the cost |
+| `options.Retry.Timeout` | one attempt | `100s` | **No** — a retryable failure just under it repeats the cost. Throws `TimeoutRejectedException`, *not* `TaskCanceledException` — see below |
 | `HttpClient.Timeout` | one attempt | `100s` | **No** — same; see below |
 | `CancellationToken` you pass to the call | the whole call | none | **Yes** — the only one |
 
 **`HttpClient.Timeout` is applied per attempt here, which is not obvious.** It is enforced by a CTS created
 inside each `SendAsync`, and the retry pipeline sits *above* `SendAsync` — so every retry gets a fresh full
 `Timeout`.
+
+**The two per-attempt knobs throw two different exception types here.** `HttpClient.Timeout` throws
+`TaskCanceledException`; `options.Retry.Timeout` throws Polly's **`TimeoutRejectedException`** (with a
+`TaskCanceledException` inside it), because `RawClient` on this surface catches nothing and so translates
+nothing. A boundary that guards only the first silently lets the second through — see
+**maxio-sdk:dotnet-error-handling**.
 
 It is still the highest-value single knob, for a reason worth understanding: its expiry throws
 `TaskCanceledException`, which the pipeline does **not** retry (see Notes), so **the first time it fires the

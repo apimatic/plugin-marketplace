@@ -12,16 +12,15 @@ name: assert-c1
 
 on:
   pull_request:
-    # Deliberately NOT plugins/*/skills/dotnet-*: the suite only has an assertion
-    # set for the generator-4.0.0 surface, which is paypal-sdk and twilio-sdk. The
-    # maxio-sdk plugin documents a pre-4.0.0 SDK and fails ~98 assertions by
-    # construction, so running against them would be noise — and triggering on
-    # them without checking them is worse: a green assert-c1 that asserted nothing
-    # about the files in the diff. If a pre-4.0.0 assertion set is ever written,
-    # widen this and add the fixture below in the same commit.
+    # All three SDK plugins now, including maxio-sdk. It documents the pre-4.0.0
+    # surface and fails 100 of the general assertions by construction — but those
+    # are pinned in maxio-pre-4.0.0-drift.txt and its own positive claims are
+    # asserted by the pre400.* set, so a maxio diff is now genuinely checked rather
+    # than merely triggering a green run that asserted nothing about it.
     paths:
       - 'plugins/paypal-sdk/skills/dotnet-*/**'
       - 'plugins/twilio-sdk/skills/dotnet-*/**'
+      - 'plugins/maxio-sdk/skills/dotnet-*/**'
       - 'tools/assert-c1/**'
       - '.github/workflows/assert-c1.yml'
   push:
@@ -29,6 +28,7 @@ on:
     paths:
       - 'plugins/paypal-sdk/skills/dotnet-*/**'
       - 'plugins/twilio-sdk/skills/dotnet-*/**'
+      - 'plugins/maxio-sdk/skills/dotnet-*/**'
       - 'tools/assert-c1/**'
   schedule:
     # Weekly. The generator-drift job below is the reason this runs on a timer:
@@ -92,11 +92,23 @@ jobs:
           git clone --depth 1 --branch "${{ matrix.ref }}" \
             "${{ matrix.repo }}.git" "$RUNNER_TEMP/sdk"
 
+      # A fixture on a different core surface carries a baseline of assertions that
+      # cannot hold there, so the run is graded against that baseline: red when the
+      # delta CHANGES, not while it merely exists. Fixtures without one must be clean.
       - name: Assert
+        env:
+          EXPECT: ${{ matrix.expectFailures }}
         run: |
-          python tools/assert-c1/assert_c1.py "$RUNNER_TEMP/sdk" \
-            --surface "${{ matrix.surface }}" \
-            --json "$RUNNER_TEMP/report-${{ matrix.name }}.json"
+          if [ -n "$EXPECT" ]; then
+            python tools/assert-c1/assert_c1.py "$RUNNER_TEMP/sdk" \
+              --surface "${{ matrix.surface }}" \
+              --json "$RUNNER_TEMP/report-${{ matrix.name }}.json" \
+              --expect-failures "tools/assert-c1/$EXPECT"
+          else
+            python tools/assert-c1/assert_c1.py "$RUNNER_TEMP/sdk" \
+              --surface "${{ matrix.surface }}" \
+              --json "$RUNNER_TEMP/report-${{ matrix.name }}.json"
+          fi
 
       # Proves the suite can still fail. A regex loosened during a refactor until
       # it matches anything leaves every assertion green over a rotted claim —

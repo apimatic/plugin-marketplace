@@ -152,9 +152,32 @@ counter-example", and on a fixture with no examples at all the answer is no.
 
 ## Surfaces
 
-`--surface` is a hook nothing uses yet: no assertion declares a `surfaces` key, so the value
-selects nothing today. The `surface.*` assertions do the discriminating instead, by failing on
-the wrong surface — louder than filtering, and it tells you *which* facts differ.
+Two surfaces ship in this repo: generator **4.0.0** (paypal-sdk, twilio-sdk — 122 `Core/*.cs`)
+and **pre-4.0.0** (maxio-sdk — 88). Until a maxio fixture existed, every assertion here had only
+ever run against 4.0.0, which meant the C1-vs-C2 distinction the whole suite rests on had never
+itself been tested: an assertion cannot be shown to be generator-static by checking it against
+one generator.
+
+The suite handles the two surfaces in two different ways, deliberately:
+
+**The general 328 are never filtered.** They run in full against every fixture, including the
+one where ~100 of them cannot hold. Those 100 are pinned in `maxio-pre-4.0.0-drift.txt` and
+graded with `--expect-failures`, so the job goes red when the delta **changes** rather than
+while it merely exists. Failing loudly against a recorded baseline beats silently running a
+smaller suite — and the baseline doubles as the readable document of what the two surfaces
+actually differ on, grouped by family with a line on each explaining why.
+
+**Assertions that are true of one surface only declare it.** `assertions/15-pre-4.0.0.json`
+carries `"surfaces": ["pre-4.0.0"]` on all 14 of its entries, because they assert things that
+are *false* on 4.0.0 — a bare `.Handle<HttpRequestException>()` with no method gate, an empty
+pipeline for retry-ineligible requests, no delay clamp, a `RawClient` that catches nothing.
+Ten of the fourteen fail on a 4.0.0 fixture if you force them to run
+(`--surface pre-4.0.0` against paypal); the other four are pins that hold on both.
+
+Surface-filtered assertions are counted and reported **separately** from unsettled ones —
+`13 unsettled, 14 n/a on this surface`, never one merged skip count. The two mean opposite
+things: an unsettled assertion is a question this run left open, an n/a one is closed by
+construction. Merging them is the same mistake as reporting a skip as a pass.
 
 `X-APIMatic-Gen-Version` **does not pin the surface.** codegen-v2 still stamps `4.0.0`
 while its `StaticCode/Core` has moved ahead of the SDKs reporting that same value — 20 of
@@ -193,9 +216,15 @@ fixture that exercises them exists:
 fails if that list is empty, then:
 
 **static** — clones each SDK fixture at its pinned ref and runs the suite, plus the mutation
-test on one of them. Triggers on any PR touching `plugins/{paypal,twilio}-sdk/skills/dotnet-*` or this
-directory. Fixtures are listed in `fixtures.json`; the refs there must track what the
-plugins themselves pin, or CI reports green about a surface nobody ships any more.
+test on one of them. Triggers on any PR touching `plugins/{paypal,twilio,maxio}-sdk/skills/dotnet-*`
+or this directory. Fixtures are listed in `fixtures.json`; the refs there must track what the
+plugins themselves pin, or CI reports green about a surface nobody ships any more. A fixture that
+names an `expectFailures` baseline is graded against it; one that does not must come back clean.
+
+maxio has no mutation test yet — `mutation_test.py`'s edits are written against 4.0.0 `Core/`
+files and would fail to apply rather than prove anything. Until a pre-4.0.0 mutation set exists,
+that fixture's assertions are unproven in the one way the others are proven: nothing yet
+demonstrates they can still fail.
 
 **behavioural** — runs the compiled checks against the published package. PayPal-specific by
 construction (see above), so it does not fan out over fixtures the way the static job does.
@@ -210,8 +239,12 @@ assertions fail, and `--expect-failures` makes the job go red only when that set
 — a new id means the generator moved again, a removed one means the gap closed and the
 skills can follow. A job that is permanently red is one everybody learns to ignore.
 
-Regenerate the baseline after reconciling:
+Regenerate either baseline after reconciling:
 
 ```
 python assert_c1.py <StaticCode> | grep '^FAIL' | awk '{print $2}' | sort
+python assert_c1.py <maxio-sdk> --surface pre-4.0.0 | grep '^FAIL' | awk '{print $2}' | sort
 ```
+
+`maxio-pre-4.0.0-drift.txt` is grouped and commented rather than a flat list, so regenerating it
+by piping the above loses the per-family reasons. Merge new ids into the right group instead.

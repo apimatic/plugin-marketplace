@@ -7,7 +7,11 @@
     "against a newer SDK, update it here in the same commit, or CI keeps checking the old one",
     "and reports green about a surface nobody ships any more.",
     "",
-    "surface is passed to --surface. It is currently a no-op hook (nothing declares `surfaces`); the surface.* assertions are what actually discriminate, by failing."
+    "surface is passed to --surface. Assertions that declare a `surfaces` key run only on the",
+    "surfaces they name (today: the pre-4.0.0 set in assertions/15-pre-4.0.0.json). The general",
+    "328 are NOT filtered — they run in full against every fixture, and the ~100 that cannot",
+    "hold on pre-4.0.0 are pinned per-fixture in expectFailures. Failing loudly against a",
+    "recorded baseline is more informative than silently running a smaller suite."
   ],
   "fixtures": [
     {
@@ -29,6 +33,27 @@
         "twilio-sdk"
       ],
       "mutationTest": false
+    },
+    {
+      "name": "maxio",
+      "repo": "https://github.com/asadali214/advanced-billing-sample-sdk",
+      "ref": "v1.0.2",
+      "surface": "pre-4.0.0",
+      "usedBy": [
+        "maxio-sdk"
+      ],
+      "mutationTest": false,
+      "expectFailures": "maxio-pre-4.0.0-drift.txt",
+      "note": [
+        "The pre-4.0.0 surface — 88 Core/*.cs against 4.0.0's 122. 100 of the general assertions",
+        "fail here by construction and are baselined; the pre400.* set is the positive half and is",
+        "expected to pass. Before this fixture existed, NOTHING checked maxio-sdk's runtime claims:",
+        "the suite ran against two 4.0.0 SDKs only, so no assertion had ever been tried on a second",
+        "surface and the C1-vs-C2 split the skills rest on was itself unverified.",
+        "",
+        "No mutation test yet: mutation_test.py's edits are written against 4.0.0 Core/ files, so it",
+        "would fail to apply rather than prove anything. A pre-4.0.0 mutation set is worth writing."
+      ]
     }
   ],
   "generatorTemplate": {

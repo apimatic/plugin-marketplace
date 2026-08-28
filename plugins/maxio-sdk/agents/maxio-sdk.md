@@ -159,7 +159,7 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
 ## maxio-plan.md format (keep it tight — tables, not prose)
 
 1. **Scope & sequence** — the implementation steps in order, each naming the operations it uses.
-   A capability the map lacks is a Blocker (§5), never a data path you invent to replace it.
+   A capability the map lacks is a Blocker (§6), never a data path you invent to replace it.
 2. **CONTRACT SHEET** — open the section with these two literal warning lines:
    > **Signatures are generated code, verbatim — every parameter name is the literal
    > C# identifier. The cancellation-token parameter really is named `ct`: in named
@@ -176,7 +176,7 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    Then one table row per operation: controller property · method signature (params in order,
    types, required-but-nullable flags) · request model + its fields (`Name (wire_name): type,
    required?`) · response envelope + the inner fields the integration reads · error case A/B +
-   accessors + payload type · pagination · **source** (§6). Below it: the enum value tables
+   accessors + payload type · pagination · **source** (§7). Below it: the enum value tables
    actually needed, and the client construction/auth/server-node facts.
    ⚠ **A request model may mark nothing required, and then `required?` selects nothing for you.**
    Carry the optional fields the operation's Notes tie to whether the call is accepted, and say
@@ -211,12 +211,33 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
    **MUST load `dotnet-error-handling`** before writing that boundary. These rows belong in the
    FIRST sheet, not a later revision: the boundary is written early, and a caveat that arrives
    afterwards arrives too late to shape it.
-5. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
+5. **PRODUCTION READINESS** — a fixed eight-row table, every row carrying a *decision*. Naming a
+   skill in REQUIRED READING does not address a concern; it defers it. `N/A` is a legitimate
+   answer where it is genuinely true, but it must carry its reason — "N/A: read-only scope, no
+   writes" is a decision a reviewer can grade, a blank cell is an omission they cannot.
+
+   | # | Concern | The decision the plan must record |
+   |---|---|---|
+   | 1 | **Credential fail-fast** | Where credentials are bound, and that the host refuses to start when one is missing or blank. `options.BasicAuth` is **nullable**, and a null one is not an error: the factory quietly substitutes `NoneAuthScheme` and the call goes out **unauthenticated**. `Username` and `Password` are `required`, so they cannot be omitted — but a blank environment variable satisfies `required` and `Encode()` will happily base64 `":"`. Both failures surface only as a `401` from the provider. |
+   | 2 | **Secret sourcing & rotation** | Where the API key comes from, and that `AddMaxioAdvancedBillingClient` runs your `configure` delegate **once at registration**, before the service provider exists, and captures the resulting options in a **singleton**. Two consequences to record: a rotated key needs a process restart, and you cannot resolve `IConfiguration` or `IOptionsMonitor` inside that delegate. If rotation without a restart is required, say how. |
+   | 3 | **Total timeout budget** | The number the caller actually gets, not the knob. `Retry.Timeout` is **per attempt** (`100s`), so under the defaults a hung call costs ≈`4 × 100s + 7s backoff` ≈ **407s** before jitter (`1s`, `2s`, `4s` at `BackOffFactor = 2`, plus up to `500ms` drawn per retry) — and on this surface that is the budget for **writes too**, not just reads (see row 4). Two traps: a **binary** request runs on an empty pipeline and gets **no `Retry.Timeout` at all**, leaving only `HttpClient.Timeout`; and `Retry.Timeout` expiry throws `TimeoutRejectedException`, *not* `TaskCanceledException`. A `CancellationToken` deadline is the only thing that bounds a whole call. |
+   | 4 | **Write-retry ownership** | Which of the scope's writes the SDK may resend — and here the answer is **all of them**. The retry predicate has two arms and only one is method-gated: `HttpMethodsToRetry` (`GET, HEAD, PUT, OPTIONS`) gates the **status** arm, while the transport arm is a bare `.Handle<HttpRequestException>()` that fires on **every verb**. A `POST` that fails mid-flight is therefore resent up to 3 times. This is the **inverse** of the 4.0.0 surface, where the method filter gates both arms — do not carry that reassurance across. Record which writes can be resent and what the provider does with a duplicate. |
+   | 5 | **Idempotency & ambiguous writes** | For each write in scope: how a duplicate is reconciled. **This SDK has no idempotency mechanism at all** — no generator-injected header, and no operation takes a key parameter; the string `idempotenc` does not appear anywhere in `Api/`, `Models/` or `Core/`. Combined with row 4 that makes every write **at-least-once with no dedupe key**, so the reconciliation path is not optional here the way it is on a surface that has keys. Record it per write, or record why the write is naturally idempotent. |
+   | 6 | **Observability** | What is logged and by what. There is **no built-in logging surface** — no `LoggingOptions`, no environment-variable switch, no redaction — so nothing is logged until you attach a `DelegatingHandler` yourself, and nothing is masked unless you write the masking. Record which handler is attached where, what it records, and which correlation id reaches your own logs. |
+   | 7 | **Sensitive data** | Whether the scope carries data you would not want in a log. Advanced Billing is billing data, and the request side is **unmasked**: five models carry a raw `full_number` (`CreatePaymentProfile`, `UpdatePaymentProfile`, `CreditCardAttributes`, `PaymentProfileAttributes`, `SubscriptionGroupCreditCard`) and three a raw `bank_account_number` (`BankAccountAttributes`, `CreatePaymentProfile`, `SubscriptionGroupBankAccount`). Responses mask — `masked_card_number`, `masked_bank_account_number` — so the exposure is **request bodies on the `PaymentProfiles` paths**, not responses. Because there is no built-in masker (row 6), the only control is the handler you wrote: state that it does not log request bodies there, or that it redacts `full_number` and `bank_account_number` by name. |
+   | 8 | **Environment selection** | Which base URLs each deployment talks to — and this SDK will not tell you when you get it wrong. Two dimensions multiply: `ServerEnvironment` picks `Us` (the default) or `Eu`, and `ServerOptions` carries **two independent server groups** — `Production` (245 of 247 operations) and `Ebb` (2, both on `SubscriptionComponents`). Each group holds its own `Us`/`Eu` pair, and **every one of the four defaults `Site` to the literal string `"subdomain"`** — so an unconfigured client resolves to `https://subdomain.chargify.com` and fails against a host that is not yours. Setting `Production.Us.Site` does not set `Ebb.Us.Site`, and setting the `Us` pair while `Environment = Eu` sets nothing that is read. **There is no sandbox host**: isolation means pointing at a test *site*, so a wrong `Site` in a test run is real traffic against a real site. State which `Site` each deployment sets, on which groups. |
+
+   A reviewer grades this from the table alone: each row either records a decision or records why
+   it does not apply. A row that points at a skill, restates the concern, or sits blank is **not
+   addressed**. Rows 4, 5, 7 and 8 are the ones where "not addressed" costs something that cannot
+   be recovered afterwards — a duplicate charge with no key to reconcile it by, a PAN in a log, or
+   a test run that wrote to a live site.
+6. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
    that blocks planning. An empty section is a valid outcome; an invented fact is not.
    If you expect the provider to reject a call the plan makes, that is a **Blocker** — not an
    assumption, and never a caveat inside the step that causes it. The plan is wrong until someone
    resolves it.
-6. Every row's **source** cell cites its map page (e.g. `operations/Subscriptions.md`,
+7. Every row's **source** cell cites its map page (e.g. `operations/Subscriptions.md`,
    `records-4-Su-We.md`) so the implementer can name the exact page when it asks you about a row
    — it may not open the map itself. A row with no map page to cite is not a contract fact: write
    `YOUR CALL — not in the map` there instead, so the implementer weighs it against the task
@@ -225,7 +246,7 @@ corrected rows VERBATIM in the report — the main agent works from your reply, 
 
    Three labels, one order. A fact the map settles cites its page. A fact only live traffic can
    settle is `UNVERIFIED`. A decision about the application is `YOUR CALL — not in the map`.
-   Something that stops you planning is none of the three — it goes in §5.
+   Something that stops you planning is none of the three — it goes in §6.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the
 operations and fields the scope actually touches. Your final message: the file path, a

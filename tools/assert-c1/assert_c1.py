@@ -60,6 +60,10 @@ class Result:
     defends: str
     detail: str = ""
     skipped: bool = False
+    # A skip because this assertion is not declared for the surface under test. It is
+    # still a skip, but it says nothing about the SDK — unlike an Unsettleable, which
+    # says the fixture could not answer a question that does apply.
+    notApplicable: bool = False
 
 
 @dataclass
@@ -700,7 +704,8 @@ def run(root: str, surface: str, only: str | None) -> list[Result]:
         surfaces = a.get("surfaces")
         if surfaces and surface not in surfaces:
             results.append(Result(a["id"], True, a["claim"], a.get("defends", ""),
-                                  "not applicable to surface " + surface, skipped=True))
+                                  "not applicable to surface " + surface,
+                                  skipped=True, notApplicable=True))
             continue
         missing = [p for p in a.get("requires", []) if not ctx.has(p)]
         if missing:
@@ -740,11 +745,15 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sdk_root")
     ap.add_argument("--surface", default="4.0.0",
-                    help="core surface the fixture is expected to be (default 4.0.0). NOTE: this is a "
-                         "hook with no current users — no assertion declares a `surfaces` key, so the "
-                         "value selects nothing today. What actually discriminates between surfaces is "
-                         "the surface.* assertions, which FAIL on the wrong one; that is louder and more "
-                         "informative than silently filtering the suite down.")
+                    help="core surface the fixture is expected to be: 4.0.0 (paypal-sdk, twilio-sdk) or "
+                         "pre-4.0.0 (maxio-sdk). Assertions that declare a `surfaces` key run only on "
+                         "the surfaces they name; everything else runs everywhere. The filtering is "
+                         "reported separately as `n/a on this surface` rather than folded into the "
+                         "skip count, so a narrowed run cannot be mistaken for a full one. The general "
+                         "suite is still NOT filtered by surface — it runs in full against every "
+                         "fixture, and the ~100 assertions that cannot hold on pre-4.0.0 are pinned in "
+                         "maxio-pre-4.0.0-drift.txt via --expect-failures. Failing loudly against a "
+                         "recorded baseline beats silently running less.")
     ap.add_argument("--only", help="run only assertions whose id starts with this prefix")
     ap.add_argument("--json", help="write a machine-readable report here")
     ap.add_argument("--expect-failures", metavar="FILE",
@@ -763,11 +772,15 @@ def main() -> int:
     results = run(args.sdk_root, args.surface, args.only)
     failed = [r for r in results if not r.ok]
     skipped = [r for r in results if r.skipped]
+    # Split for the summary: unsettled is a gap in what this run proved, not-applicable is not.
+    notapplicable = [r for r in skipped if r.notApplicable]
+    unsettled = [r for r in skipped if not r.notApplicable]
 
     for r in results:
         if r.ok and not args.verbose:
             continue
-        mark = "SKIP" if r.skipped else ("ok  " if r.ok else "FAIL")
+        mark = ("n/a " if r.notApplicable else "SKIP") if r.skipped \
+            else ("ok  " if r.ok else "FAIL")
         print("%s %s" % (mark, r.id))
         if not r.ok or args.verbose:
             print("       claim: %s" % r.claim)
@@ -776,9 +789,11 @@ def main() -> int:
             print("      result: %s" % r.detail)
 
     print()
-    print("%d assertions: %d passed, %d failed, %d skipped   [%s, surface %s]" % (
-        len(results), len(results) - len(failed) - len(skipped), len(failed),
-        len(skipped), args.sdk_root, args.surface))
+    summary = "%d assertions: %d passed, %d failed, %d unsettled" % (
+        len(results), len(results) - len(failed) - len(skipped), len(failed), len(unsettled))
+    if notapplicable:
+        summary += ", %d n/a on this surface" % len(notapplicable)
+    print(summary + "   [%s, surface %s]" % (args.sdk_root, args.surface))
 
     if args.json:
         with open(args.json, "w", encoding="utf-8") as fh:
@@ -788,6 +803,8 @@ def main() -> int:
                 "total": len(results),
                 "failed": len(failed),
                 "skipped": len(skipped),
+                "unsettled": len(unsettled),
+                "notApplicable": len(notapplicable),
                 "results": [r.__dict__ for r in results],
             }, fh, indent=2)
         print("report: " + args.json)
@@ -801,7 +818,10 @@ def main() -> int:
         # stopped being able to answer it (a glob that no longer matches, say). Comparing
         # only the failing set would let that pass as "resolved", which is precisely the
         # kind of generator change this job exists to catch.
-        vanished = {r.id for r in skipped} & expected
+        # Only an UNSETTLED baselined failure is the disguised-regression case. One that went
+        # not-applicable was filtered on purpose and belongs in `gone`, to be removed from the
+        # baseline like any other resolved entry.
+        vanished = {r.id for r in unsettled} & expected
         new, gone = sorted(actual - expected), sorted(expected - actual - vanished)
         print()
         if not new and not gone and not vanished:

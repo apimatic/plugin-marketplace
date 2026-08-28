@@ -10,7 +10,10 @@ description: Error and exception handling for an APIMatic-generated .NET SDK in 
      on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
      a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
      Retry-After handling and no delay clamp.
-     verified-this-file: 2026-08-25 — namespace layout and the four Case-A usings, against Errors/*.cs and Core/ErrorResponse.
+     verified-this-file: 2026-08-28 — namespace layout and the four Case-A usings, against Errors/*.cs and
+     Core/ErrorResponse. Connection-failure ladder corrected: RawClient has NO try/catch on this surface,
+     so options.Retry.Timeout surfaces as Polly.Timeout.TimeoutRejectedException (inner:
+     TaskCanceledException) and the old two-type guard missed it. Confirmed by running the SDK.
      Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
      this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
      here. Do NOT copy runtime claims across a core-surface boundary. -->
@@ -266,15 +269,34 @@ Those come through as `HttpRequestException` / `TaskCanceledException`, which a
 `catch (SdkException<...>)` will not match. If that catch is your only guard, a connection failure
 escapes and takes down whatever was running the call.
 
+**On this surface there is a third type, and it is the one people miss.** `RawClient` here wraps the
+send in no `try`/`catch` at all, so when `options.Retry.Timeout` elapses Polly's own
+**`TimeoutRejectedException`** reaches you untranslated — its `InnerException` is a
+`TaskCanceledException`, but the exception itself is not one, so a guard written as
+`when (ex is HttpRequestException or TaskCanceledException)` **does not match it**. The failure that
+guard exists for is precisely the one that escapes it. Two consequences worth stating plainly:
+
+- Catch it explicitly. It lives in `Polly.Timeout`, so the `using` is `using Polly.Timeout;` and your
+  boundary takes a direct **Polly** dependency it did not ask for. That is a real cost of this
+  surface, not an oversight to route around — the alternative is letting the SDK's own configured
+  timeout escape your boundary.
+- Do not confuse it with `HttpClient.Timeout`, which *does* throw `TaskCanceledException`. Both are
+  per-attempt bounds; they surface as two different exception types. See
+  **maxio-sdk:dotnet-configuration-resilience**.
+
 **Convert connection failures to your own error type in one place.** If you wrap the SDK behind
 your own abstraction (a client interface, a service, a repository), catch connection failures at
 that boundary and rethrow the same error type you already use for API errors — so the rest of the
-code has a single failure type to handle instead of two unrelated ones:
+code has a single failure type to handle instead of three unrelated ones:
 
 ```csharp
 catch (SdkException<RawError> ex)                // API error (non-2xx)
 {
     throw new {ProviderException}("...", ex);
+}
+catch (TimeoutRejectedException ex)              // options.Retry.Timeout elapsed - NOT a
+{                                                // TaskCanceledException on this surface
+    throw new {ProviderException}("provider timed out", ex);
 }
 catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)  // connection failure
 {

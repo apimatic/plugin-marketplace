@@ -129,6 +129,25 @@ Each plugin's getting-started skill now states this, and each agent's REQUIRED R
 to write skill names **plugin-qualified** (`paypal-sdk:dotnet-error-handling`) — or, where the harness has
 no qualified form, to name the owning plugin in the same line.
 
+### The claims are executable — run them before you trust them
+
+`tools/assert-c1/` turns the runtime claims these skills make into assertions and runs them against the
+real SDKs in CI (`.github/workflows/assert-c1.yml`). **342 assertions across three fixtures**: paypal and
+twilio at generator 4.0.0, and maxio at pre-4.0.0. Do not correct a `dotnet-*` runtime claim from reading
+alone — add or run the assertion, because ten false claims shipped in five plugins for months precisely
+because they read plausibly.
+
+The maxio fixture is the one that makes the surface split real. 100 of the general assertions cannot hold
+on pre-4.0.0; they are baselined in `maxio-pre-4.0.0-drift.txt`, so the job goes red when that delta
+**changes**, and the 14 pre-4.0.0-only assertions in `assertions/15-pre-4.0.0.json` cover the claims
+maxio's own skills make instead. Some of them are the exact inverse of the 4.0.0 claim — on pre-4.0.0 the
+retry method filter gates only the status arm, so **writes are resent on transport faults**, and
+`RawClient` catches nothing, so the SDK's own timeout escapes as `TimeoutRejectedException`. That is what
+"do not copy runtime claims across a core-surface boundary" means in practice.
+
+Assertions marked `run-verified` were settled by executing the SDK, not by reading it. Reach for that when
+the source is ambiguous — it is how the `TimeoutRejectedException` hole was found.
+
 ## Per-IDE manifest convention
 
 MCP-backed plugins carry one manifest per IDE, and each manifest points at its own MCP config file so it can send an IDE-specific `X-Apimatic-Mcp-Client` telemetry header:
