@@ -1,0 +1,324 @@
+{
+  "group": "di-client",
+  "note": "Client construction, the options class, DI registration and server/base-URL selection.",
+  "assertions": [
+    {
+      "id": "diclient.client.single-public-sealed-class",
+      "kind": "count",
+      "glob": "*Client.cs",
+      "pattern": "^public sealed class \\w+Client\\b",
+      "expect": 1,
+      "claim": "An APIMatic .NET SDK exposes exactly one public client class, and it is sealed.",
+      "defends": "dotnet-client-initialization § Shape of the client — 'one public client class'; dotnet-testing § the seam (you fake the HttpClient, not the client)",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.client.ctor-httpclient-then-options",
+      "kind": "at-least",
+      "glob": "*Client.cs",
+      "pattern": "public\\s+(\\w+)Client\\(\\s*HttpClient\\s+\\w+\\s*,\\s*\\1ClientOptions\\s+\\w+\\s*\\)",
+      "expect": 1,
+      "claim": "public {Api}Client(HttpClient httpClient, {Api}ClientOptions options) — the HttpClient comes first and the options type is the client type name plus 'Options'. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-client-initialization § Shape of the client, the constructor code block; dotnet-testing § the seam",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.client.ctor-is-the-only-one",
+      "kind": "count",
+      "glob": "*Client.cs",
+      "pattern": "^[ \\t]+public\\s+\\w+Client\\s*\\(",
+      "expect": 1,
+      "claim": "That constructor is the client's ONLY public constructor — there is no parameterless or options-only overload, so an HttpClient must always be supplied.",
+      "defends": "dotnet-client-initialization § Shape of the client; dotnet-testing § the seam",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.client.not-disposable",
+      "kind": "absent",
+      "glob": "*Client.cs",
+      "pattern": "\\bIDisposable\\b|\\bDispose\\s*\\(",
+      "claim": "The SDK does not own the HttpClient — the client implements no IDisposable and disposes nothing, so it neither needs nor accepts a using block.",
+      "defends": "dotnet-client-initialization § HttpClient lifetime — 'The SDK does not own the HttpClient — you provide it.'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.client.never-disposes-transport",
+      "kind": "absent",
+      "glob": "**/*.cs",
+      "pattern": "[Hh]ttpClient\\s*(?:\\?)?\\.\\s*Dispose\\s*\\(",
+      "claim": "Nothing anywhere in the SDK disposes the HttpClient it was handed — its lifetime is entirely the caller's, which is what makes one long-lived instance (or IHttpClientFactory) safe.",
+      " defends": "",
+      "defends": "dotnet-client-initialization § HttpClient lifetime"
+    },
+    {
+      "id": "diclient.client.group-property-per-controller",
+      "kind": "at-least",
+      "glob": "*Client.cs",
+      "pattern": "^[ \\t]+public\\s+(\\w+)\\s+\\1\\s*\\{\\s*get;\\s*\\}",
+      "expect": 1,
+      "claim": "Each API group is a get-only property on the client named after its controller type, so a grouped operation is called client.{ApiGroup}.{Operation}(...). Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-client-initialization § Shape of the client — 'grouped under controller properties ... called client.{ApiGroup}.{Operation}(...)'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.client.ungrouped-operations-keep-signature",
+      "kind": "absent",
+      "glob": "*Client.cs",
+      "pattern": "^[ \\t]+public\\s+(?:async\\s+)?Task[^(\\n]*\\((?![^()]*RequestOptions\\?\\s+requestOptions\\s*=\\s*null\\s*,\\s*CancellationToken\\s+ct\\s*=\\s*default\\s*\\))",
+      "claim": "An operation that belongs to no group sits directly on the client and obeys the same signature template as a grouped one — requestOptions second-to-last, ct last.",
+      "defends": "dotnet-client-initialization § Shape of the client — 'an operation that belongs to no group sits directly on the client'; dotnet-calling-endpoints § signature template",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.client.captures-environment-at-construction",
+      "kind": "at-least",
+      "glob": "*Client.cs",
+      "pattern": "new\\s+Server\\(\\s*options\\.Environment\\s*,\\s*options\\.Server\\s*\\)",
+      "expect": 1,
+      "claim": "The client reads options.Environment once, in its constructor, and hands the ServerOptions object itself to the Server — which is why assigning options.Environment after construction silently does nothing. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment — 'Environment and Server are not read at the same time'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.client.gen-version-header-value",
+      "kind": "at-least",
+      "glob": "*Client.cs",
+      "pattern": "new\\s+HeaderParam\\(\\s*\"X-APIMatic-Gen-Version\"\\s*,\\s*\"4\\.0\\.0\"\\s*\\)",
+      "expect": 1,
+      "claim": "The generated client sends X-APIMatic-Gen-Version: 4.0.0. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "the core-surface stamp at the top of every dotnet-* skill",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.client.pipeline-built-from-options-retry",
+      "kind": "at-least",
+      "glob": "*Client.cs",
+      "pattern": "new\\s+ResiliencePipelineFactory\\(\\s*options\\.Retry\\s*\\)",
+      "expect": 1,
+      "claim": "The resilience pipelines are built in the client constructor from options.Retry — so retry configuration is a per-client choice fixed at construction, not a per-call one. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-client-initialization § HttpClient lifetime — 'two Polly pipelines are eagerly built from options.Retry'; dotnet-configuration-resilience § Retries",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.options.public-class-named-after-client",
+      "kind": "at-least",
+      "glob": "*ClientOptions.cs",
+      "pattern": "^public class \\w+ClientOptions\\s*$",
+      "expect": 1,
+      "claim": "The options class is a plain public class named {Api}ClientOptions — not a record, no base type — so the object-initializer form the samples use compiles. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-client-initialization § Shape of the client, the options code block",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.options.fixed-knobs-with-defaults",
+      "kind": "at-least",
+      "glob": "*ClientOptions.cs",
+      "pattern": "public\\s+class\\s+\\w+ClientOptions\\s*\\{[\\s\\S]{0,200}?public\\s+ServerEnvironment\\s+Environment\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*ServerEnvironment\\.Default\\(\\);[\\s\\S]{0,200}?public\\s+RetryOptions\\s+Retry\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*RetryOptions\\.Default\\(\\);[\\s\\S]{0,200}?public\\s+LoggingOptions\\s+Logging\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\);[\\s\\S]{0,200}?public\\s+ServerOptions\\s+Server\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\);",
+      "expect": 1,
+      "claim": "The options class always carries these four knobs, get/set, in this order — Environment = ServerEnvironment.Default(), Retry = RetryOptions.Default(), Logging = new(), Server = new(). Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-client-initialization § Shape of the client — 'The options class always carries these knobs'; the 'This surface HAS: LoggingOptions on the options class' stamp",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.options.no-required-members",
+      "kind": "absent",
+      "glob": "*ClientOptions.cs",
+      "pattern": "^[ \\t]*public\\s+required\\b",
+      "claim": "No member of the options class is `required`, so new {Api}ClientOptions() compiles — auth is not needed for a stub.",
+      "defends": "dotnet-testing § A reusable stub handler — 'new {Api}ClientOptions { /* auth not needed for stubs */ }'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.options.defaultless-properties-are-nullable",
+      "kind": "absent",
+      "glob": "*ClientOptions.cs",
+      "pattern": "^[ \\t]*public\\s+[\\w<>,\\.\\[\\]]*[^?\\s]\\s+\\w+\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*$",
+      "claim": "Every property beyond the four fixed knobs — the per-scheme credentials and the OAuth2 token-strategy hook — is nullable and carries no initializer; nothing on the options class has to be set for it to construct.",
+      "defends": "dotnet-client-initialization § the options code block — 'one nullable credentials property per auth scheme'; dotnet-authentication § how APIMatic surfaces each scheme",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.options.oauth2-token-strategy-sibling",
+      "claim": "For an OAuth2 scheme the options class exposes a {OAuthProperty}TokenStrategy immediately alongside the credentials, typed over that same credentials type.",
+      "defends": "dotnet-client-initialization § the options code block — 'a nullable {Scheme}TokenStrategy hook alongside it'; dotnet-authentication § Supplying your own token source",
+      "requires": [
+        "root-client"
+      ],
+      "kind": "probe",
+      "probe": "oauth2-credentials-have-a-token-strategy-sibling"
+    },
+    {
+      "id": "diclient.servers.serverenvironment-namespace-and-shape",
+      "kind": "present",
+      "file": "Servers/ServerEnvironment.cs",
+      "pattern": "^namespace\\s+\\w+\\.Servers;[\\s\\S]*?public\\s+record\\s+ServerEnvironment\\s*:\\s*StringEnum<ServerEnvironment>",
+      "claim": "ServerEnvironment lives in {RootNamespace}.Servers and is a StringEnum record, not a C# enum — which is why every construction sample carries `using {RootNamespace}.Servers;`.",
+      "defends": "dotnet-client-initialization § Direct instantiation (the using list) and § Choosing the server / base URL",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.servers.serverenvironment-default-factory",
+      "kind": "present",
+      "file": "Servers/ServerEnvironment.cs",
+      "pattern": "public\\s+static\\s+ServerEnvironment\\s+Default\\(\\)\\s*=>\\s*\\w+;",
+      "claim": "ServerEnvironment exposes a static Default() method returning the API's default environment — the value options.Environment is initialised to and every sample assigns.",
+      "defends": "dotnet-client-initialization § Direct instantiation — 'Environment = ServerEnvironment.Default()'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.servers.one-property-per-server",
+      "kind": "absent",
+      "file": "ServerOptions.cs",
+      "pattern": "^[ \\t]+public\\s+(?!(\\w+)Options\\s+\\1\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\);)",
+      "claim": "options.Server is a ServerOptions holding nothing but one {ServerName}Options property per server the API defines, each named after its own type and defaulted — there is nothing settable directly on ServerOptions.",
+      "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment — 'It exposes one {ServerName}Options per server the API defines'; dotnet-client-initialization § Choosing the server / base URL — 'NOT directly on ServerOptions'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.servers.nested-per-server-and-environment",
+      "kind": "at-least",
+      "glob": "Servers/*Options.cs",
+      "pattern": "public\\s+class\\s+\\w+Options\\s*\\{\\s*public\\s+(\\w+)Options\\s+\\1\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\);[\\s\\S]*?public\\s+class\\s+\\1Options\\s*\\{\\s*public\\s+string\\s+BaseUrl\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*\"https?://",
+      "expect": 1,
+      "claim": "Server options are nested per server AND per environment: {ServerName}Options carries one {Environment}Options property named after the environment, and that nested class carries the BaseUrl — always present and settable. The override path is options.Server.{ServerName}.{Environment}.BaseUrl. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment; dotnet-client-initialization § Choosing the server / base URL",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.servers.resolve-uses-selected-environment-baseurl",
+      "kind": "at-least",
+      "glob": "Servers/*Options.cs",
+      "pattern": "internal\\s+UrlTemplate\\s+Resolve\\(\\s*ServerEnvironment\\s+\\w+\\s*,\\s*string\\s+\\w+\\s*\\)\\s*=>\\s*\\w+\\.Match\\(\\(\\)\\s*=>\\s*new\\s+UrlTemplate\\(\\s*\\w+\\.BaseUrl\\s*,",
+      "expect": 1,
+      "claim": "The environment you select is what picks the BaseUrl the request URL is built from — only that environment's options are read. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment — 'only that environment's options are read'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.servers.options-read-per-request",
+      "kind": "present",
+      "file": "Server.cs",
+      "pattern": "private\\s+readonly\\s+ServerOptions\\s+(\\w+);[\\s\\S]*?internal\\s+UrlTemplate\\s+\\w+\\(\\s*string\\s+\\w+\\s*\\)\\s*=>\\s*\\1\\.\\w+\\.Resolve\\(",
+      "claim": "The client keeps a live reference to the ServerOptions object and re-resolves the URL through it on every request — so editing options.Server.{ServerName}.{Environment}.BaseUrl after construction does take effect, unlike reassigning options.Environment.",
+      "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment — 'keeps a live reference to the ServerOptions object and re-resolves the URL on every request'",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "diclient.di.extension-in-root-namespace",
+      "kind": "present",
+      "file": "ServiceCollectionExtensions.cs",
+      "pattern": "^namespace\\s+\\w+;[\\s\\S]*?public\\s+static\\s+class\\s+ServiceCollectionExtensions\\b",
+      "claim": "The DI extension class sits in the SDK's root namespace, so `using {RootNamespace};` is all a Program.cs needs for Add{Api}Client to bind.",
+      "defends": "dotnet-client-initialization § Dependency injection, the snippet's `using {RootNamespace};`",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "diclient.di.extension-name-and-signature",
+      "kind": "present",
+      "file": "ServiceCollectionExtensions.cs",
+      "pattern": "extension\\(\\s*IServiceCollection\\s+\\w+\\s*\\)\\s*\\{\\s*public\\s+IServiceCollection\\s+Add(\\w+Client)\\(\\s*Action<\\1Options>\\?\\s+\\w+\\s*=\\s*null\\s*\\)",
+      "claim": "Every APIMatic .NET SDK ships an IServiceCollection extension named Add{Api}Client — the client type name prefixed with 'Add' — taking an optional Action<{Api}ClientOptions> and returning IServiceCollection, so both services.Add{Api}Client(); and the configure-callback form compile and chain.",
+      "defends": "dotnet-client-initialization § Dependency injection — 'Every APIMatic .NET SDK ships a ServiceCollection extension named Add{Api}Client'",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "diclient.di.single-registration-overload",
+      "kind": "count",
+      "glob": "ServiceCollectionExtensions.cs",
+      "pattern": "public\\s+IServiceCollection\\s+Add\\w+\\(",
+      "expect": 1,
+      "claim": "There is exactly one registration overload, and its callback is handed only the options object — never an IServiceProvider — so the callback cannot read container services, scoped or otherwise.",
+      "defends": "dotnet-client-initialization § Dependency injection — 'the callback may read IConfiguration or environment variables, but not scoped services'",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "diclient.di.configure-runs-at-registration",
+      "kind": "ordered",
+      "file": "ServiceCollectionExtensions.cs",
+      "first": "configure\\?\\.Invoke\\(\\s*options\\s*\\)",
+      "then": "services\\.AddSingleton\\(",
+      "claim": "The configure callback is invoked once, at registration — outside and before the singleton factory — and the options object it mutates is the one captured for the client's whole life.",
+      "defends": "dotnet-client-initialization § Dependency injection — 'captures the options you configure once, at registration'",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "diclient.di.calls-addhttpclient-unnamed",
+      "kind": "present",
+      "file": "ServiceCollectionExtensions.cs",
+      "pattern": "services\\.AddHttpClient\\(\\s*\\);",
+      "claim": "Add{Api}Client itself calls AddHttpClient() with no name — which registers an ILoggerFactory, so on the DI path logging is already on and the {APICLIENTTYPENAME}_LOG environment variable never fires.",
+      "defends": "dotnet-configuration-resilience § Logging — 'Add{Api}Client always fills it (it calls AddHttpClient(), which registers an ILoggerFactory)'",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "diclient.di.registers-concrete-client-type",
+      "kind": "present",
+      "file": "ServiceCollectionExtensions.cs",
+      "pattern": "services\\.AddSingleton\\(\\s*sp\\s*=>[\\s\\S]*?return\\s+new\\s+\\w+Client\\(\\s*\\w+\\s*,\\s*\\w+\\s*\\);",
+      "claim": "The singleton factory returns the concrete {Api}Client, so the registered service type is the client class itself — GetRequiredService<{Api}Client>() resolves it and there is no SDK interface to register against.",
+      "defends": "dotnet-testing § DI-based construction — 'services.BuildServiceProvider().GetRequiredService<{Api}Client>()'; dotnet-client-initialization § Dependency injection (the constructor-injection snippet)",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "diclient.api.controllers-have-no-public-ctor",
+      "kind": "absent",
+      "glob": "Api/*.cs",
+      "pattern": "class\\s+(\\w+)[\\s\\S]*?^[ \\t]+public\\s+\\1\\s*\\(",
+      "claim": "Controller types are constructed only by the client — their constructors are internal, so the one public client class is the only entry point to an operation.",
+      "defends": "dotnet-client-initialization § Shape of the client — 'one public client class'",
+      "requires": [
+        "api"
+      ]
+    }
+  ]
+}

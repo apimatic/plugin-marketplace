@@ -1,0 +1,149 @@
+{
+  "group": "retry",
+  "note": "The retry section was wrong in four of five shipped plugins, in both directions. Every claim it now makes is pinned here. The syntax assertions matter as much as the value ones: the defect that mattered most was not a wrong number, it was a && in the wrong place.",
+  "assertions": [
+    {
+      "id": "retry.defaults.status-codes",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "StatusCodesToRetry\\s*=\\s*\\[\\s*HttpStatusCode\\.RequestTimeout\\s*,\\s*\\(HttpStatusCode\\)429[^\\]]*?HttpStatusCode\\.InternalServerError\\s*,\\s*HttpStatusCode\\.BadGateway\\s*,\\s*HttpStatusCode\\.ServiceUnavailable\\s*,\\s*HttpStatusCode\\.GatewayTimeout\\s*\\]",
+      "dotall": true,
+      "claim": "StatusCodesToRetry defaults to exactly 408, 429, 500, 502, 503, 504 — not 'all 5xx'. The closing ] is part of the pattern on purpose: without it the assertion matched a LONGER list too, and could not detect the one drift it exists to catch.",
+      "defends": "dotnet-configuration-resilience § defaults table; dotnet-testing § Notes"
+    },
+    {
+      "id": "retry.defaults.http-methods",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "HttpMethodsToRetry\\s*=\\s*\\[\\s*HttpMethod\\.Get\\s*,\\s*HttpMethod\\.Head\\s*,\\s*HttpMethod\\.Put\\s*,\\s*HttpMethod\\.Options\\s*\\]",
+      "dotall": true,
+      "claim": "HttpMethodsToRetry defaults to GET, HEAD, PUT, OPTIONS — PUT is in the list, which is why write-safety is not purely a POST question.",
+      "defends": "dotnet-configuration-resilience § defaults table and § Making a write safe under retries"
+    },
+    {
+      "id": "retry.defaults.max-retries",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "MaxRetries\\s*=\\s*3\\s*,",
+      "claim": "MaxRetries defaults to 3, i.e. up to 4 attempts.",
+      "defends": "dotnet-configuration-resilience § defaults table and the cost arithmetic"
+    },
+    {
+      "id": "retry.defaults.delay-and-backoff",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "Delay\\s*=\\s*TimeSpan\\.FromSeconds\\(1\\)\\s*,\\s*BackOffFactor\\s*=\\s*2\\s*,\\s*UseExponentialBackoff\\s*=\\s*true\\s*,\\s*MaxJitter\\s*=\\s*TimeSpan\\.FromMilliseconds\\(500\\)",
+      "dotall": true,
+      "claim": "Delay 1s, BackOffFactor 2, exponential on, MaxJitter 500ms — the 1s+2s+4s in the cost table.",
+      "defends": "dotnet-configuration-resilience § defaults table"
+    },
+    {
+      "id": "retry.defaults.timeout",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "Timeout\\s*=\\s*TimeSpan\\.FromSeconds\\(100\\)",
+      "claim": "The per-attempt Timeout defaults to 100s — the 4 x 100s in the worst-case arithmetic.",
+      "defends": "dotnet-configuration-resilience § defaults table; dotnet-client-initialization § named HttpClient"
+    },
+    {
+      "id": "retry.disabled-factory-exists",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "public\\s+static\\s+RetryOptions\\s+Disabled\\(\\)\\s*=>\\s*Default\\(\\)\\s+with\\s*\\{\\s*MaxRetries\\s*=\\s*0\\s*\\}",
+      "claim": "RetryOptions.Disabled() exists and is Default() with MaxRetries = 0 — retries CAN be turned off.",
+      "defends": "dotnet-configuration-resilience § Making a write safe under retries, option 3"
+    },
+    {
+      "id": "retry.predicate.method-filter-gates-both-arms",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "methodsToRetry\\.Contains\\(method\\)\\s*&&\\s*args\\.Outcome\\s+switch",
+      "dotall": true,
+      "claim": "The HTTP-method filter is a top-level && ABOVE both retry arms, so a POST is never resent on any trigger. This is the single claim the skills previously had exactly backwards.",
+      "defends": "dotnet-configuration-resilience § Notes, first bullet; dotnet-error-handling § Notes; dotnet-testing § Notes"
+    },
+    {
+      "id": "retry.predicate.timeout-is-a-trigger",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Exception:\\s*HttpRequestException\\s+or\\s+TimeoutRejectedException\\s*\\}\\s*=>\\s*true",
+      "claim": "The SDK's own per-attempt timeout (TimeoutRejectedException) is itself a retry trigger — which is why a hung GET costs the whole budget, not one Timeout.",
+      "defends": "dotnet-configuration-resilience § Notes, 'Three things trigger a retry' and the cost table"
+    },
+    {
+      "id": "retry.predicate.status-arm",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Result:\\s*\\{\\s*\\}\\s*response\\s*\\}\\s*=>\\s*statusCodesToRetry\\.Contains\\(response\\.StatusCode\\)",
+      "claim": "The status arm consults StatusCodesToRetry on the response.",
+      "defends": "dotnet-configuration-resilience § Notes"
+    },
+    {
+      "id": "retry.predicate.reads-method-from-context",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "args\\.Context\\.Properties\\.TryGetValue\\(MethodKey",
+      "claim": "The verb is read from the pipeline context, not off response.RequestMessage — so a test stub that leaves RequestMessage null still exercises retries on this surface.",
+      "defends": "dotnet-testing § Notes, the stub's response.RequestMessage line"
+    },
+    {
+      "id": "retry.zero-is-skipped-not-passed-to-polly",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "if\\s*\\(options\\.MaxRetries\\s*>\\s*0\\)",
+      "claim": "MaxRetries <= 0 skips the retry strategy entirely rather than handing 0 to Polly — so there is no MaxRetryAttempts >= 1 validation error and no floor of 1.",
+      "defends": "dotnet-configuration-resilience § Making a write safe under retries"
+    },
+    {
+      "id": "retry.ineligible-keeps-timeout",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "_timeoutOnly\\s*=\\s*options\\.MaxRetries\\s*<=\\s*0\\s*\\?\\s*_pipeline\\s*:\\s*CreateResiliencePipeline\\(options\\s+with\\s*\\{\\s*MaxRetries\\s*=\\s*0\\s*\\}",
+      "dotall": true,
+      "claim": "A retry-ineligible request runs on a timeout-only pipeline built from the same RetryOptions — it keeps the per-attempt Timeout and loses only the retry strategy. The skills used to say it was swapped for an empty pipeline.",
+      "defends": "dotnet-configuration-resilience § Notes, the multipart bullet"
+    },
+    {
+      "id": "retry.eligibility.by-request-type",
+      "kind": "present",
+      "file": "Core/Request/FormRequest.cs",
+      "pattern": "CanRetry\\s*=>\\s*!_\\w+\\.Any\\(p\\s*=>\\s*p\\.Value\\s+is\\s+BinaryContent\\s+or\\s+IEnumerable<BinaryContent>\\)",
+      "claim": "A multipart request is retry-eligible unless it carries a binary part — multipart is not blanket-excluded.",
+      "defends": "dotnet-configuration-resilience § Notes, the multipart bullet"
+    },
+    {
+      "id": "retry.eligibility.binary-never",
+      "kind": "present",
+      "file": "Core/Request/BinaryRequest.cs",
+      "pattern": "CanRetry\\s*=>\\s*false",
+      "claim": "A binary-body request is never retried. (A later template relaxes this to `_binaryContent is null`; a failure here means the fixture is not the surface the skills describe.)",
+      "defends": "dotnet-configuration-resilience § Notes, the multipart bullet"
+    },
+    {
+      "id": "retry.retry-after-overrides-backoff",
+      "kind": "ordered",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "first": "RetryAfterDelay\\(args\\.Outcome\\.Result",
+      "then": "BackoffDelay\\(options",
+      "claim": "Retry-After is consulted first and replaces the computed backoff.",
+      "defends": "dotnet-configuration-resilience § Notes, the Retry-After bullet"
+    },
+    {
+      "id": "retry.delay-clamped-at-60s",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "MaxDelay\\s*=\\s*TimeSpan\\.FromMinutes\\(1\\)",
+      "claim": "Both the computed backoff and a Retry-After value clamp at a hard, non-configurable 60s.",
+      "defends": "dotnet-configuration-resilience § Notes, the Retry-After bullet and the ~9.7 minute worst case"
+    },
+    {
+      "id": "retry.timeout-rejection-is-translated",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "catch\\s*\\(TimeoutRejectedException[^)]*\\)[^}]*throw\\s+new\\s+TaskCanceledException",
+      "dotall": true,
+      "claim": "Callers never catch TimeoutRejectedException — it is translated to a TaskCanceledException wrapping a TimeoutException, so the SDK's own timeout and the caller's cancellation arrive as the same type.",
+      "defends": "dotnet-configuration-resilience § Notes, 'You never catch TimeoutRejectedException'"
+    }
+  ]
+}

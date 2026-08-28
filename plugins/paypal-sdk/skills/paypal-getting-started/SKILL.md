@@ -1,16 +1,15 @@
 ---
 name: paypal-getting-started
-description: PayPal .NET SDK identity and lookup layer for the paypal-sdk helper agent (.NET/C# only) — install, root namespace, environments, auth pattern, and the bundled SDK map of every operation signature, model, enum, union and error type. The helper agent loads this to answer contract questions; other agents work from the contract sheet it produces.
+description: PayPal .NET SDK identity and lookup layer (.NET/C# only) you load directly — install, root namespace, environments, auth pattern, and the bundled SDK map of every operation signature, model, enum, union and error type. Load it for every contract fact, never memory; integrate-paypal is the workflow that uses it.
 ---
 
 # Getting started with the PayPal .NET SDK
 
-> **Who this skill is for.** This is the **map layer**, preloaded for the `paypal-sdk` helper
-> agent — if you are it, this skill is yours to follow directly and fully. It is the only place
-> the bundled SDK map is opened, and the map stays here: an implementer works from the contract
-> sheet this agent produces, and asks the warm agent for any fact the sheet is missing. The
-> "load the companion skill" steps below address whoever is doing the grounding. This skill
-> never calls back into the router, so there is no loop.
+> **Who this skill is for.** This is the **map layer**: load it to ground every PayPal SDK
+> fact. `integrate-paypal` is the workflow that drives it — you collect the contracts for the work
+> in scope into `paypal-plan.md`, implement from that sheet, and come back to the one map page a
+> row cites for any fact the sheet is missing. Every contract fact comes from here, never from
+> memory.
 
 This is the **SDK-specific** entry point. For general patterns that apply to any APIMatic-generated
 .NET SDK (auth, calling endpoints, models, error handling, retries, testing), see the companion
@@ -39,20 +38,22 @@ confirm names against the map.
 | --- | --- |
 | API | PayPal |
 | NuGet package | `AsadAli.Checkout.Sdk` (install version-less — see *Install* below) |
-| Source repo | https://github.com/asadali214/checkout-sample-sdk (tag `v1.0.1` — the release this map documents) |
+| Source repo | https://github.com/asadali214/checkout-sample-sdk (ref `v1.0.1` — the ref this map documents) |
 | Root namespace | `PayPalServerSdk` (the `using` namespace) |
 | Client class | `PayPalServerSdkClient` |
 | Options class | `PayPalServerSdkClientOptions` |
 <!-- gen:auth -->
-| Auth | Credentials properties on `PayPalServerSdkClientOptions`: `Oauth2: OAuth2ClientCredentials?`, `Oauth2TokenStrategy: IOAuth2TokenStrategy<OAuth2ClientCredentials>?` — see the SDK map's *Servers & auth* section |
+| Auth | Credentials properties on `PayPalServerSdkClientOptions` — the scheme(s) and property names are in the SDK map's *Servers & auth* section |
 <!-- /gen:auth -->
 <!-- gen:environments -->
-| Environments | `options.Environment` — `ServerEnvironment` members: `Sandbox` (see the SDK map's *Servers & auth* section) |
+| Environments | `options.Environment` — the `ServerEnvironment` members are in the SDK map's *Servers & auth* section |
 <!-- /gen:environments -->
 
 The table above is **orientation, not a copy-paste recipe** — it gives you the names and facts (install,
 namespaces, the auth *pattern*, the environments), while the actual integration code comes from the companion
-skills. Load each one as you reach its step (see **Integration workflow** below) and confirm its types
+skills. Load every one the contract sheet's REQUIRED READING names before you start implementing
+(`integrate-paypal` makes that binding); the **Integration workflow** below says which governs which
+step. Confirm each one's types
 against the SDK map: the client construction and DI from `dotnet-client-initialization`, the exact
 auth-credentials property name from `dotnet-authentication`, each call from `dotnet-calling-endpoints`, and so
 on.
@@ -89,7 +90,7 @@ This skill bundles a generated table-of-contents for the SDK, right next to this
 - **`map/operations/{Controller}.md`** — one page per controller. Each operation
   row carries the HTTP verb/path, the exact C# signature with must-pass-explicitly params, the return type,
   the error case (typed `{Operation}Error` vs `RawError`) with its `TryGet…` accessors, and pagination.
-  Each page's header names the source file it came from (e.g. `Api/Orders.cs`).
+  Each page's header names the source file it came from (e.g. `Api/{Controller}.cs`).
 - **`map/models/`** — record models (alphabetical pages), `unions.md` (variant factories + `TryGet…`),
   and `enums.md` (full value lists).
 
@@ -101,23 +102,23 @@ whose entire surface is already indexed here. Instead:
 2. Read the fact by lookup — most questions (signature, error accessors, enum values, pagination) end here
    without touching the clone at all.
 3. Only when you need a **full method or model body** the map doesn't carry, take the file path the map
-   names (e.g. `Api/Orders.cs`, `Errors/CreateOrderError.cs`, `Models/OrderRequest.cs`) and
+   names (e.g. `Api/{Controller}.cs`, `Errors/{Operation}Error.cs`, `Models/{Model}.cs`) and
    **open that one file directly in the clone**.
 
 Keep lookups cheap — the rules that keep a session's context small:
 
 - Collect the contracts for **every** in-scope operation in **one** map pass — signature, required fields
-  with wire names, error accessors, enum values — into a short **contract sheet** in your plan or working
-  notes, then implement from the sheet. Don't re-open the map per field, and never re-look-up a fact the
+  with wire names, error accessors, enum values — into the **contract sheet** in `paypal-plan.md`, then
+  implement from the sheet. Don't re-open the map per field, and never re-look-up a fact the
   sheet already carries.
 - When you do open a source file, read it **scoped**: the Read tool with an offset/limit, or the Grep tool
   on the one symbol — never dump a whole file into the conversation with `cat`/`sed`.
 - Never open the SDK's `api-reference.md` — the map supersedes it.
 
-Staleness check: `sdk-map.md` records the release tag and source commit it was generated from
-(provenance). The map documents that pinned release, while `dotnet add package` installs the latest —
-so if a name from the map ever fails to compile, trust the compiler, re-read the source file the map's
-row names, and report the drift; never patch around it from memory.
+Staleness check: `sdk-map.md` records the source ref and commit it was generated from
+(provenance). The map documents that pinned ref, while `dotnet add package` installs the latest
+release — so if a name from the map ever fails to compile, trust the compiler, re-read the
+source file the map's row names, and report the drift; never patch around it from memory.
 
 ## SDK source — clone only on a map-side issue; don't reflect or fetch files
 
@@ -126,30 +127,30 @@ integrations never open it. Clone only when the map has actually failed you: a m
 compile, ambiguity remains after the map lookup, or you need a full method/model body the map doesn't
 carry. (You clone only on a real map-side issue — never "just in case".) The clone lives in the **system
 temp directory** (`<temp>/paypal-sdk-src/`), never in the project
-repo, so the clone stays invisible to the main agent — navigated via the SDK map above, a read-only
+repo — navigated via the SDK map above, a read-only
 reference, **not** a build dependency (never add a project reference to *this* clone; the build takes the
 SDK from the NuGet package in the *Install* section).
 
-**Clone only on a real map-side issue.** Clone once this session — shallow, at tag `v1.0.1` (the exact
-release the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder
-under `<temp>/paypal-sdk-src/`, and reuse that folder for the rest of your session:
+**Clone only on a real map-side issue.** Clone once this session — at ref `v1.0.1` (the exact ref the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder under `<temp>/paypal-sdk-src/`, and reuse
+that folder for the rest of your session:
 
 ```bash
 # Linux/macOS:
 dir="${TMPDIR:-/tmp}/paypal-sdk-src/$(date +%Y%m%d-%H%M%S)"
-git clone --depth 1 --branch v1.0.1 https://github.com/asadali214/checkout-sample-sdk "$dir"
+git clone --filter=blob:none https://github.com/asadali214/checkout-sample-sdk "$dir" && git -C "$dir" checkout --quiet v1.0.1
 # Reuse "$dir" for the rest of your session (it is your clone path).
 ```
 
 ```powershell
 # Windows (PowerShell):
 $dir = "$env:TEMP\paypal-sdk-src\$(Get-Date -Format yyyyMMdd-HHmmss)"
-git clone --depth 1 --branch v1.0.1 https://github.com/asadali214/checkout-sample-sdk $dir
+git clone --filter=blob:none https://github.com/asadali214/checkout-sample-sdk $dir; git -C $dir checkout --quiet v1.0.1
 # Reuse $dir for the rest of your session (it is your clone path).
 ```
 
 The clone lives in `<temp>/paypal-sdk-src/`, **never** in the project repo, and its path never goes into
-`paypal-plan.md` — the main agent must never see the clone or its path.
+`paypal-plan.md` — the plan must stay portable, and the clone is a session-local reference, not part of
+the project.
 
 Then confirm the SDK shape **only** from that local clone — not by either of these:
 
@@ -159,14 +160,14 @@ Then confirm the SDK shape **only** from that local clone — not by either of t
 - **Don't fetch GitHub files one at a time** as your way in — `…/blob/…` pages return HTML (not source) and
   guessed paths fail, which is exactly how ad-hoc fetching breaks. Clone once and read locally instead. Only
   if you truly cannot clone (`git` is unavailable) fetch a **raw** URL
-  (`https://raw.githubusercontent.com/<owner>/<repo>/main/…`, derived from the source repo above —
-  never a `…/blob/…` page), e.g. `…/main/Api/Orders.cs`.
+  (`https://raw.githubusercontent.com/<owner>/<repo>/v1.0.1/…`, derived from the source repo above —
+  never a `…/blob/…` page), e.g. `…/v1.0.1/Api/{Controller}.cs`.
 
 Layout — where the SDK map's file references resolve (open these directly; don't scan for them):
 
 - `Api/` — one file per controller/group; **this is where the operation methods and their signatures live**
   (each carries XML-doc comments for the params, the endpoint path, and the thrown error type). The map's
-  per-controller pages name the exact file (e.g. `Api/Orders.cs`).
+  per-controller pages name the exact file (e.g. `Api/{Controller}.cs`).
 - `Models/` (+ `Models/Enums/`, `Models/AnyOf/`, `Models/OneOf/`) — request/response records, enums, unions.
 - `Errors/` — per-operation `{Operation}Error` types (only Case-A operations have one; the map's rows say
   which case each operation is).
@@ -177,9 +178,80 @@ Layout — where the SDK map's file references resolve (open these directly; don
 keeping it is what lets every later step in this session reuse it instead of cloning again. The OS reaps the
 temp directory on its own; a future session simply makes its own timestamped clone.
 
+## Idempotency — the real keys are on the map; the injected header is not one
+
+The generator injects an `Idempotency-Key: Guid.NewGuid()` header on **every non-GET operation** —
+fresh on every call, invisible to you, and **not** an idempotency key in any meaningful sense:
+PayPal does not document reading it, and a value that changes per call deduplicates nothing.
+`dotnet-configuration-resilience` § *Make the write idempotent at the provider* explains why a
+visible header like this is worse than an absent one.
+
+Whether an operation takes a **real**, caller-supplied key is an API fact, on that operation's map
+row: look for a key-shaped parameter (an idempotency key, a request id) among its parameters, and
+read the parameter doc the map quotes — retention windows and mandatory cases live there. Some APIs
+expose **`If-Match` optimistic concurrency** instead — a different guarantee (reject my write if the
+resource changed) solving a different problem (lost updates, not duplicates); the map rows name
+those parameters too. For every write with no key, the answer is reconciliation —
+`dotnet-configuration-resilience` § *Reconcile after a failure* — not hope.
+
+## Sensitive data — check the model pages before you log anything
+
+Whether this API's **request** models carry fields you must never log — card or bank numbers,
+personal data, message content — is a map question: the model pages list every field with its wire
+name. If the scope touches such a field, three generator facts decide your logging posture (all in
+`dotnet-configuration-resilience` § *Logging*): JSON request bodies are logged **verbatim** when
+`LogRequestBody` is on, with no redaction; form bodies are masked only by deny-list; and leaving
+`options.Logging.LoggerFactory` unset arms the `PAYPALSERVERSDKCLIENT_LOG` environment variable, whose
+`trace` level forces body logging on with no code change and no deploy. So on any build that can
+carry such a field: `LogRequestBody` stays off, `LoggerFactory` is set explicitly in production,
+and your own diagnostics never echo a request body on those paths.
+
+Responses are often safer — many APIs return masked variants of what requests carry raw — but that
+too is a model-page fact: check it before assuming.
+
+## Response metadata — status and headers are not what you expect
+
+On a success the SDK returns only the deserialized body: the HTTP status and headers of a
+successful call are **not reachable** in-band, and unless the map shows `{Operation}Result`
+siblings for this SDK (most APIs generate none), there is no non-throwing variant to get them
+from. On an error, what is reachable depends on the operation's error case — its map row: a Case B
+`RawError` carries `StatusCode`; a typed Case A body may or may not (see `dotnet-error-handling`).
+
+**Headers are never reachable on either path.** A `Retry-After` on a 429 the SDK has already
+exhausted its retries against, rate-limit budget headers, and a request-id echo for correlation
+are all unavailable in-band. `RawClient.ExecuteResult` does return an `ApiResult`, but `RawClient`
+is `internal sealed`, so it is not a way round this. If you genuinely need transport metadata —
+metrics, a provider-availability SLA — a `DelegatingHandler` sees every response before the SDK
+maps it; under retry it observes one response *per attempt* (so "the" value is the last
+attempt's), and getting the value to the catch site needs `AsyncLocal` or a scoped service.
+
+## The `dotnet-*` skill names are not unique in this marketplace
+
+Three plugins in this marketplace — `maxio-sdk`, `paypal-sdk` and `twilio-sdk` — each ship their own copy
+of the same seven `dotnet-*` skill names. The 21 copies are **not interchangeable**: paypal-sdk and
+twilio-sdk ship byte-identical, API-portable copies of all seven, but maxio-sdk's describe a different
+(pre-4.0.0) generator surface — so the seven names resolve to **14 distinct versions**, and any pairing
+that includes maxio-sdk exposes two different skills under one name, with nothing announcing which one
+a bare name resolves to.
+
+**Load the copy that ships with THIS plugin.** Where your harness supports plugin-qualified skill names,
+write them out — `paypal-sdk:dotnet-error-handling`, `paypal-sdk:dotnet-configuration-resilience`, and so on. Where it does not, and more than one of those three plugins is installed,
+confirm you have this plugin's copy before you rely on it: check the `core-surface:` stamp at the top of
+the file, where it must name generator **4.0.0**.
+
+The difference is not cosmetic, and it is not safe to shrug at:
+
+- `maxio-sdk` documents a **pre-4.0.0** generator surface — 88 `Core/*.cs` against 122, with 28 of the 87
+  shared files differing. Loading its copy here would describe a runtime this SDK does not have — its
+  retry predicate, timeout behaviour and logging surface are all different.
+- The `paypal-sdk` and `twilio-sdk` copies are byte-identical and API-portable, so between those two the
+  collision is harmless — but only because neither copy states an API fact: which error case an operation
+  is, and what its errors carry, still comes from THIS plugin's map, never from the skill text.
+
 ## Integration workflow — load the companion skill at each step
 
-Before you write the code for each step, load the named companion skill — even if you've already read the
+You loaded every companion the sheet named before starting (per `integrate-paypal`); before you write the
+code for each step, re-read the one that governs it — even if you've already read the
 relevant source. Each step calls out the trap the signature hides (in *parens*). A typical integration reaches
 them in this order:
 
@@ -194,20 +266,23 @@ them in this order:
    constructing the client or in the DI callback, and load secrets from configuration rather than hardcoding.)
 3. **Calling an endpoint / building a request body** — load **dotnet-calling-endpoints** before the first
    `client.{ApiGroup}.{Operation}(...)` call. (*The signature won't tell you:* call list/search ops with
-   named arguments — many optional params have no C# default and mis-bind in a positional call.)
+   named arguments — many optional params have no C# default and mis-bind in a positional call; and on the
+   whether a write takes a real idempotency key is on its map row — the injected `Idempotency-Key` header is not one,
+   see *Idempotency* above.)
 4. **Models** — load **dotnet-models** the moment a request/response field isn't a plain string or number.
    (*The signature won't tell you:* unions are built with factory methods and read via `TryGet…` (no `new`),
    enums are `StringEnum<T>` not C# enums, and unmodeled JSON fields are dropped on deserialize.)
 5. **Error handling** — load **dotnet-error-handling** before you write any `try/catch`. (*The signature won't
-   tell you:* many read/list/find/delete ops are Case B (`SdkException<RawError>`, no typed
-   accessors) while others are Case A typed `{Operation}Error`s — confirm each operation's case in its map
-   row; and `TryGetRawError` is not a catch-all on the typed errors. Each operation's map row also says
+   tell you:* an operation is either Case B (`SdkException<RawError>`, no typed accessors) or
+   Case A (a typed `{Operation}Error`) — how the API mixes them is its own fact, so confirm each
+   operation's case in its map row; and `TryGetRawError` is not a catch-all on the typed errors. Each operation's map row also says
    whether a no-throw `…Result` variant exists — never assume one does.)
 6. **Configuration & resilience** — load **dotnet-configuration-resilience** when you tune retries, timeouts,
-   the base URL, pagination, or logging. (*The signature won't tell you:* `HttpMethodsToRetry` gates only the
-   **status** trigger — but a **transport failure**
-   (`HttpRequestException`) is retried on **every** verb, `POST` included, so a non-idempotent write can
-   execute more than once. `Timeout` is per-attempt not total, and there's no built-in logging hook.)
+   the base URL, pagination, or logging. (*The signature won't tell you:* `HttpMethodsToRetry` gates **every**
+   retry trigger, so a `POST` is never resent by default — but a `GET` that hangs costs ≈407s, not the ≈100s
+   `Timeout` suggests, because the per-attempt timeout is itself retried. `Timeout` is per-attempt not total,
+   `RetryOptions.Disabled()` turns retries off, and there **is** a built-in logger on `options.Logging` —
+   whose `LogRequestBody` does not redact JSON.)
 7. **Testing** — load **dotnet-testing** before you stub the SDK. (*The signature won't tell you:* the
    `HttpClient` constructor argument is the test seam; match the project's existing framework and assertion
    style.)

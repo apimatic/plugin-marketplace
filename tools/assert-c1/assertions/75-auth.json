@@ -1,0 +1,428 @@
+{
+  "group": "auth",
+  "note": "Every scheme the generator emits, its credential shape, and the OAuth2 caching and composition behaviour.",
+  "assertions": [
+    {
+      "id": "auth.core.every-credential-type-ships",
+      "kind": "count",
+      "glob": "Core/Authentication/**/*.cs",
+      "pattern": "^public sealed class \\w+Credentials\\b",
+      "expect": 4,
+      "claim": "Core/Authentication ships EVERY scheme's credential class as shared runtime code regardless of what the API accepts - Basic, OAuth2 client-credentials, authorization-code and password are all present in an SDK that uses only one of them.",
+      "defends": "dotnet-authentication - 'The {RootNamespace}.Core.Authentication folder ships *every* scheme class as shared runtime code regardless of what the API accepts'"
+    },
+    {
+      "id": "auth.core.namespace-is-root-dot-core-dot-authentication",
+      "kind": "absent",
+      "glob": "Core/Authentication/**/*.cs",
+      "pattern": "^namespace (?!\\w+\\.Core\\.Authentication\\b)",
+      "claim": "Every credential and scheme type lives under {RootNamespace}.Core.Authentication.* - the using lines in the skill's snippets differ between SDKs only in the root segment.",
+      "defends": "dotnet-authentication - 'The credential classes below live under {RootNamespace}.Core.Authentication.* and are the same across all APIMatic .NET SDKs; only the options property names are generated per-API'"
+    },
+    {
+      "id": "auth.apikey.three-placements",
+      "kind": "count",
+      "glob": "Core/Authentication/ApiKey/*.cs",
+      "pattern": "class ApiKey(?:Header|Query|Cookie)Scheme\\b",
+      "expect": 3,
+      "claim": "An API key is sent as a header, a query parameter, or a cookie - exactly those three placements exist.",
+      "defends": "dotnet-authentication - API key: 'The key is sent as a header, query parameter, or cookie'"
+    },
+    {
+      "id": "auth.basic.credentials-both-members-required",
+      "kind": "present",
+      "file": "Core/Authentication/Basic/BasicAuthCredentials.cs",
+      "dotall": true,
+      "pattern": "public\\s+sealed\\s+class\\s+BasicAuthCredentials\\b.*?public\\s+required\\s+string\\s+Username\\s*\\{\\s*get;\\s*init;\\s*\\}.*?public\\s+required\\s+string\\s+Password\\s*\\{\\s*get;\\s*init;\\s*\\}",
+      "claim": "BasicAuthCredentials carries Username and Password, both `required` - the skill's initializer sets both, and omitting either is a compile error rather than a runtime 401.",
+      "defends": "dotnet-authentication - Basic, the `new BasicAuthCredentials { Username = \"...\", Password = \"...\" }` snippet"
+    },
+    {
+      "id": "auth.basic.encoding-is-utf8-base64-of-user-colon-password",
+      "kind": "present",
+      "file": "Core/Authentication/Basic/BasicAuthCredentials.cs",
+      "dotall": true,
+      "pattern": "\\$\"\\{Username\\}:\\{Password\\}\".*?Encoding\\.UTF8\\.GetBytes\\(.*?Convert\\.ToBase64String\\(",
+      "claim": "Basic auth sends base64(username:password), UTF-8 encoded - the SDK does the joining and the encoding, so the caller supplies the raw values.",
+      "defends": "dotnet-authentication - Basic: 'Sends Authorization: Basic base64(username:password)'"
+    },
+    {
+      "id": "auth.basic.sets-authorization-basic",
+      "kind": "present",
+      "file": "Core/Authentication/Basic/BasicAuthScheme.cs",
+      "pattern": "Headers\\.Authorization\\s*=\\s*new AuthenticationHeaderValue\\(\"Basic\",",
+      "claim": "Basic auth is applied as the request's Authorization header with the `Basic` scheme.",
+      "defends": "dotnet-authentication - Basic: 'Sends Authorization: Basic base64(username:password)'"
+    },
+    {
+      "id": "auth.bearer.credential-is-a-bare-string",
+      "kind": "present",
+      "file": "Core/Authentication/Bearer/BearerAuthScheme.cs",
+      "pattern": "static IAuthScheme Create\\(string\\?\\s+\\w+\\)",
+      "claim": "The bearer credential is surfaced as a plain string - the options property takes the raw token, not a credentials object.",
+      "defends": "dotnet-authentication - Bearer: `options.{BearerAuthProperty} = \"ACCESS_TOKEN\";`"
+    },
+    {
+      "id": "auth.bearer.token-sent-verbatim",
+      "kind": "present",
+      "file": "Core/Authentication/Bearer/BearerAuthScheme.cs",
+      "pattern": "new AuthenticationHeaderValue\\(\"Bearer\",\\s*_\\w+\\)",
+      "claim": "Bearer auth sends `Authorization: Bearer <token>` with the token verbatim - no encoding and no trimming, so a value pasted with its own `Bearer ` prefix is sent twice.",
+      "defends": "dotnet-authentication - Bearer: 'Sends Authorization: Bearer ACCESS_TOKEN'"
+    },
+    {
+      "id": "auth.apikey.name-is-fixed-by-the-generated-scheme",
+      "kind": "count",
+      "glob": "Core/Authentication/ApiKey/*.cs",
+      "pattern": "Create\\(string\\s+\\w+,\\s*string\\?\\s+\\w+\\)",
+      "expect": 3,
+      "claim": "An API key's placement and parameter name are fixed by the generated scheme, not settable by the caller: the name is the factory's FIRST argument (supplied by generated wiring) and only the key - a plain string - comes from the options class.",
+      "defends": "dotnet-authentication - API key: 'its placement and name are fixed by the generated scheme'; `options.{ApiKeyProperty} = \"API_KEY\";`"
+    },
+    {
+      "id": "auth.oauth2.cc.credentials-shape",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/ClientCredentials/OAuth2ClientCredentials.cs",
+      "dotall": true,
+      "pattern": "public\\s+sealed\\s+class\\s+OAuth2ClientCredentials\\b.*?public\\s+required\\s+string\\s+ClientId\\b.*?public\\s+required\\s+string\\s+ClientSecret\\b.*?public\\s+string\\?\\s+Scope\\s*\\{\\s*get;\\s*init;\\s*\\}",
+      "claim": "OAuth2ClientCredentials has ClientId and ClientSecret (both required) and an optional Scope - the `// optional` in the snippet marks the one nullable member.",
+      "defends": "dotnet-authentication - OAuth 2.0 client credentials snippet"
+    },
+    {
+      "id": "auth.oauth2.cc.scope-dropped-when-null-or-empty",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/ClientCredentials/OAuth2ClientCredentialsStrategy.cs",
+      "pattern": "scope\\s+is\\s+null\\s+or\\s+\"\"\\s*\\?\\s*\\[\\]",
+      "claim": "Scope really is optional for the client-credentials grant: null OR empty drops the `scope` parameter from the token request rather than sending an empty one.",
+      "defends": "dotnet-authentication - OAuth 2.0 client credentials, the `Scope = \"...\"  // optional` line"
+    },
+    {
+      "id": "auth.oauth2.pw.credentials-shape",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/Password/OAuth2PasswordCredentials.cs",
+      "dotall": true,
+      "pattern": "public\\s+sealed\\s+class\\s+OAuth2PasswordCredentials\\b.*?public\\s+required\\s+string\\s+ClientId\\b.*?public\\s+string\\?\\s+ClientSecret\\b.*?public\\s+required\\s+string\\s+Username\\b.*?public\\s+required\\s+string\\s+Password\\b.*?public\\s+string\\?\\s+Scope\\b",
+      "claim": "OAuth2PasswordCredentials has ClientId, Username and Password (required) plus an optional ClientSecret and Scope - the two `// optional` markers line up with exactly the two nullable members.",
+      "defends": "dotnet-authentication - OAuth 2.0 resource-owner-password snippet"
+    },
+    {
+      "id": "auth.oauth2.ac.credentials-shape",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeCredentials.cs",
+      "dotall": true,
+      "pattern": "public\\s+sealed\\s+class\\s+OAuth2AuthorizationCodeCredentials\\b.*?public\\s+required\\s+string\\s+ClientId\\b.*?public\\s+string\\?\\s+ClientSecret\\b.*?public\\s+required\\s+string\\s+RedirectUri\\b.*?public\\s+string\\?\\s+Scope\\b.*?public\\s+string\\?\\s+State\\b.*?public\\s+PkceMethod\\?\\s+Pkce\\b.*?public\\s+required\\s+AuthorizationCodePrompt\\s+PromptForAuthorizationCode\\b",
+      "claim": "OAuth2AuthorizationCodeCredentials carries ClientId, ClientSecret, RedirectUri, Scope, State, Pkce and PromptForAuthorizationCode - with RedirectUri and PromptForAuthorizationCode `required` and ClientSecret optional at the type level (which is why the secret's real requirement is a runtime guard, not the compiler).",
+      "defends": "dotnet-authentication - OAuth 2.0 authorization-code snippet and its 'often required even with PKCE' note"
+    },
+    {
+      "id": "auth.oauth2.ac.pkce-defaults-to-s256",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeCredentials.cs",
+      "pattern": "public\\s+PkceMethod\\?\\s+Pkce\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*=\\s*PkceMethod\\.S256\\s*;",
+      "claim": "Pkce defaults to PkceMethod.S256 - PKCE is on unless you set the property to null.",
+      "defends": "dotnet-authentication - `Pkce = PkceMethod.S256,  // default; RFC 7636`"
+    },
+    {
+      "id": "auth.oauth2.ac.pkce-method-members",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/PkceMethod.cs",
+      "dotall": true,
+      "pattern": "public\\s+sealed\\s+record\\s+PkceMethod\\s*:\\s*StringEnum<PkceMethod>.*?static\\s+readonly\\s+PkceMethod\\s+S256\\s*=\\s*new\\(\"S256\"\\).*?static\\s+readonly\\s+PkceMethod\\s+Plain\\s*=\\s*new\\(\"plain\"\\)",
+      "claim": "PkceMethod.S256 is a real, addressable member of PkceMethod (with Plain as the only alternative), reachable from the same AuthorizationCode using-line the snippet already carries.",
+      "defends": "dotnet-authentication - `Pkce = PkceMethod.S256`"
+    },
+    {
+      "id": "auth.oauth2.ac.prompt-delegate-signature",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeCredentials.cs",
+      "pattern": "public delegate Task<string> AuthorizationCodePrompt\\(\\s*string \\w+,\\s*CancellationToken \\w+\\s*\\)",
+      "claim": "PromptForAuthorizationCode is a delegate taking (authorizationUrl, CancellationToken) and returning Task<string> - the authorization code. The two-parameter async lambda in the snippet is target-typed to exactly this.",
+      "defends": "dotnet-authentication - `PromptForAuthorizationCode = async (authorizationUrl, ct) => { ... return await GetCodeFromUserAsync(authorizationUrl, ct); }`"
+    },
+    {
+      "id": "auth.oauth2.ac.authorization-url-is-fully-built",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "dotall": true,
+      "pattern": "\"response_type\",\\s*\"code\".*?\"client_id\".*?\"redirect_uri\"",
+      "claim": "The authorizationUrl handed to the prompt is fully built - response_type, client_id and redirect_uri are always on it, so the callback only has to open it and return the code.",
+      "defends": "dotnet-authentication - the prompt comment 'Open/redirect the browser to authorizationUrl, then return the authorization code'"
+    },
+    {
+      "id": "auth.oauth2.ac.pkce-challenge-only-when-enabled",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "dotall": true,
+      "pattern": "if \\(pkce is not null\\).*?\"code_challenge\".*?\"code_challenge_method\"",
+      "claim": "The PKCE challenge and its method are added to the authorization URL only when PKCE is enabled.",
+      "defends": "dotnet-authentication - authorization-code, 'and the PKCE challenge when PKCE is on'"
+    },
+    {
+      "id": "auth.oauth2.ac.guard.pkce-disabled-requires-secret",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "dotall": true,
+      "pattern": "credentials\\.Pkce is null && credentials\\.ClientSecret is null or \"\"\\s*\\)?\\s*throw new InvalidOperationException\\(\\s*\\$\"\\{nameof\\([^)]*\\bClientSecret\\)\\} is required when PKCE is disabled\\.\"",
+      "claim": "With PKCE disabled and no ClientSecret the SDK throws InvalidOperationException(\"ClientSecret is required when PKCE is disabled.\") - and an empty-string secret trips the same guard, not just null.",
+      "defends": "dotnet-authentication - authorization-code PKCE/secret table, the `InvalidOperationException(\"ClientSecret is required when PKCE is disabled.\")` row"
+    },
+    {
+      "id": "auth.oauth2.ac.guard.pkce-check-precedes-the-prompt",
+      "kind": "ordered",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "first": "is required when PKCE is disabled\\.",
+      "then": "await credentials\\.PromptForAuthorizationCode\\(",
+      "claim": "The PKCE-disabled guard fires BEFORE the prompt runs, so the user is never sent through a browser round-trip for a flow that cannot complete.",
+      "defends": "dotnet-authentication - authorization-code table: '- **before** the prompt runs'"
+    },
+    {
+      "id": "auth.oauth2.ac.guard.pkce-check-is-shared-by-both-factories",
+      "kind": "count",
+      "glob": "Core/Authentication/OAuth2/AuthorizationCode/*.cs",
+      "pattern": "is required when PKCE is disabled",
+      "expect": 1,
+      "claim": "The PKCE-disabled guard is a single check in the shared GetToken, so it applies to EITHER token-request factory - Basic and form-body alike.",
+      "defends": "dotnet-authentication - authorization-code table row '| disabled (`Pkce = null`) | either factory |'"
+    },
+    {
+      "id": "auth.oauth2.ac.guard.basic-requires-a-client-secret",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "dotall": true,
+      "pattern": "is null\\)\\s*throw new InvalidOperationException\\(\\s*\\$?\"Basic auth requires a client secret\\.",
+      "claim": "With a Basic-style token request and no ClientSecret the SDK throws an InvalidOperationException whose message begins 'Basic auth requires a client secret.'",
+      "defends": "dotnet-authentication - authorization-code table: `InvalidOperationException(\"Basic auth requires a client secret.\")`"
+    },
+    {
+      "id": "auth.oauth2.ac.guard.basic-failure-is-after-the-prompt",
+      "kind": "ordered",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "first": "await credentials\\.PromptForAuthorizationCode\\(",
+      "then": "_\\w+\\(credentials\\.ClientId, credentials\\.ClientSecret\\)",
+      "claim": "The Basic-no-secret failure happens AFTER the prompt: the header factory is evaluated only when the token request is built, so the user completes a full browser round-trip before the exchange throws.",
+      "defends": "dotnet-authentication - 'the user completes a full browser round-trip before the exchange throws'"
+    },
+    {
+      "id": "auth.oauth2.ac.form-body-factory-sends-no-auth-header",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "dotall": true,
+      "pattern": "ForFormBodyRequest\\([^;]*?\\(_,\\s*_\\)\\s*=>\\s*\\[\\],\\s*\\w+\\)",
+      "claim": "The form-body factory installs an EMPTY header factory, so the Basic client-secret guard is never reached - PKCE plus a form-body token request is the public-client case and needs no ClientSecret.",
+      "defends": "dotnet-authentication - authorization-code table row '| enabled | `ForFormBodyRequest` | fine - this is the public-client case |'"
+    },
+    {
+      "id": "auth.oauth2.ac.form-body-omits-client-secret-when-absent",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "dotall": true,
+      "pattern": "if \\(clientSecret is not null\\)\\s*\\w+\\.Add\\(new Param\\(\"client_secret\"",
+      "claim": "A public client's token-request body carries client_id but no client_secret - the secret parameter is added only when a secret was supplied.",
+      "defends": "dotnet-authentication - authorization-code table row '| enabled | `ForFormBodyRequest` | fine - this is the public-client case |'"
+    },
+    {
+      "id": "auth.token.non-refreshable-has-no-refresh-token-binding",
+      "kind": "absent",
+      "file": "Core/Authentication/OAuth2/OAuthToken.cs",
+      "pattern": "\\bRefreshToken\\b",
+      "claim": "A refresh_token in a client-credentials or password response is DISCARDED: the non-refreshable OAuthToken has no binding for it at all.",
+      "defends": "dotnet-authentication - Token caching & refresh: 'a refresh_token in a password-grant response is discarded, because the non-refreshable OAuthToken has no binding for it'"
+    },
+    {
+      "id": "auth.token.oauthtoken-is-public-with-required-members",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuthToken.cs",
+      "dotall": true,
+      "pattern": "public record OAuthToken\\b.*?\\[JsonPropertyName\\(\"access_token\"\\)\\]\\s*public required string AccessToken\\b.*?\\[JsonPropertyName\\(\"token_type\"\\)\\]\\s*public required string TokenType\\b",
+      "claim": "A custom token strategy returns OAuthToken, which is public and constructible outside Core - and its AccessToken and TokenType are required, so the token you return must carry both.",
+      "defends": "dotnet-authentication - Supplying your own token source: `options.{OAuthProperty}TokenStrategy = new MyTokenStrategy();  // Task<OAuthToken> GetToken(creds, ct)`"
+    },
+    {
+      "id": "auth.strategy.gettoken-signature",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/IOAuth2TokenStrategy.cs",
+      "pattern": "Task<OAuthToken> GetToken\\(TCredentials \\w+, CancellationToken \\w+\\);",
+      "claim": "The single method a custom token strategy implements is `Task<OAuthToken> GetToken(credentials, cancellationToken)` - credentials first, cancellation token second.",
+      "defends": "dotnet-authentication - Supplying your own token source, the `// Task<OAuthToken> GetToken(creds, ct)` comment"
+    },
+    {
+      "id": "auth.strategy.refreshable-adds-a-second-method",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/IOAuth2RefreshableTokenStrategy.cs",
+      "dotall": true,
+      "pattern": "public interface IOAuth2RefreshableTokenStrategy<in TCredentials>.*?Task<OAuthTokenRefreshable> GetToken\\(.*?Task<OAuthTokenRefreshable\\?> TryRefreshToken\\(\\s*TCredentials \\w+,\\s*string \\w+,\\s*CancellationToken",
+      "claim": "The refreshable strategy is a DIFFERENT contract: its GetToken returns OAuthTokenRefreshable and it adds TryRefreshToken(credentials, refreshToken, ct) - a custom authorization-code strategy implements two methods, not one.",
+      "defends": "dotnet-authentication - Supplying your own token source; 'Only the authorization-code grant refreshes'"
+    },
+    {
+      "id": "auth.refresh.only-authorization-code-is-refreshable",
+      "kind": "count",
+      "glob": "Core/**/*.cs",
+      "pattern": ":\\s*IOAuth2RefreshableTokenStrategy<",
+      "expect": 1,
+      "claim": "Only the authorization-code grant refreshes - it is the one grant wired to IOAuth2RefreshableTokenStrategy / OAuth2RefreshableScheme.",
+      "defends": "dotnet-authentication - Token caching & refresh: '**Only the authorization-code grant refreshes.** It is the one grant wired to IOAuth2RefreshableTokenStrategy / OAuth2RefreshableScheme.'"
+    },
+    {
+      "id": "auth.cache.single-acquisition-path-in-the-plain-scheme",
+      "kind": "count",
+      "glob": "Core/Authentication/OAuth2/OAuth2Scheme.cs",
+      "pattern": "_\\w+\\.(?:GetToken|TryRefreshToken)\\(",
+      "expect": 1,
+      "claim": "Client-credentials and resource-owner-password re-run the WHOLE grant when the token expires: the non-refreshable scheme has exactly one token-acquisition call and no refresh path.",
+      "defends": "dotnet-authentication - Token caching & refresh: 'Client-credentials and resource-owner-password re-run the whole grant when the token expires'"
+    },
+    {
+      "id": "auth.cache.fast-path-returns-the-unexpired-token",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuth2Scheme.cs",
+      "dotall": true,
+      "pattern": "(\\w+) = _cachedToken;\\s*if \\(\\1 is not null && !\\1\\.IsExpired\\([^)]*\\)\\)\\s*return \\1;",
+      "claim": "The SDK fetches the token, caches it, and acquires a fresh one only when the cached one expires - an unexpired cached token short-circuits before any HTTP call.",
+      "defends": "dotnet-authentication - Token caching & refresh: 'The SDK fetches and caches the token, acquiring a fresh one when it expires'"
+    },
+    {
+      "id": "auth.cache.exactly-two-write-sites",
+      "kind": "count",
+      "glob": "Core/Authentication/OAuth2/OAuth2Scheme.cs",
+      "pattern": "_cachedToken\\s*=[^=]",
+      "expect": 2,
+      "claim": "When the token response omits expires_in the first token is cached for the life of the client and the only thing that ever replaces it is a 401: the cache has exactly two write sites - the post-fetch assignment and Invalidate().",
+      "defends": "dotnet-authentication - Token caching & refresh, the expires_in warning: 'the first token is cached for the life of the client and the only thing that ever replaces it is a 401'"
+    },
+    {
+      "id": "auth.cache.no-process-wide-token-store",
+      "kind": "absent",
+      "glob": "Core/Authentication/**/*.cs",
+      "pattern": "static\\s+(?:volatile\\s+|readonly\\s+)*OAuthToken",
+      "claim": "Tokens are cached in memory PER CLIENT INSTANCE - nothing under Core/Authentication holds a static token, so two clients built from the same options object fetch two tokens.",
+      "defends": "dotnet-authentication - Token caching & refresh: 'Tokens are cached in-memory, per client instance'; dotnet-client-initialization - 'the auth scheme *is* the access-token cache - an instance field on the scheme object'"
+    },
+    {
+      "id": "auth.refresh.ac.refresh-is-tried-before-the-full-grant",
+      "kind": "ordered",
+      "file": "Core/Authentication/OAuth2/OAuth2RefreshableScheme.cs",
+      "first": "_\\w+\\.TryRefreshToken\\(",
+      "then": "_\\w+\\.GetToken\\(",
+      "claim": "The authorization-code grant refreshes the expired token first and falls back to the full grant - which re-invokes PromptForAuthorizationCode - only when the refresh fails.",
+      "defends": "dotnet-authentication - authorization code: 'The SDK exchanges the code for a token and refreshes it when it expires ... if the refresh fails, it invokes PromptForAuthorizationCode again to re-authorize'"
+    },
+    {
+      "id": "auth.refresh.ac.refresh-needs-a-cached-refresh-token",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuth2RefreshableScheme.cs",
+      "pattern": "if \\(\\w+\\?\\.RefreshToken is not null\\)",
+      "claim": "The refresh attempt is reachable only through the cached token's refresh token, so invalidation drops the refresh token along with the access token and the next acquisition is the full grant.",
+      "defends": "dotnet-authentication - 'For the authorization-code grant, invalidation drops the refresh token along with the access token, so \"re-acquired\" means the *full* grant runs again and PromptForAuthorizationCode fires'"
+    },
+    {
+      "id": "auth.refresh.ac.invalidate-drops-the-whole-cached-token",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuth2RefreshableScheme.cs",
+      "pattern": "public void Invalidate\\(\\)\\s*=>\\s*_\\w+\\s*=\\s*null;",
+      "claim": "Invalidate() on the refreshable scheme nulls the one cached token - the refresh token lives nowhere else - and it is a bare volatile write that does not take the fetch lock, so an in-flight fetch can repopulate the cache.",
+      "defends": "dotnet-authentication - Token caching & refresh, the invalidation bullet and 'Invalidate() clears the cache without taking the fetch lock'"
+    },
+    {
+      "id": "auth.refresh.ac.failed-refresh-is-signalled-by-null",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/AuthorizationCode/OAuth2AuthorizationCodeStrategy.cs",
+      "pattern": "return \\w+\\.TryGetResponse\\(out var (\\w+)\\) \\? \\1 : null;",
+      "claim": "A failed refresh is signalled by returning null - ANY non-success status from the refresh endpoint, not an exception - which is what makes the scheme fall through to the full grant and re-prompt.",
+      "defends": "dotnet-authentication - 'if the refresh fails, it invokes PromptForAuthorizationCode again to re-authorize'"
+    },
+    {
+      "id": "auth.compose.all-applies-every-scheme",
+      "kind": "present",
+      "file": "Core/Authentication/AuthSchemeAll.cs",
+      "dotall": true,
+      "pattern": "foreach \\(var (\\w+) in _\\w+\\)\\s*await \\1\\.Apply\\(",
+      "claim": "AND composition is AuthSchemeAll, which applies every scheme to every request.",
+      "defends": "dotnet-authentication - Combined / multiple schemes: '**AND** - all schemes are applied to every request (AuthSchemeAll)'"
+    },
+    {
+      "id": "auth.compose.all-does-not-skip-unconfigured",
+      "kind": "absent",
+      "file": "Core/Authentication/AuthSchemeAll.cs",
+      "pattern": "IsConfigured",
+      "claim": "The skip-unconfigured rule belongs to OR only: AuthSchemeAll applies every scheme, unconfigured ones included (they are no-ops), so an AND API with one credential missing sends a partially authenticated request rather than failing locally.",
+      "defends": "dotnet-authentication - Combined / multiple schemes, the AND bullet read against the OR bullet 'schemes with no credentials configured are skipped, not tried'"
+    },
+    {
+      "id": "auth.compose.unconfigured-means-noneauthscheme",
+      "kind": "present",
+      "file": "Core/Authentication/IAuthScheme.cs",
+      "pattern": "IsConfigured\\(\\)\\s*=>\\s*scheme is not NoneAuthScheme",
+      "claim": "'No credentials configured' is defined as 'the factory produced NoneAuthScheme' - which is exactly what an unset credentials property yields.",
+      "defends": "dotnet-authentication - Combined / multiple schemes: 'schemes with **no credentials configured are skipped, not tried**'"
+    },
+    {
+      "id": "auth.compose.any-returns-on-first-success",
+      "kind": "present",
+      "file": "Core/Authentication/AuthSchemeAny.cs",
+      "dotall": true,
+      "pattern": "await \\w+\\.Apply\\([^)]*\\)\\.ConfigureAwait\\(false\\);\\s*return;",
+      "claim": "Under OR composition the first configured scheme that succeeds wins - Apply returns immediately, in constructor order, and 'succeeds' means only that Apply did not throw.",
+      "defends": "dotnet-authentication - Combined / multiple schemes: 'the first configured scheme that succeeds wins'"
+    },
+    {
+      "id": "auth.compose.any-throws-only-when-a-configured-scheme-failed",
+      "kind": "present",
+      "file": "Core/Authentication/AuthSchemeAny.cs",
+      "dotall": true,
+      "pattern": "if \\(failures\\.Count > 0\\)\\s*throw new AuthSchemeException\\(",
+      "claim": "AuthSchemeException is thrown only if every *configured* scheme fails - with nothing configured the failure list is empty and the request goes out unauthenticated.",
+      "defends": "dotnet-authentication - Combined / multiple schemes: 'AuthSchemeException is thrown only if every *configured* scheme fails (AuthSchemeAny)'"
+    },
+    {
+      "id": "auth.exception.single-throw-site",
+      "kind": "count",
+      "glob": "**/*.cs",
+      "pattern": "throw new AuthSchemeException\\(",
+      "expect": 1,
+      "claim": "AuthSchemeException comes from OR composition alone - it has exactly one throw site in the whole SDK, so an SDK whose API declares a single scheme never hits it.",
+      "defends": "dotnet-error-handling - 'a call can also throw AuthSchemeException ... when the configured schemes can't be satisfied ... (An SDK whose API declares a single scheme never hits this.)'"
+    },
+    {
+      "id": "auth.none.is-an-internal-noop-singleton",
+      "kind": "present",
+      "file": "Core/Authentication/NoneAuthScheme.cs",
+      "dotall": true,
+      "pattern": "internal sealed class NoneAuthScheme : IAuthScheme\\b.*?public static NoneAuthScheme Instance \\{ get; \\} = new\\(\\);.*?private NoneAuthScheme\\(\\)\\s*\\{\\s*\\}.*?Apply\\([^)]*\\)\\s*=>\\s*default;",
+      "claim": "No-auth endpoints are represented by NoneAuthScheme: a private-ctor singleton whose Apply writes nothing. It is `internal`, so leaving the credentials properties unset is the only way to reach it.",
+      "defends": "dotnet-authentication - 'Some endpoints/APIs need no credentials (NoneAuthScheme) - leave the credentials properties unset'"
+    },
+    {
+      "id": "auth.none.every-factory-falls-back-to-it",
+      "kind": "count",
+      "glob": "Core/Authentication/**/*.cs",
+      "pattern": ":\\s*NoneAuthScheme\\.Instance",
+      "expect": 7,
+      "claim": "An unset credentials property yields a no-op scheme, not an error: every scheme factory - Basic, Bearer, the three ApiKey placements and both OAuth2 schemes - falls back to NoneAuthScheme when its credential is null.",
+      "defends": "dotnet-authentication - 'an unset credentials property yields a no-op scheme, not an error, so the call reaches the provider with no Authorization header'"
+    },
+    {
+      "id": "auth.options.credentials-are-never-required",
+      "kind": "absent",
+      "glob": "*ClientOptions.cs",
+      "pattern": "\\brequired\\b",
+      "requires": [
+        "root-client"
+      ],
+      "claim": "Leaving the credentials properties unset is legal C#: the generated options class declares no `required` member, so the client constructs fine with no credentials and the call reaches the provider unauthenticated.",
+      "defends": "dotnet-authentication - 'leave the credentials properties unset'; and the 'Missing credentials must stop the app from starting' section, which exists precisely because the SDK will not stop it for you"
+    },
+    {
+      "id": "auth.wiring.options-property-flows-into-the-core-factory",
+      "kind": "at-least",
+      "glob": "AuthSchemes.cs",
+      "pattern": "\\.Create\\(\\s*options\\.\\w+",
+      "expect": 1,
+      "requires": [
+        "root-client"
+      ],
+      "claim": "The generated AuthSchemes hands the options credentials property straight to the Core scheme factory - which is exactly how an unset property becomes NoneAuthScheme instead of an error. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-authentication - 'only the **options property names** are generated per-API'; the unset-credentials bullet"
+    }
+  ]
+}

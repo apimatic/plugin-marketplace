@@ -1,0 +1,9 @@
+{
+  "api.name": "PayPal",
+  "api.id": "paypal",
+  "sdk.rootNamespace": "PayPalServerSdk",
+  "sdk.package": "AsadAli.Checkout.Sdk",
+  "sdk.repoUrl": "https://github.com/asadali214/checkout-sample-sdk",
+  "sdk.cloneRef": "v1.0.1",
+  "sdk.envLogVar": "PAYPALSERVERSDKCLIENT_LOG"
+}

@@ -1,0 +1,26 @@
+{
+  "group": "safety",
+  "note": "Two production-safety emission facts the skills lean on: the injected Idempotency-Key header that no caller can reach, and the set of models carrying a raw card number. Both decide guidance where being wrong is expensive - a write that looks deduplicated and is not, and a log line that discloses a PAN - so both are asserted rather than trusted.",
+  "assertions": [
+    {
+      "id": "idempotency.header.every-non-get-and-no-get",
+      "kind": "probe",
+      "probe": "idempotency-key-on-every-non-get",
+      "requires": [
+        "api"
+      ],
+      "claim": "Every non-GET operation carries an `Idempotency-Key` header and no GET does; where no parameter feeds it, the value is a generator-injected `Guid.NewGuid()` the caller cannot set.",
+      "defends": "dotnet-configuration-resilience - Make the write idempotent at the provider, the injected-header warning"
+    },
+    {
+      "id": "pci.raw-pan-models-match-the-docs",
+      "kind": "probe",
+      "probe": "raw-pan-models-are-the-documented-set",
+      "requires": [
+        "models"
+      ],
+      "claim": "The models carrying a raw card `number` are exactly the seven the card-data section names, and no response model is among them - responses carry `last_digits` only.",
+      "defends": "paypal-getting-started - Card data: LogRequestBody writes PANs to your logs"
+    }
+  ]
+}

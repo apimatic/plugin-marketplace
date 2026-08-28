@@ -1,0 +1,195 @@
+{
+  "group": "logging",
+  "note": "Logging surface beyond the core set in 30-logging.json.",
+  "assertions": [
+    {
+      "id": "logging.namespace.options-in-core-configuration",
+      "kind": "present",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "^namespace\\s+[\\w.]+\\.Core\\.Configuration\\s*;\\s*public\\s+record\\s+LoggingOptions\\b",
+      "claim": "LoggingOptions is a `{RootNamespace}.Core.Configuration` type — that is the using the sample needs.",
+      "defends": "dotnet-configuration-resilience § Logging, the options sample"
+    },
+    {
+      "id": "logging.namespace.request-options-in-core-not-configuration",
+      "kind": "present",
+      "file": "Core/RequestOptions.cs",
+      "pattern": "^namespace\\s+[\\w.]+\\.Core\\s*;\\s*public\\s+sealed\\s+record\\s+RequestOptions\\b",
+      "claim": "RequestOptions is a `{RootNamespace}.Core` type — the per-call options live under .Core, NOT under .Core.Configuration where LoggingOptions lives.",
+      "defends": "dotnet-calling-endpoints § requestOptions; dotnet-configuration-resilience § Logging, per-call override"
+    },
+    {
+      "id": "logging.options.assignable-on-the-client-options",
+      "kind": "at-least",
+      "glob": "*ClientOptions.cs",
+      "pattern": "public\\s+LoggingOptions\\s+Logging\\s*\\{\\s*get;\\s*set;\\s*\\}\\s*=\\s*new\\(\\)\\s*;",
+      "expect": 1,
+      "claim": "`Logging` is a real, settable property on the options class, defaulted to `new()` — which is what makes `options.Logging = new LoggingOptions { ... }` compile and `options.Logging.X` safe to read. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-client-initialization § options class; dotnet-configuration-resilience § Logging, the options sample",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "logging.options.no-required-members",
+      "kind": "absent",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "\\brequired\\b",
+      "claim": "No LoggingOptions member is `required`, so the skill's object initializer — which sets only four of the ten — compiles as written.",
+      "defends": "dotnet-configuration-resilience § Logging, the options sample"
+    },
+    {
+      "id": "logging.options.logger-factory-nullable-with-no-default",
+      "kind": "present",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "public\\s+ILoggerFactory\\?\\s+LoggerFactory\\s*\\{\\s*get;\\s*init;\\s*\\}(?!\\s*=)",
+      "claim": "LoggerFactory is a nullable ILoggerFactory with no default — 'you leave LoggerFactory null' is the state the three-state table is about.",
+      "defends": "dotnet-configuration-resilience § Logging, the three-state table"
+    },
+    {
+      "id": "logging.options.three-switches-default-false",
+      "kind": "count",
+      "glob": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "public\\s+bool\\s+Log(?:RequestHeaders|ResponseHeaders|RequestBody)\\s*\\{\\s*get;\\s*init;\\s*\\}(?!\\s*=)",
+      "expect": 3,
+      "claim": "LogRequestHeaders, LogResponseHeaders and LogRequestBody are all bools with no initializer, i.e. all three default to false.",
+      "defends": "dotnet-configuration-resilience § Logging, the options sample and the 'On by default' column"
+    },
+    {
+      "id": "logging.options.redaction-placeholder-default",
+      "kind": "present",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "pattern": "RedactionPlaceholder\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*=\\s*\"\\*\\*\\*\"",
+      "claim": "The masked replacement is RedactionPlaceholder, defaulting to \"***\".",
+      "defends": "dotnet-configuration-resilience § Logging, the redaction paragraph"
+    },
+    {
+      "id": "logging.category.is-client-name-dot-http",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "CreateLogger\\(\\$\"\\{\\w+\\}\\.Http\"\\)",
+      "claim": "The SDK logs under the category '{client type name}.Http' — the string a host's log filters must target.",
+      "defends": "dotnet-configuration-resilience § Logging"
+    },
+    {
+      "id": "logging.category.client-passes-its-own-type-name",
+      "kind": "at-least",
+      "glob": "*Client.cs",
+      "pattern": "class\\s+(\\w+)\\b[\\s\\S]*?new\\s+HttpLogger\\(\\s*[^,()]*,\\s*\"\\1\"\\s*\\)",
+      "expect": 1,
+      "claim": "The client hands the logger its own type name, so the log category is '{Api}Client.Http' and the environment variable is '{APICLIENTTYPENAME}_LOG' for that same name. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-configuration-resilience § Logging; dotnet-client-initialization § options class",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "logging.factory.null-falls-back-to-nulllogger",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "\\w+\\.LoggerFactory\\s*\\?\\?\\s*NullLoggerFactory\\.Instance",
+      "claim": "A hand-built client with no LoggerFactory (and no environment variable) gets NullLoggerFactory — nothing is written.",
+      "defends": "dotnet-configuration-resilience § Logging, the three-state table, row 2"
+    },
+    {
+      "id": "logging.plan.lines-on-by-default",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "Line:\\s*On\\(\\s*LogLevel\\.Information\\s*,\\s*(?:byDefault:\\s*)?true\\s*\\)",
+      "claim": "The request and success-response lines are Information and on by default — no option has to be set to get them.",
+      "defends": "dotnet-configuration-resilience § Logging, the event table"
+    },
+    {
+      "id": "logging.plan.payload-rows-are-opt-in",
+      "kind": "count",
+      "glob": "Core/Logging/HttpLogger.cs",
+      "pattern": "(?:RequestHeaders|ResponseHeaders):\\s*On\\(\\s*LogLevel\\.Debug\\s*,\\s*(?!(?:byDefault\\s*:\\s*)?(?:true|false)\\b)[\\w.]+\\s*\\)|RequestBody:\\s*On\\(\\s*LogLevel\\.Trace\\s*,\\s*(?!(?:byDefault\\s*:\\s*)?(?:true|false)\\b)[\\w.]+\\s*\\)",
+      "expect": 3,
+      "claim": "The three payload rows are opt-in and emit below Information: headers at Debug, body at Trace, each gated by its own switch rather than on by default.",
+      "defends": "dotnet-configuration-resilience § Logging, the event table's 'On by default' column"
+    },
+    {
+      "id": "logging.levels.response-line-warning-on-failure",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "\\?\\s*LogLevel\\.Information\\s*:\\s*LogLevel\\.Warning",
+      "claim": "The response line is Information on success and Warning on failure — the level is chosen per response, not fixed in the LoggerMessage attribute.",
+      "defends": "dotnet-configuration-resilience § Logging, the event table"
+    },
+    {
+      "id": "logging.levels.terminal-failure-carries-the-exception",
+      "kind": "present",
+      "file": "Core/Logging/SdkLog.cs",
+      "pattern": "EventName\\s*=\\s*\"HttpFailed\"\\s*,\\s*Level\\s*=\\s*LogLevel\\.Error[\\s\\S]{0,400}?HttpFailed\\(\\s*ILogger\\s+\\w+\\s*,\\s*Exception\\s+\\w+",
+      "claim": "A terminal failure is logged at Error with the exception attached to the record, not just formatted into the message.",
+      "defends": "dotnet-configuration-resilience § Logging, the event table"
+    },
+    {
+      "id": "logging.env-var.accepted-values-are-exactly-three",
+      "kind": "present",
+      "file": "Core/Logging/LoggingEnvironment.cs",
+      "pattern": "\\?\\.Trim\\(\\)\\.ToLowerInvariant\\(\\)\\s*switch\\s*\\{\\s*\"info\"\\s*=>\\s*\\(\\s*true\\s*,\\s*LogLevel\\.Information\\s*\\)\\s*,\\s*\"debug\"\\s*=>\\s*\\(\\s*true\\s*,\\s*LogLevel\\.Debug\\s*\\)\\s*,\\s*\"trace\"\\s*=>\\s*\\(\\s*true\\s*,\\s*LogLevel\\.Trace\\s*\\)\\s*,\\s*_\\s*=>\\s*\\(\\s*false\\s*,",
+      "claim": "The environment variable accepts exactly info, debug or trace — trimmed and lower-cased, and anything else (information, warn, 1) is silently ignored.",
+      "defends": "dotnet-configuration-resilience § Logging, the env-var warning"
+    },
+    {
+      "id": "logging.env-var.debug-forces-headers-not-body",
+      "kind": "present",
+      "file": "Core/Logging/LoggingEnvironment.cs",
+      "pattern": "LogLevel\\.Debug\\s*=>\\s*\\w+\\s+with\\s*\\{(?:(?!LogRequestBody)[^}])*LogRequestHeaders\\s*=\\s*true\\s*,(?:(?!LogRequestBody)[^}])*LogResponseHeaders\\s*=\\s*true\\s*,(?:(?!LogRequestBody)[^}])*\\}",
+      "claim": "`debug` additionally forces request AND response headers on — and only trace, not debug, forces the body on.",
+      "defends": "dotnet-configuration-resilience § Logging, the env-var warning"
+    },
+    {
+      "id": "logging.env-var.installs-the-console-error-factory",
+      "kind": "at-least",
+      "glob": "Core/Logging/LoggingEnvironment.cs",
+      "pattern": "LoggerFactory\\s*=\\s*new\\s+ConsoleErrorLoggerFactory\\(",
+      "expect": 3,
+      "claim": "Every accepted value installs the built-in console logger as the factory — that is how the variable gets output to stderr with no code change. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-configuration-resilience § Logging, the env-var warning"
+    },
+    {
+      "id": "logging.redaction.unmask-beats-redacted-beats-known-safe",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "\\w*[Uu]nmask\\w*\\.Contains\\(\\w+\\)\\s*\\?\\s*\\w+\\s*:\\s*\\w*[Rr]edacted\\w*\\.Contains\\(\\w+\\)\\s*\\?\\s*\\w+\\s*:\\s*KnownSafe\\.Headers\\.Contains\\(\\w+\\)\\s*\\?\\s*\\w+\\s*:\\s*\\w+\\s*;",
+      "claim": "RedactedHeaders forces a header in and UnmaskHeaders opts one out — tested in that order, so UnmaskHeaders wins when a header is in both.",
+      "defends": "dotnet-configuration-resilience § Logging, the redaction paragraph"
+    },
+    {
+      "id": "logging.redaction.redacted-keys-are-additive",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "\\w*[Rr]edactedKeys\\.Contains\\(\\w+\\)\\s*\\|\\|\\s*\\(\\s*maskUnknownKeys\\s*&&\\s*!\\s*KnownSafe\\.QueryKeys\\.Contains\\(\\w+\\)\\s*\\)",
+      "claim": "RedactedKeys ADDS to the masked set: it is ORed in front of the allow-list test, so its keys are masked in a form body as well as in a query string.",
+      "defends": "dotnet-configuration-resilience § Logging, the redaction paragraph"
+    },
+    {
+      "id": "logging.redaction.url-path-is-not-masked",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "\\+\\s*\\w+\\.AbsolutePath\\s*\\+",
+      "claim": "The URL path is NOT masked — it is concatenated into the logged URL as-is, so an id or reference in the route is logged verbatim; only the query goes through MaskPairs.",
+      "defends": "dotnet-configuration-resilience § Logging, 'The URL path is not masked'"
+    },
+    {
+      "id": "logging.hot-path.scope-opens-before-the-send",
+      "kind": "ordered",
+      "file": "Core/RawClient.cs",
+      "first": "\\w*[Hh]ttpLogger\\.Begin\\(",
+      "then": "\\.RequestSending\\(",
+      "claim": "The built-in logger is on the request hot path — RawClient opens a log scope for the call and reports the outgoing request from inside the attempt, so you do not need a DelegatingHandler to see requests.",
+      "defends": "dotnet-configuration-resilience § Logging, opening line; dotnet-client-initialization § options class"
+    },
+    {
+      "id": "logging.per-call-options.read-only-by-the-logger",
+      "kind": "count",
+      "glob": "Core/**/*.cs",
+      "pattern": "\\brequestOptions\\s*\\??\\s*\\.\\s*\\w+",
+      "expect": 1,
+      "claim": "requestOptions is a per-call LOGGING override and nothing else: exactly one place in Core reads a member off it, and that place is the HTTP logger.",
+      "defends": "dotnet-calling-endpoints § requestOptions; dotnet-configuration-resilience § per-call override"
+    }
+  ]
+}

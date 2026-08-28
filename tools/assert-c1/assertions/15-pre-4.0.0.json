@@ -1,0 +1,161 @@
+{
+  "group": "pre-4.0.0",
+  "note": "Assertions for the PRE-4.0.0 core surface — the one maxio-sdk documents. Everything else in this directory describes generator 4.0.0, and on a pre-4.0.0 fixture ~100 of those fail by construction; that delta is baselined in maxio-pre-4.0.0-drift.txt so the job goes red when it CHANGES. This file is the other half, and it is the half that was missing: the positive claims maxio's own dotnet-* skills make had no executable backing at all, so they could rot exactly the way the 4.0.0 claims did before this tool existed. Each one below is verified against asadali214/advanced-billing-sample-sdk@v1.0.2; the three marked `run-verified` were settled by executing the SDK, not by reading it. These carry `surfaces` so they do not run against the 4.0.0 fixtures, where they would be false.",
+  "assertions": [
+    {
+      "id": "pre400.stamp.core-file-count",
+      "kind": "count",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "glob": "Core/**/*.cs",
+      "pattern": "\\A",
+      "expect": 88,
+      "claim": "The pre-4.0.0 core surface is 88 Core/*.cs files — against 122 on 4.0.0. The count is the cheapest surface discriminator there is.",
+      "defends": "the core-surface stamp at the top of every maxio-sdk dotnet-* skill"
+    },
+    {
+      "id": "pre400.retry.transport-arm-is-unconditional",
+      "kind": "present",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "\\.Handle<HttpRequestException>\\(\\)\\s*\\.HandleResult\\(",
+      "claim": "The transport arm is a bare .Handle<HttpRequestException>() sitting directly beside the result arm, with no method test of its own — so a transport fault is retried on EVERY verb, POST included.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Notes; maxio-sdk:dotnet-testing § Notes — 'is retried on every verb, POST included'"
+    },
+    {
+      "id": "pre400.retry.method-gate-lives-inside-the-status-arm",
+      "kind": "present",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "HandleResult\\(msg\\s*=>[\\s\\S]{0,240}?msg\\.RequestMessage\\?\\.Method\\s+is\\s*\\{\\s*\\}\\s*method\\s*&&\\s*options\\.HttpMethodsToRetry\\.Contains\\(method\\)",
+      "claim": "HttpMethodsToRetry is consulted INSIDE the result arm, not above both arms — so it gates status retries only. This is the exact inverse of the 4.0.0 claim that the method filter gates both arms, and copying that claim here would be a falsehood about which writes get resent.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Notes, first bullet"
+    },
+    {
+      "id": "pre400.retry.status-arm-reads-response-requestmessage",
+      "kind": "present",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "msg\\.RequestMessage\\?\\.Method",
+      "claim": "The verb the status arm filters on is read off response.RequestMessage — so a test stub that leaves RequestMessage null makes status retries silently never fire, and a 503-then-200 test 'proves' a policy that is not running.",
+      "defends": "maxio-sdk:dotnet-testing — 'Do not drop the response.RequestMessage = request line from the stub'"
+    },
+    {
+      "id": "pre400.retry.max-retries-goes-straight-to-polly",
+      "kind": "present",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "MaxRetryAttempts\\s*=\\s*options\\.MaxRetries\\s*,",
+      "claim": "MaxRetries is handed to Polly's MaxRetryAttempts unguarded. run-verified: MaxRetries = 0 therefore throws a Polly ValidationException when the CLIENT IS CONSTRUCTED — the floor is 1, and there is no way to turn retries off through this knob.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Retries — 'MaxRetries = 0 throws in Polly (the floor is 1)'"
+    },
+    {
+      "id": "pre400.retry.no-zero-guard",
+      "kind": "absent",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "if\\s*\\(options\\.MaxRetries\\s*>\\s*0\\)",
+      "claim": "There is no `if (options.MaxRetries > 0)` guard around the retry strategy — the 4.0.0 escape hatch that makes 0 mean 'no retries' does not exist here.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Retries"
+    },
+    {
+      "id": "pre400.retry.ineligible-gets-an-empty-pipeline",
+      "kind": "present",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "request\\.CanRetry\\s*\\?\\s*_pipeline\\s*:\\s*ResiliencePipeline<HttpResponseMessage>\\.Empty",
+      "claim": "A retry-ineligible request runs on ResiliencePipeline.Empty — it loses the retry strategy AND the per-attempt timeout with it, leaving HttpClient.Timeout as the only bound. On 4.0.0 the same request keeps a timeout-only pipeline.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Bounding a call — 'requests the pipeline declares retry-ineligible, which run with no per-attempt timeout at all'"
+    },
+    {
+      "id": "pre400.retry.canretry-is-about-body-replay-not-verb",
+      "kind": "present",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/Request/BinaryRequest.cs",
+      "pattern": "public\\s+bool\\s+CanRetry\\s*=>\\s*false\\s*;",
+      "claim": "CanRetry is a property of the BODY, not the verb: a binary request cannot be replayed and so opts out, while a JSON request — including a JSON POST — is eligible and does go through the full pipeline.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Retries"
+    },
+    {
+      "id": "pre400.retry.no-delay-clamp",
+      "kind": "absent",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Math\\.Min\\(",
+      "claim": "Nothing clamps the computed delay — there is no MaxDelay ceiling on this surface, so a large BackOffFactor grows unbounded. 4.0.0 clamps at 60s.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience — 'there is no Retry-After handling and no delay clamp'"
+    },
+    {
+      "id": "pre400.retry.options-have-no-maxdelay",
+      "kind": "absent",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "\\bMaxDelay\\b",
+      "claim": "RetryOptions declares no MaxDelay property at all, so the clamp is absent from the option surface as well as from the factory.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Retries — the knob table"
+    },
+    {
+      "id": "pre400.retry.no-disabled-factory",
+      "kind": "absent",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "\\bDisabled\\s*\\(\\s*\\)",
+      "claim": "There is no RetryOptions.Disabled() on this surface. Combined with Polly's floor of 1, retries cannot be switched off through RetryOptions at all — the only way out is a request the pipeline declares ineligible.",
+      "defends": "the core-surface stamp — 'NO RetryOptions.Disabled()'"
+    },
+    {
+      "id": "pre400.retry.jitter-is-an-integer-draw",
+      "kind": "present",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Jitterer\\.Value!\\.Next\\(\\(int\\)options\\.MaxJitter\\.TotalMilliseconds\\)",
+      "claim": "Jitter is a whole-millisecond Random.Next draw over MaxJitter, not the NextDouble() * MaxJitter of 4.0.0 — and MaxJitter <= zero short-circuits to no jitter rather than throwing.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Retries — backoff and jitter"
+    },
+    {
+      "id": "pre400.rawclient.nothing-is-caught",
+      "kind": "absent",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/RawClient.cs",
+      "pattern": "\\bcatch\\s*\\(",
+      "claim": "RawClient wraps the send in no try/catch whatsoever, so NOTHING is translated on the way out. run-verified: options.Retry.Timeout therefore surfaces as Polly.Timeout.TimeoutRejectedException (InnerException: TaskCanceledException) and is NOT a TaskCanceledException — a boundary guard written as `when (ex is HttpRequestException or TaskCanceledException)` does not match it. 4.0.0 catches and rethrows, which is why the same guard is correct in the paypal-sdk and twilio-sdk copies and wrong here.",
+      "defends": "maxio-sdk:dotnet-error-handling § Connection failures; maxio-sdk:dotnet-configuration-resilience § Bounding a call"
+    },
+    {
+      "id": "pre400.retry.timeout-is-inner-so-it-is-per-attempt",
+      "kind": "present",
+      "surfaces": [
+        "pre-4.0.0"
+      ],
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "\\.AddRetry\\(new\\s+RetryStrategyOptions[\\s\\S]+?builder\\.AddTimeout\\(new\\s+TimeoutStrategyOptions\\s*\\{\\s*Timeout\\s*=\\s*timeout\\s*\\}\\)",
+      "claim": "The timeout strategy is added AFTER the retry strategy, making it inner — so options.Retry.Timeout bounds one attempt, not the call. Only a CancellationToken bounds the whole call.",
+      "defends": "maxio-sdk:dotnet-configuration-resilience § Bounding a call — the three-layer table"
+    }
+  ]
+}

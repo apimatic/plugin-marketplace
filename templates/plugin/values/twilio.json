@@ -1,0 +1,9 @@
+{
+  "api.name": "Twilio",
+  "api.id": "twilio",
+  "sdk.rootNamespace": "TwilioSdk",
+  "sdk.package": "AsadAli.TwilioSdk",
+  "sdk.repoUrl": "https://github.com/context-plugins/twilio-csharp-sdk",
+  "sdk.cloneRef": "51fdf48c0d657f717642ada229682ef234db9ead",
+  "sdk.envLogVar": "TWILIOSDKCLIENT_LOG"
+}

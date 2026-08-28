@@ -1,0 +1,26 @@
+# Assertions known to fail against the generator's own StaticCode/Core template.
+#
+# The template still stamps X-APIMatic-Gen-Version 4.0.0 but has moved ahead of every
+# SDK reporting that value. These failures are therefore EXPECTED and describe the diff
+# between what the dotnet-* skills document and what the next generated plugin will get.
+#
+# The CI job fails when this set CHANGES, not when it is non-empty. A new id here means
+# the generator moved again; a removed id means the gap closed and the skills can follow.
+#
+# Regenerate:  python assert_c1.py <StaticCode> | grep '^FAIL' | awk '{print $2}' | sort
+
+auth.oauth2.ac.form-body-omits-client-secret-when-absent
+enums.trygetknownvalue-out-is-nullable
+logging.per-call-options.read-only-by-the-logger
+models.unknown.no-core-additional-properties-type
+other.models.converter-injection-is-payload-wide
+other.stamp.core-file-count
+other.stamp.no-additional-properties-model
+other.stamp.no-http-content-extensions
+other.wire.flatten-normalises-before-formatting
+other.wire.param-normalised-through-json
+retry.eligibility.binary-never
+signature.request-options-single-property
+surface.request-options.single-property
+surface.sdk-hook.absent
+wire.parameter-value-normalized-through-json

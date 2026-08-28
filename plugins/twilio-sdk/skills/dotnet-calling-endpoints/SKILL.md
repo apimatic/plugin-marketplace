@@ -3,12 +3,28 @@ name: dotnet-calling-endpoints
 description: Calling operations on an APIMatic-generated .NET SDK in C# — finding the controller that owns an operation, required vs optional parameters, request and response envelope shapes, async usage, and cancellation. Load before writing the first call to an SDK operation, or when an operation's shape or return type is unclear.
 ---
 
+<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
+     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
+     context-plugins/twilio-csharp-sdk@51fdf48: 122 Core/*.cs, byte-identical modulo the root namespace.
+     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
+     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
+     for retry-ineligible requests.
+     verified-this-file: 2026-08-25 — the operation signature shape, including RequestOptions between the last defaulted parameter and ct. Response/model shape claims are spec-derived and NOT covered.
+     CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
+     (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
+     differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
+     and RequestOptions gains a `Hooks` property (so "its single property is LogLevel?" is already stale
+     against the template). Re-verify against the EMITTED Core of the SDK in hand, not against
+     X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check this stamp in
+     both files first. -->
+
 # Calling endpoints on an APIMatic .NET SDK
 
 Operations are **async methods** on the client. Most are **grouped under a controller property** and called
 `client.{ApiGroup}.{Operation}(...)`; an operation that belongs to no group sits **directly on the
 client**, called `client.{Operation}(...)`. The controller property, the exact operation name, and its
-signature come from the contract sheet (the SDK helper agent grounds it from the SDK map/source) — operation
+signature come from the contract sheet (grounded from the SDK map/source) — operation
 names follow no fixed verb/resource pattern, so take the real name from the sheet, never from memory.
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{ApiGroup}`,
@@ -20,22 +36,29 @@ Every endpoint method is `async` (returns a `Task`) and lays its parameters out 
 
 ```csharp
 public Task<{ReturnType}> {Operation}(
-    {non-defaulted params},            // no C# default value — listed first
-    {defaulted params} = {default},    // have a C# default (e.g. = null, = 1d) — may be skipped
-    CancellationToken ct = default);   // always last
+    {non-defaulted params},                  // no C# default value — listed first
+    {defaulted params} = {default},          // have a C# default (e.g. = null, = 1d) — may be skipped
+    RequestOptions? requestOptions = null,   // on EVERY operation — see below
+    CancellationToken ct = default);         // always last
 ```
 
 - **Parameter order is fixed:** parameters **without a default value come first**, then parameters **with a
-  default value**, then `CancellationToken ct = default` last (C# requires defaulted parameters to follow
-  non-defaulted ones).
+  default value**, then `RequestOptions? requestOptions = null`, then `CancellationToken ct = default` last
+  (C# requires defaulted parameters to follow non-defaulted ones).
+- **`requestOptions` is on every generated operation**, between the last defaulted parameter and `ct`. It
+  is a `{RootNamespace}.Core.RequestOptions` whose only property is `LogLevel?` — a per-call logging
+  override (see **dotnet-configuration-resilience**). You will rarely set it, but you must **count** it: a
+  positional call written from a signature that leaves it out puts your `CancellationToken` where a
+  `RequestOptions?` is expected, and the call fails to compile with
+  `CS1503: Argument N: cannot convert from 'System.Threading.CancellationToken' to
+  '{RootNamespace}.Core.RequestOptions?'`. Pass `ct:` by name and the problem cannot arise.
 - **An optional parameter may still have no C# default.** Many nullable query params are generated without a
   `= null` default (e.g. `string? startDate`), so they sit in the leading group and must be passed
   explicitly (as `null`) in a positional call — which is why named arguments matter (see below).
 - **The contract sheet is the source of truth for the signature.** Whether a parameter is nullable,
   required, or defaulted — and whether the operation takes a body — varies per operation. Path params are
   typically non-nullable primitives listed first; query and body params may be required or optional. Take
-  each operation's exact signature from the contract sheet (the SDK helper agent grounds it from the SDK
-  map/source), not from memory.
+  each operation's exact signature from the contract sheet (grounded from the SDK map/source), not from memory.
 - **Return type** varies by operation — see [Reading the response](#making-the-call-and-reading-the-response).
 - Methods are **async-only** (no sync overloads) and **throw `SdkException<TError>`** on API errors — see
   `dotnet-error-handling`.
@@ -61,17 +84,23 @@ var response = await client.{ApiGroup}.{Operation}(
     status: {EnumType}.SomeConstant,
     someFilterId: 12345d,
     someFlag: true,
-    page: 1d,
-    perPage: 100d,
+    page: 1,          // int? or double? per API — take the type from the contract sheet
+    perPage: 100,
     ct: ct);
 ```
 
 ## Building request models
 
-Request bodies are immutable `record`s built with object-initializer syntax (no builders). `required`
-members must be set; optional ones are nullable and are omitted from the JSON when left null. The request
-type is the type of the operation's `body` parameter — take its exact name from the contract sheet (the
-SDK helper agent grounds it from the SDK map/source):
+**Only a JSON-bodied operation has a `body` parameter.** Where the API declares a
+`application/x-www-form-urlencoded` request, the generator emits the fields as *individual method
+parameters* and assembles the form itself — there is no request record to construct and no `body` argument
+to pass. In an API built that way this is the majority shape, not an exception. The contract sheet says
+which you are looking at; the signature settles it.
+
+For the JSON case: request bodies are immutable `record`s built with object-initializer syntax (no
+builders). `required` members must be set; optional ones are nullable and are omitted from the JSON when
+left null. The request type is the type of the operation's `body` parameter — take its exact name from the
+contract sheet (grounded from the SDK map/source):
 
 ```csharp
 var body = new {RequestType}
@@ -127,8 +156,7 @@ var response = await client.{ApiGroup}.{Operation}(pathArg, queryArg: null, body
 > which `TError` to catch per operation — or use the non-throwing `{Operation}Result` variant (below).
 
 **Each operation's return type varies** — the shape, and even the type's name, differ by operation. The
-contract sheet's response-envelope column names the return type and the inner fields to read (the SDK helper
-agent grounds it from the SDK map/source); handle it accordingly. The cases you'll meet:
+contract sheet's response-envelope column names the return type and the inner fields to read (grounded from the SDK map/source); handle it accordingly. The cases you'll meet:
 
 - **An object that nests the resource** under a property (a record whose member holds the inner resource).
   Unwrap that member:
@@ -156,9 +184,10 @@ exist. See **dotnet-error-handling**.
 
 ## Cancellation
 
-Every operation takes a `CancellationToken` as its last argument, passed as `ct:`. To bound an individual
-call with a timeout, use the per-request cancellation pattern in **dotnet-configuration-resilience** (it
-owns timeouts).
+Every operation takes a `CancellationToken` as its last argument, passed as `ct:`, with
+`RequestOptions? requestOptions = null` immediately before it — so `ct` is last, never second-to-last. To bound an individual call with a
+timeout, use the per-request cancellation pattern in **dotnet-configuration-resilience** (it owns
+timeouts).
 
 ## Worked example — a list/GET call
 
@@ -166,14 +195,15 @@ owns timeouts).
 // Signature (illustrative):
 //   Task<IReadOnlyList<{ItemType}>> {Operation}(
 //       {EnumType}? filter, string? startDate, string? q,
-//       double? page = 1d, double? perPage = 20d, CancellationToken ct = default);
+//       {Num}? page = {p}, {Num}? perPage = {n},        // {Num} is int? or double? PER API — check the sheet
+//       RequestOptions? requestOptions = null, CancellationToken ct = default);
 
 var results = await client.{ApiGroup}.{Operation}(
     filter: {EnumType}.SomeConstant,
     startDate: null,
     q: "search text",
-    page: 1d,
-    perPage: 20d,
+    page: 1,           // literal must match the parameter's type — a `1d` against an `int?` is CS1503
+    perPage: 20,
     ct: ct);
 
 foreach (var item in results)

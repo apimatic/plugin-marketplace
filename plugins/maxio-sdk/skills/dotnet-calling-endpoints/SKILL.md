@@ -3,12 +3,26 @@ name: dotnet-calling-endpoints
 description: Calling operations on an APIMatic-generated .NET SDK in C# — finding the controller that owns an operation, required vs optional parameters, request and response envelope shapes, async usage, and cancellation. Load before writing the first call to an SDK operation, or when an operation's shape or return type is unclear.
 ---
 
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: not audited, and not scheduled - this plugin wraps a pre-4.0.0 test
+     SDK and is not a generation target. Production plugins are generated at 4.0.0 or later; see
+     the paypal-sdk / twilio-sdk copy of this file for the audited text.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
+
 # Calling endpoints on an APIMatic .NET SDK
 
 Operations are **async methods** on the client. Most are **grouped under a controller property** and called
 `client.{ApiGroup}.{Operation}(...)`; an operation that belongs to no group sits **directly on the
 client**, called `client.{Operation}(...)`. The controller property, the exact operation name, and its
-signature come from the contract sheet (the SDK helper agent grounds it from the SDK map/source) — operation
+signature come from the contract sheet (grounded from the SDK map/source) — operation
 names follow no fixed verb/resource pattern, so take the real name from the sheet, never from memory.
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{ApiGroup}`,
@@ -34,8 +48,7 @@ public Task<{ReturnType}> {Operation}(
 - **The contract sheet is the source of truth for the signature.** Whether a parameter is nullable,
   required, or defaulted — and whether the operation takes a body — varies per operation. Path params are
   typically non-nullable primitives listed first; query and body params may be required or optional. Take
-  each operation's exact signature from the contract sheet (the SDK helper agent grounds it from the SDK
-  map/source), not from memory.
+  each operation's exact signature from the contract sheet (grounded from the SDK map/source), not from memory.
 - **Return type** varies by operation — see [Reading the response](#making-the-call-and-reading-the-response).
 - Methods are **async-only** (no sync overloads) and **throw `SdkException<TError>`** on API errors — see
   `dotnet-error-handling`.
@@ -70,8 +83,7 @@ var response = await client.{ApiGroup}.{Operation}(
 
 Request bodies are immutable `record`s built with object-initializer syntax (no builders). `required`
 members must be set; optional ones are nullable and are omitted from the JSON when left null. The request
-type is the type of the operation's `body` parameter — take its exact name from the contract sheet (the
-SDK helper agent grounds it from the SDK map/source):
+type is the type of the operation's `body` parameter — take its exact name from the contract sheet (grounded from the SDK map/source):
 
 ```csharp
 var body = new {RequestType}
@@ -127,8 +139,7 @@ var response = await client.{ApiGroup}.{Operation}(pathArg, queryArg: null, body
 > which `TError` to catch per operation — or use the non-throwing `{Operation}Result` variant (below).
 
 **Each operation's return type varies** — the shape, and even the type's name, differ by operation. The
-contract sheet's response-envelope column names the return type and the inner fields to read (the SDK helper
-agent grounds it from the SDK map/source); handle it accordingly. The cases you'll meet:
+contract sheet's response-envelope column names the return type and the inner fields to read (grounded from the SDK map/source); handle it accordingly. The cases you'll meet:
 
 - **An object that nests the resource** under a property (a record whose member holds the inner resource).
   Unwrap that member:

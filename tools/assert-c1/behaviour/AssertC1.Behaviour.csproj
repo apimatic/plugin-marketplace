@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The behavioural tier of assert-c1. Runs the SDK rather than reading it.
+
+    Against the published package:
+        dotnet run -c Release
+
+    Against a local tree of the SAME SDK (a regenerated checkout-sample-sdk, say):
+        dotnet run -c Release -p:SdkProject=C:\path\to\TheSdk.csproj
+
+    SdkProject swaps which project is referenced; it does NOT make these checks
+    SDK-agnostic. Program.cs names PayPalServerSdk types directly — the client, the
+    options class, ApplePayPaymentDataType, CheckoutPaymentIntent, OrderRequest — so it
+    compiles only against an SDK with that root namespace and those models. Porting it
+    elsewhere means editing Program.cs.
+
+    Making it generic would mean reflection over a named client type, which trades away
+    the compile-time binding that is half the point: a renamed member currently fails the
+    BUILD, loudly, and the static tier cannot produce that signal.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AssertC1.Behaviour</RootNamespace>
+    <AssemblyName>assert-c1-behaviour</AssemblyName>
+    <!-- The checks deliberately bind to generated symbols by name, so a rename is a
+         compile ERROR and fails the build on its own — no warning promotion needed. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
+  </ItemGroup>
+
+  <!-- Prefer a local SDK tree when one is named; fall back to the published package. -->
+  <ItemGroup Condition="'$(SdkProject)' != ''">
+    <ProjectReference Include="$(SdkProject)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SdkProject)' == ''">
+    <PackageReference Include="AsadAli.Checkout.Sdk" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>

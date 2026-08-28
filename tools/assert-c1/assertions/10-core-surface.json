@@ -1,0 +1,50 @@
+{
+  "group": "core-surface",
+  "note": "Surface discriminators. These decide WHICH set of skill text is correct for a given SDK, so they run first: if one of these fails the rest of the report is about the wrong surface. X-APIMatic-Gen-Version does not pin the surface on its own — codegen-v2 has shipped differing Core trees under the same 4.0.0 string — so the file-presence checks below are the real discriminators.",
+  "assertions": [
+    {
+      "id": "surface.logging-options.exists",
+      "kind": "file",
+      "file": "Core/Configuration/LoggingOptions.cs",
+      "claim": "The options class carries a built-in logging surface (LoggingOptions).",
+      "defends": "dotnet-configuration-resilience § Logging; dotnet-client-initialization § options class"
+    },
+    {
+      "id": "surface.request-options.exists",
+      "kind": "file",
+      "file": "Core/RequestOptions.cs",
+      "claim": "A per-call RequestOptions type exists.",
+      "defends": "dotnet-calling-endpoints § signature template"
+    },
+    {
+      "id": "surface.pageable.exists",
+      "kind": "file",
+      "file": "Core/Pagination/Pageable.cs",
+      "claim": "Pagination is expressed through Pageable<TPage,TItem>.",
+      "defends": "dotnet-configuration-resilience § Pagination"
+    },
+    {
+      "id": "surface.sdk-hook.absent",
+      "kind": "no-file",
+      "file": "Core/Hooks/SdkHook.cs",
+      "claim": "This surface has no SdkHook — a fixture that has one is a LATER surface than the skills describe, even if it still reports 4.0.0.",
+      "defends": "the core-surface stamp on every dotnet-* skill"
+    },
+    {
+      "id": "surface.request-options.single-property",
+      "kind": "absent",
+      "file": "Core/RequestOptions.cs",
+      "pattern": "\\bHooks\\b",
+      "claim": "RequestOptions carries only LogLevel; a Hooks property means a later surface.",
+      "defends": "dotnet-calling-endpoints — 'whose only property is LogLevel?'"
+    },
+    {
+      "id": "surface.gen-version-header",
+      "kind": "present",
+      "file": "Core/Logging/HttpLogger.cs",
+      "pattern": "\"X-APIMatic-Gen-Version\"",
+      "claim": "The generator stamps a version header (and treats it as log-safe).",
+      "defends": "the core-surface stamp"
+    }
+  ]
+}

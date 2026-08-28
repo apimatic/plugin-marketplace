@@ -3,6 +3,20 @@ name: dotnet-configuration-resilience
 description: Client configuration and resilience for an APIMatic-generated .NET SDK in C# — retries and backoff, timeouts and cancellation, base-URL/server selection, list pagination, SSE streaming, and request/response logging. Load before you register or tune the client — the option names alone do not reveal which calls retry, what a timeout actually bounds, or what you must still set yourself.
 ---
 
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: 2026-08-25 — NOT covered: the pagination section — this surface exposes
+     ExecutePagedItems / ExecutePagedPages / ExecutePagedResults and the sampled SDK generates no
+     paginated operation, so which shape an operation gets could not be settled. Covered: retry predicate, empty-pipeline behaviour and absence of LoggingOptions re-confirmed correct for this surface; the text was deliberately left unchanged.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
+
 # Configuration & resilience for an APIMatic .NET SDK
 
 All types below live under `{RootNamespace}.Core.Configuration` / `.Servers` and are generic across
@@ -33,7 +47,7 @@ options.Server.{ServerName}.{Environment}.BaseUrl = "https://my-host.example.com
 ```
 
 The real server names, per-environment options, and template parameters come from the contract sheet
-(the SDK helper agent grounds them from the SDK map/source). See **dotnet-client-initialization** for selecting the environment.
+(grounded from the SDK map/source). See **dotnet-client-initialization** for selecting the environment.
 
 **`Environment` and `Server` are not read at the same time, which makes one of them look inert.** The client
 captures `options.Environment` **once, when it is constructed**, but keeps a live reference to the
@@ -71,7 +85,7 @@ attempt fails, and the two cases are far apart:
 | **Hangs** (no response at all) | ≈ **100s** — the per-attempt timeout fires, and a timeout rejection is **not** retried (see Notes), so the call ends on the first attempt |
 | **Stalls, then fails retryably** (slow reset, or a slow `503` on a retryable verb) | up to **4 × 100s + 7s ≈ 407s** — each attempt burns nearly the full timeout and is then retried |
 
-Either way, a hung or stalling provider pins a request-handling thread, a pooled connection and the caller's
+Either way, a hung or stalling provider holds the request open, a pooled connection and the caller's
 browser for a window measured in minutes. Treat every default in this table as a value you have chosen only
 once you have written it down; `Timeout` in particular has no defensible default for a request-path call.
 
@@ -185,7 +199,7 @@ There are three places a bound can live, and **two of the three are per-attempt*
 
 | Layer | Scope | Default | Bounds a whole call? |
 | --- | --- | --- | --- |
-| `options.Retry.Timeout` | one attempt | `100s` | **No** — a retryable failure just under it repeats the cost |
+| `options.Retry.Timeout` | one attempt | `100s` | **No** — a retryable failure just under it repeats the cost. Throws `TimeoutRejectedException`, *not* `TaskCanceledException` — see below |
 | `HttpClient.Timeout` | one attempt | `100s` | **No** — same; see below |
 | `CancellationToken` you pass to the call | the whole call | none | **Yes** — the only one |
 
@@ -193,7 +207,13 @@ There are three places a bound can live, and **two of the three are per-attempt*
 inside each `SendAsync`, and the retry pipeline sits *above* `SendAsync` — so every retry gets a fresh full
 `Timeout`.
 
-It is still the highest-value single knob, for a reason worth understanding: its expiry throws
+**The two per-attempt knobs throw two different exception types here.** `HttpClient.Timeout` throws
+`TaskCanceledException`; `options.Retry.Timeout` throws Polly's **`TimeoutRejectedException`** (with a
+`TaskCanceledException` inside it), because `RawClient` on this surface catches nothing and so translates
+nothing. A boundary that guards only the first silently lets the second through — see
+**maxio-sdk:dotnet-error-handling**.
+
+`HttpClient.Timeout` is still the highest-value single knob, for a reason worth understanding: its expiry throws
 `TaskCanceledException`, which the pipeline does **not** retry (see Notes), so **the first time it fires the
 call ends**. A `10s` value therefore does bound a *hang* at ≈10s. What it does not bound is a provider that
 fails *retryably* just under the limit on every attempt — that still costs ≈ `4 × 10s + 7s ≈ 47s`. It also

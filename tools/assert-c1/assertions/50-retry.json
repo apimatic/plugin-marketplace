@@ -1,0 +1,190 @@
+{
+  "group": "retry",
+  "note": "Retry, timeout and backoff mechanics beyond the core set in 20-retry.json — drafted from the claims the skills actually make, each verified against both sampled SDKs.",
+  "assertions": [
+    {
+      "id": "retry.options.namespace",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "^namespace\\s+[\\w.]+\\.Core\\.Configuration\\s*;",
+      "claim": "RetryOptions lives in {RootNamespace}.Core.Configuration — the namespace the Customize sample's using directive imports.",
+      "defends": "dotnet-configuration-resilience § Retries, the Customize sample's `using {RootNamespace}.Core.Configuration;`"
+    },
+    {
+      "id": "retry.options.onretry-is-a-void-action",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "Action<RetryAttempt>\\?\\s+OnRetry\\s*\\{\\s*get;\\s*init;\\s*\\}",
+      "claim": "OnRetry is an Action<RetryAttempt>? — a synchronous void callback. That is why the sample's `attempt => Console.WriteLine(...)` binds; there is no async form to await.",
+      "defends": "dotnet-configuration-resilience § Retries, the Customize sample"
+    },
+    {
+      "id": "retry.defaults.on-retry-null",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "OnRetry\\s*=\\s*null\\s*,",
+      "claim": "OnRetry defaults to null — nothing observes a retry until you assign it.",
+      "defends": "dotnet-configuration-resilience § Retries, defaults table"
+    },
+    {
+      "id": "retry.options.timeout-is-nullable",
+      "kind": "present",
+      "file": "Core/Configuration/RetryOptions.cs",
+      "pattern": "TimeSpan\\?\\s+Timeout\\s*\\{\\s*get;\\s*init;\\s*\\}",
+      "claim": "Timeout is nullable — `Timeout = null` is a legal value, not a compile error.",
+      "defends": "dotnet-configuration-resilience § Notes, the `Timeout` is per attempt bullet"
+    },
+    {
+      "id": "retry.timeout.strategy-added-only-when-set",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "if\\s*\\(options\\.Timeout\\s+is\\s*\\{\\s*\\}\\s*\\w+\\s*\\)\\s*builder\\.AddTimeout\\(",
+      "claim": "Setting Timeout = null disables the per-attempt timeout entirely — the timeout strategy is added only when Timeout has a value.",
+      "defends": "dotnet-configuration-resilience § Notes, the `Timeout` is per attempt bullet"
+    },
+    {
+      "id": "retry.timeout.retry-registered-outside-timeout",
+      "kind": "ordered",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "first": "builder\\.AddRetry\\(",
+      "then": "builder\\.AddTimeout\\(",
+      "claim": "Timeout is per attempt, not cumulative: retry is registered before — therefore outside — the timeout strategy, so every attempt gets its own full Timeout.",
+      "defends": "dotnet-configuration-resilience § Notes, the `Timeout` is per attempt bullet; § Bounding a call, three-layers table"
+    },
+    {
+      "id": "retry.backoff.exponential-arm-uses-attempt-number",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "options\\.UseExponentialBackoff\\s*\\?\\s*options\\.Delay\\.TotalMilliseconds\\s*\\*\\s*Math\\.Pow\\(\\s*options\\.BackOffFactor\\s*,\\s*\\w+\\s*\\)",
+      "claim": "The nth retry waits Delay * BackOffFactor^(n-1): the growth term is Delay multiplied by BackOffFactor raised to the 0-based attempt number, so the first retry waits exactly one Delay.",
+      "defends": "dotnet-configuration-resilience § Notes, first bullet"
+    },
+    {
+      "id": "retry.backoff.constant-when-exponential-off",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Math\\.Pow\\([^)]*\\)\\s*:\\s*options\\.Delay\\.TotalMilliseconds\\s*;",
+      "claim": "UseExponentialBackoff = false gives a constant Delay between attempts — the other arm of the same expression is the bare Delay, with no growth term.",
+      "defends": "dotnet-configuration-resilience § Notes, first bullet"
+    },
+    {
+      "id": "retry.backoff.jitter-is-uniform-over-maxjitter",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "\\w+\\.NextDouble\\(\\)\\s*\\*\\s*options\\.MaxJitter\\.TotalMilliseconds",
+      "claim": "The jitter term is random(0, MaxJitter) — a uniform draw scaled by MaxJitter, not a fixed or proportional fudge.",
+      "defends": "dotnet-configuration-resilience § Notes, first bullet"
+    },
+    {
+      "id": "retry.backoff.sum-clamped-to-maxdelay",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Math\\.Min\\(\\s*\\w+\\s*\\+\\s*\\w+\\s*,\\s*MaxDelay\\.TotalMilliseconds\\s*\\)",
+      "claim": "Backoff and jitter are summed and then clamped to the 60s ceiling, so a large BackOffFactor cannot push a single delay past a minute.",
+      "defends": "dotnet-configuration-resilience § Notes, the Retry-After bullet"
+    },
+    {
+      "id": "retry.retry-after.delta-and-date-forms",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Headers\\.RetryAfter\\s+switch\\s*\\{\\s*\\{\\s*Delta:\\s*\\{\\s*\\}\\s*\\w+\\s*\\}\\s*=>\\s*\\w+\\(\\s*\\w+\\s*\\)\\s*,\\s*\\{\\s*Date:\\s*\\{\\s*\\}\\s*\\w+\\s*\\}\\s*=>\\s*\\w+\\(\\s*\\w+\\s*-\\s*\\w+\\s*\\)",
+      "dotall": true,
+      "claim": "Retry-After is honoured in both wire forms — delta-seconds, and an HTTP date turned into a delay by subtracting the current time.",
+      "defends": "dotnet-configuration-resilience § Notes, the Retry-After bullet"
+    },
+    {
+      "id": "retry.retry-after.clamped-at-both-ends",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "<\\s*TimeSpan\\.Zero\\s*\\?\\s*TimeSpan\\.Zero\\s*:\\s*\\w+\\s*>\\s*MaxDelay\\s*\\?\\s*MaxDelay\\s*:",
+      "dotall": true,
+      "claim": "A Retry-After value is clamped at both ends — a date already in the past floors at zero instead of producing a negative delay, and anything above the ceiling becomes 60s.",
+      "defends": "dotnet-configuration-resilience § Notes, the Retry-After bullet"
+    },
+    {
+      "id": "retry.maxdelay.never-public",
+      "kind": "absent",
+      "glob": "**/*.cs",
+      "pattern": "public\\s+[^\\n]*\\bMaxDelay\\b",
+      "claim": "The 60s delay ceiling is not configurable — it is an internal constant of the pipeline factory and is never exposed as a public member.",
+      "defends": "dotnet-configuration-resilience § Notes, the Retry-After bullet (a hard 60s ceiling that is not configurable)"
+    },
+    {
+      "id": "retry.pipeline.selected-per-request-by-canretry",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Create\\(IRequest\\s+\\w+\\)\\s*=>\\s*\\w+\\.CanRetry\\s*\\?\\s*_pipeline\\s*:\\s*_timeoutOnly",
+      "dotall": true,
+      "claim": "Retry eligibility is decided per request type before the pipeline runs: IRequest.CanRetry alone picks between the retrying pipeline and the timeout-only one.",
+      "defends": "dotnet-configuration-resilience § Notes, the multipart bullet"
+    },
+    {
+      "id": "retry.pipeline.empty-only-when-nothing-to-do",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "options\\s+is\\s*\\{\\s*MaxRetries:\\s*<=\\s*0\\s*,\\s*Timeout:\\s*null\\s*\\}[\\s\\S]{0,80}ResiliencePipeline<HttpResponseMessage>\\.Empty",
+      "claim": "The pipeline goes empty only when retries are off AND Timeout is null — so Disabled() keeps the per-attempt Timeout, and a client with both off still constructs instead of tripping Polly's zero-strategy builder.",
+      "defends": "dotnet-configuration-resilience § Making a write safe under retries (Disabled() keeps the per-attempt Timeout)"
+    },
+    {
+      "id": "retry.onretry.attempt-number-is-one-based",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "AttemptNumber\\s*=\\s*args\\.AttemptNumber\\s*\\+\\s*1\\s*,",
+      "claim": "The AttemptNumber on the RetryAttempt handed to OnRetry is 1-based — the first retry reports 1, not Polly's 0.",
+      "defends": "dotnet-configuration-resilience § Retries, the Customize sample's `retry #{attempt.AttemptNumber}`"
+    },
+    {
+      "id": "retry.onretry.reason-is-failure-or-status",
+      "kind": "present",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "Outcome\\.Exception\\s+is\\s*\\{\\s*\\}\\s*\\w+\\s*\\?\\s*new\\s+RetryReason\\.Failure\\(\\s*\\w+\\s*\\)\\s*:\\s*new\\s+RetryReason\\.Status\\(",
+      "dotall": true,
+      "claim": "RetryAttempt.Reason is RetryReason.Failure(Exception) when the attempt threw — the per-attempt timeout included — and RetryReason.Status(HttpStatusCode) when it returned a retryable status.",
+      "defends": "dotnet-configuration-resilience § Notes, the OnRetry Reason bullet; dotnet-testing § Notes"
+    },
+    {
+      "id": "retry.attempt.carries-number-delay-reason",
+      "kind": "present",
+      "file": "Core/Configuration/RetryAttempt.cs",
+      "pattern": "record\\s+RetryAttempt\\s*\\{(?=[\\s\\S]*int\\s+AttemptNumber\\s*\\{\\s*get;)(?=[\\s\\S]*TimeSpan\\s+Delay\\s*\\{\\s*get;)(?=[\\s\\S]*RetryReason\\s+Reason\\s*\\{\\s*get;)",
+      "dotall": true,
+      "claim": "The RetryAttempt handed to OnRetry carries AttemptNumber, Delay and Reason — the three members the samples read off it.",
+      "defends": "dotnet-configuration-resilience § Retries, the Customize sample; § Notes, the OnRetry Reason bullet"
+    },
+    {
+      "id": "retry.eligibility.three-unconditional",
+      "kind": "count",
+      "glob": "Core/Request/*.cs",
+      "pattern": "public\\s+bool\\s+CanRetry\\s*=>\\s*true\\s*;",
+      "expect": 3,
+      "claim": "Exactly three body types are unconditionally retry-eligible — JSON, form-url-encoded and empty-body. With binary pinned to false and multipart conditional, that fixes all five.",
+      "defends": "dotnet-configuration-resilience § Notes, the multipart bullet"
+    },
+    {
+      "id": "retry.eligibility.irequest-set-is-five",
+      "kind": "count",
+      "glob": "Core/Request/*.cs",
+      "pattern": ":\\s*IRequest\\b",
+      "expect": 5,
+      "claim": "The body types the eligibility rule enumerates — binary, multipart, JSON, form-url-encoded, empty — are the complete set of IRequest implementations; there is no sixth kind with unstated retry behaviour.",
+      "defends": "dotnet-configuration-resilience § Notes, the multipart bullet"
+    },
+    {
+      "id": "retry.predicate.no-cancellation-type-in-the-set",
+      "kind": "absent",
+      "file": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "TaskCanceledException|OperationCanceledException",
+      "claim": "A TaskCanceledException — from your own CancellationToken, or from HttpClient.Timeout — is not in the retry set and ends the call where it fires: neither cancellation type is named anywhere in the pipeline the factory builds.",
+      "defends": "dotnet-configuration-resilience § Notes, 'Three things trigger a retry'; § Bounding a call"
+    },
+    {
+      "id": "retry.predicate.never-reads-response-requestmessage",
+      "kind": "absent",
+      "glob": "Core/**/*.cs",
+      "pattern": "(?<!Http)RequestMessage",
+      "claim": "Nothing in Core reads response.RequestMessage — the verb the predicate filters on comes from the resilience context — so a test stub that leaves RequestMessage unset still exercises retries.",
+      "defends": "dotnet-testing § Notes, the stub's response.RequestMessage line"
+    }
+  ]
+}

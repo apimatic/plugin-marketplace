@@ -595,14 +595,14 @@ This repository is a **multi-plugin marketplace** that targets Claude Code, Curs
 ```
 plugin-marketplace/
 ├── .claude-plugin/
-│   └── marketplace.json          # Claude Code marketplace catalog (lists both plugins)
+│   └── marketplace.json          # Claude Code marketplace catalog (the plugin catalog)
 ├── .cursor-plugin/
-│   └── marketplace.json          # Cursor marketplace catalog (lists both plugins)
+│   └── marketplace.json          # Cursor marketplace catalog (the plugin catalog)
 ├── .github/
 │   └── ISSUE_TEMPLATE/           # Issue templates for API, language, and feature requests
 ├── assets/                       # Shared logos and static assets used by the README
 ├── docs/
-│   └── cross-platform-agents.md  # Authoring reference for cross-platform agent files
+│   └── cross-platform-agents.md  # Authoring reference for cross-platform agent files (acp-paypal; the SDK plugins are skills-only)
 ├── plugins/
 │   ├── context-matic/            # MCP "context-matic" + integrate/onboard skills
 │   │   ├── .claude-plugin/plugin.json   # Claude  → ./.claude-mcp.json

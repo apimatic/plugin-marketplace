@@ -1,0 +1,298 @@
+{
+  "group": "errors",
+  "note": "The error surface: which namespace each thrown or read type lives in, what SdkException and ApiError expose, and how RawError buffers and reads a body. These are what a catch ladder is built from.",
+  "assertions": [
+    {
+      "id": "errors.sdkexception.single-error-property",
+      "kind": "present",
+      "file": "Core/Exceptions/SdkException.cs",
+      "pattern": "public\\s+required\\s+\\w+\\s+Error\\s*\\{\\s*get;\\s*init;\\s*\\}",
+      "claim": "SdkException<TError> exposes a single property - `public required TError Error { get; init; }`, the parsed error model. Everything a catch block can read comes off `ex.Error`.",
+      "defends": "dotnet-error-handling § Catch the exception, first line"
+    },
+    {
+      "id": "errors.sdkexception.no-status-or-headers",
+      "kind": "absent",
+      "file": "Core/Exceptions/SdkException.cs",
+      "pattern": "\\b(?:StatusCode|Headers)\\b",
+      "claim": "The throwing path carries NO HTTP status code and no response headers - `ex.StatusCode` does not exist. Only ApiResult exposes StatusCode/Headers, on both outcomes.",
+      "defends": "dotnet-error-handling § Result-style alternative, 'Unlike the throwing path, ApiResult exposes the HTTP StatusCode and Headers on both success and failure'"
+    },
+    {
+      "id": "errors.exceptions.every-thrown-type-shares-one-namespace",
+      "kind": "absent",
+      "glob": "Core/Exceptions/*.cs",
+      "pattern": "^namespace\\s+(?!\\w+(?:\\.\\w+)*\\.Core\\.Exceptions\\s*;)",
+      "claim": "Every exception type the SDK throws lives in {RootNamespace}.Core.Exceptions - SdkException<T>, AuthSchemeException and the three Sse* exceptions - so one using covers all of them, and none of them sits with ApiError/RawError under Core.ErrorResponse.",
+      "defends": "dotnet-error-handling § the namespace list and § Notes (AuthSchemeException); dotnet-configuration-resilience § Streaming, 'all under {RootNamespace}.Core.Exceptions'"
+    },
+    {
+      "id": "errors.apierror.no-typed-accessor-on-the-base",
+      "kind": "absent",
+      "file": "Core/ErrorResponse/ApiError.cs",
+      "pattern": "public\\s+bool\\s+TryGet(?!RawError\\b)",
+      "claim": "The ApiError base declares no typed TryGet* accessor of its own - a helper typed as `ApiError` can reach only TryGetRawError, which is why error-reading must not be factored out of the per-operation catch block.",
+      "defends": "dotnet-error-handling § Case A, \"Don't factor error-reading into a shared helper typed as ApiError\""
+    },
+    {
+      "id": "errors.apierror.trygetrawerror-signature",
+      "kind": "present",
+      "file": "Core/ErrorResponse/ApiError.cs",
+      "pattern": "public\\s+bool\\s+TryGetRawError\\(\\s*out\\s+RawError\\s+\\w+\\s*\\)",
+      "claim": "The base declares `bool TryGetRawError(out RawError error)` - the accessor every {Operation}Error inherits, and the reason a Case A catch that spells the out type needs the Core.ErrorResponse using.",
+      "defends": "dotnet-error-handling § Case A, step 1, third bullet; dotnet-testing § Test an error path"
+    },
+    {
+      "id": "errors.apierror.no-tostring-override",
+      "kind": "absent",
+      "file": "Core/ErrorResponse/ApiError.cs",
+      "pattern": "override\\s+string\\s+ToString",
+      "claim": "ApiError does not override ToString(), so `e.ToString()` on an error yields the bare type name rather than a message - the fallback a shared `Describe(ApiError e)` helper silently lands on.",
+      "defends": "dotnet-error-handling § Case A, \"Don't factor error-reading into a shared helper typed as ApiError\" - 'falls back to e.ToString() - a bare type name'"
+    },
+    {
+      "id": "errors.rawerror.lives-with-apierror-in-core-errorresponse",
+      "kind": "absent",
+      "glob": "Core/ErrorResponse/*.cs",
+      "pattern": "^namespace\\s+(?!\\w+(?:\\.\\w+)*\\.Core\\.ErrorResponse\\s*;)",
+      "claim": "RawError sits with ApiError under {RootNamespace}.Core.ErrorResponse, NOT with SdkException under Core.Exceptions - so a Case B catch needs exactly those two usings, and Core.* is not one namespace.",
+      "defends": "dotnet-error-handling § the namespace list, 'ApiError and RawError -> {RootNamespace}.Core.ErrorResponse'; § Case B, the two-using sample; dotnet-testing § Test an error path, Case B"
+    },
+    {
+      "id": "errors.rawerror.has-no-base-type",
+      "kind": "absent",
+      "file": "Core/ErrorResponse/RawError.cs",
+      "pattern": "class\\s+RawError\\s*:",
+      "claim": "RawError is NOT an ApiError - it declares no base type at all, so nothing an ApiError-typed helper knows about applies to a Case B error.",
+      "defends": "dotnet-error-handling § two shapes, Case B bullet; dotnet-testing § Test an error path, Case B"
+    },
+    {
+      "id": "errors.rawerror.no-tryget-accessors",
+      "kind": "absent",
+      "file": "Core/ErrorResponse/RawError.cs",
+      "pattern": "\\bTryGet",
+      "claim": "RawError has no TryGet* and no TryGetRawError - in Case B `ex.Error` IS the RawError and is read directly.",
+      "defends": "dotnet-error-handling § Case B - 'there are no TryGet* accessors and no TryGetRawError'; dotnet-testing § Test an error path, Case B"
+    },
+    {
+      "id": "errors.rawerror.statuscode-is-a-get-only-httpstatuscode",
+      "kind": "present",
+      "file": "Core/ErrorResponse/RawError.cs",
+      "pattern": "public\\s+HttpStatusCode\\s+StatusCode\\s*\\{\\s*get;\\s*\\}",
+      "claim": "RawError.StatusCode is a get-only HttpStatusCode carrying the failing response's status - which is why the samples write `(int)raw.StatusCode` and compare against `HttpStatusCode.UnprocessableEntity`.",
+      "defends": "dotnet-error-handling § Case B sample; dotnet-testing § Test an error path, the Assert.Equal(HttpStatusCode...) line"
+    },
+    {
+      "id": "errors.rawerror.readers-are-synchronous",
+      "kind": "absent",
+      "file": "Core/ErrorResponse/RawError.cs",
+      "pattern": "\\bTask<[^>]*>\\s+ReadAs",
+      "claim": "ReadAsBytes/ReadAsString/ReadAsJson<T> are synchronous - none returns a Task - so the samples call them without await, inside a catch block or an assertion.",
+      "defends": "dotnet-error-handling § Case B sample; dotnet-testing § Test an error path, 'ex.Error.ReadAsString() / ex.Error.ReadAsJson<MyDto>()'"
+    },
+    {
+      "id": "errors.rawerror.readasjson-is-an-unguarded-delegation",
+      "kind": "present",
+      "file": "Core/ErrorResponse/RawError.cs",
+      "pattern": "ReadAsJson<T>\\(\\)\\s*=>\\s*JsonSerializer\\.Deserialize<T>\\(",
+      "claim": "ReadAsJson<T>() is a bare expression-bodied delegation to JsonSerializer.Deserialize with no try/catch - so it THROWS JsonException when the body isn't valid JSON, and a RawError body often isn't. Prefer ReadAsString().",
+      "defends": "dotnet-error-handling § Case B - 'ReadAsJson<T>() throws JsonException when the body isn't valid JSON'"
+    },
+    {
+      "id": "errors.rawerror.body-buffered-before-construction",
+      "kind": "ordered",
+      "file": "Core/ErrorResponse/RawError.cs",
+      "first": "ReadAsByteArrayAsync\\(",
+      "then": "new\\s+RawError\\(\\s*response\\.StatusCode",
+      "claim": "The error body is copied into a byte[] the RawError owns BEFORE the RawError exists, so ReadAsString()/ReadAsJson<T>() still work after the call returned and the HttpResponseMessage was disposed.",
+      "defends": "dotnet-testing § Test an error path - the body assertions run after the throw"
+    },
+    {
+      "id": "errors.rawerror.no-public-constructor",
+      "kind": "absent",
+      "file": "Core/ErrorResponse/RawError.cs",
+      "pattern": "public\\s+RawError\\s*\\(",
+      "claim": "RawError has no public constructor - you never build one, you read the one the SDK handed you on ex.Error.",
+      "defends": "dotnet-error-handling § Case B - 'Its public members are StatusCode, ReadAsBytes/ReadAsString/ReadAsJson<T>'"
+    },
+    {
+      "id": "errors.generated.every-error-derives-from-apierror",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "^public\\s+sealed\\s+class\\s+\\w+\\b(?!\\s*:\\s*ApiError\\b)",
+      "requires": [
+        "errors"
+      ],
+      "claim": "Every type under Errors/ is a `public sealed class {Operation}Error : ApiError` - which is what makes the inherited TryGetRawError available on all of them (Case A).",
+      "defends": "dotnet-error-handling § two shapes, Case A bullet; dotnet-testing § Test an error path - 'ex.Error is the typed ApiError'"
+    },
+    {
+      "id": "errors.generated.trygetrawerror-is-never-redeclared",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "\\bTryGetRawError\\b",
+      "requires": [
+        "errors"
+      ],
+      "claim": "No {Operation}Error redeclares TryGetRawError - it is purely inherited, so it does NOT appear among the accessors you read off the class file, and a ladder built only from the accessors declared there would omit the final branch.",
+      "defends": "dotnet-error-handling § Case A, step 1 third bullet ('the inherited TryGetRawError(out RawError), which every {Operation}Error exposes') and step 2"
+    },
+    {
+      "id": "errors.generated.accessors-return-bool",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "public\\s+(?!bool\\b)[\\w<>?\\[\\],\\.]+\\s+TryGet\\w*\\s*\\(",
+      "requires": [
+        "errors"
+      ],
+      "claim": "Every accessor on an {Operation}Error is a `public bool TryGet...` - none returns the body, a nullable, or a Task, so a branch is always `if (ex.Error.TryGet...(...))`.",
+      "defends": "dotnet-error-handling § Case A, step 1 - 'They are the public bool TryGet...(out ...) methods on the {Operation}Error type'"
+    },
+    {
+      "id": "errors.generated.accessors-take-one-out-parameter",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "public\\s+bool\\s+TryGet\\w+\\((?!\\s*out\\s+[\\w<>?\\[\\],\\.]+\\s+\\w+\\s*\\))",
+      "requires": [
+        "errors"
+      ],
+      "claim": "Each accessor takes exactly one `out` parameter and nothing else - there is no status argument and no overload to disambiguate, so `TryGet...(out var body)` is the whole call.",
+      "defends": "dotnet-error-handling § Case A, step 1 and the catch template"
+    },
+    {
+      "id": "errors.generated.one-slot-filled-per-response",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "private\\s+static\\s+\\w+\\s+As\\w+\\([^)]*\\)\\s*=>\\s*new\\([^;]*?\\.Some\\([^;]*?\\.Some\\(",
+      "requires": [
+        "errors"
+      ],
+      "claim": "Each generated factory fills exactly ONE accessor slot and passes `default` for every other - so at most one TryGet* is ever true for a given response, and the if/else-if ladder never double-fires.",
+      "defends": "dotnet-error-handling § 'Why TryGetRawError goes last - it is not a universal fallback'"
+    },
+    {
+      "id": "errors.generated.fallback-arm-is-the-default-arm",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "\\A(?![\\s\\S]*_\\s*=>\\s*FromRawBody\\([^)]*\\)\\.As\\(AsFallback\\))[\\s\\S]*:\\s*ApiError",
+      "requires": [
+        "errors"
+      ],
+      "claim": "Every {Operation}Error's status switch ends in a `_ =>` arm that routes to the fallback factory - so a status the operation does not enumerate always lands in TryGetRawError rather than producing an error with every slot empty.",
+      "defends": "dotnet-error-handling § Case A template, 'ALWAYS LAST: fallback for untyped statuses only'"
+    },
+    {
+      "id": "errors.generated.no-enumerated-status-feeds-the-fallback",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "^[^\\n]*\\d[^\\n]*=>[^\\n]*\\bAsFallback\\b",
+      "requires": [
+        "errors"
+      ],
+      "claim": "No enumerated status arm routes to the fallback factory - only the unenumerated `_ =>` arm does. A status the operation maps explicitly, even one whose body is a raw RawError, therefore leaves TryGetRawError FALSE and must be read through its own accessor.",
+      "defends": "dotnet-error-handling § 'Why TryGetRawError goes last' - 'The status-specific RawError accessors are likewise not surfaced by TryGetRawError'; dotnet-testing § Test an error path - 'Only statuses the operation maps to RawError populate TryGetRawError'"
+    },
+    {
+      "id": "errors.generated.typed-accessor-name-mirrors-its-body-type",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "public\\s+bool\\s+TryGet(\\w+)\\(\\s*out\\s+(?!\\1\\b)(?!RawError\\b)\\w",
+      "requires": [
+        "errors"
+      ],
+      "claim": "A typed-body accessor is named after the body it yields - `TryGet{Body}(out {Body} value)`. The ONLY accessors whose name does not repeat the out type are the status-specific ones whose body is RawError, which are named after the response instead.",
+      "defends": "dotnet-error-handling § Case A, step 1 - 'their names embed the body type', typed-body vs status-specific RawError bullets; dotnet-testing § Test an error path - 'its name embeds the body type'"
+    },
+    {
+      "id": "errors.generated.no-tostring-override",
+      "kind": "absent",
+      "glob": "Errors/*.cs",
+      "pattern": "override\\s+string\\s+ToString",
+      "requires": [
+        "errors"
+      ],
+      "claim": "No {Operation}Error overrides ToString() either, so the bare-type-name fallback is what a caller actually gets - never a message worth putting on the wire.",
+      "defends": "dotnet-error-handling § Case A, the ApiError.ToString() bare-type-name trap"
+    },
+    {
+      "id": "errors.slots.empty-slot-reports-false",
+      "kind": "present",
+      "file": "Core/Models/Optional.cs",
+      "pattern": "Some\\(TValue\\s+\\w+\\)\\s*=>\\s*new\\(\\s*\\w+\\s*,\\s*true\\s*\\)[\\s\\S]*?TryGetValue\\(out\\s+TValue\\s+\\w+\\)[\\s\\S]*?return\\s+_\\w+;",
+      "claim": "An accessor slot reports true only when the generated factory filled it through Some(...); a slot left `default` reports false. That is the mechanism behind 'exactly one TryGet* fires' and behind TryGetRawError being false for a mapped status.",
+      "defends": "dotnet-error-handling § 'Why TryGetRawError goes last - it is not a universal fallback'; dotnet-testing § Test an error path"
+    },
+    {
+      "id": "errors.json.success-body-parse-is-unguarded",
+      "kind": "absent",
+      "file": "Core/Response/JsonResponse.cs",
+      "pattern": "\\bcatch\\s*\\(",
+      "claim": "Nothing wraps the success-body deserialization: a 2xx whose body no longer matches the model surfaces as a raw System.Text.Json.JsonException, which matches NEITHER a catch (SdkException<...>) nor a transport catch.",
+      "defends": "dotnet-error-handling § Presenting failures at your boundary - 'A success status with a broken body is a third failure kind'"
+    },
+    {
+      "id": "errors.json.error-body-parsed-before-the-outcome-exists",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "Error\\w*Deserializer\\.Map\\([\\s\\S]{0,400}?ApiResult<TResponse,\\s*TError>\\.Failure\\(",
+      "claim": "The error body is deserialized to completion BEFORE the failure outcome (and therefore before any SdkException) exists - so when an {Operation}Error model disagrees with the body the API really sends, the JsonException REPLACES the SdkException and the HTTP status is gone with it.",
+      "defends": "dotnet-error-handling § 'The same exception also arrives from the error path, and means the opposite'"
+    },
+    {
+      "id": "errors.sse.exceptions-share-a-catchable-base",
+      "kind": "present",
+      "file": "Core/Exceptions/SseException.cs",
+      "pattern": "public\\s+abstract\\s+class\\s+SseException\\s*:\\s*Exception",
+      "claim": "SseException is an abstract Exception base - catching SseException handles either streaming failure.",
+      "defends": "dotnet-configuration-resilience § Streaming, Errors - 'both derive from a common SseException base (catch SseException to handle either)'"
+    },
+    {
+      "id": "errors.sse.concrete-exceptions-derive-from-the-base",
+      "kind": "absent",
+      "glob": "Core/Exceptions/Sse*.cs",
+      "pattern": "^public\\s+sealed\\s+class\\s+\\w+\\b(?!\\s*:\\s*SseException\\b)",
+      "claim": "Every concrete SSE exception derives from SseException - there is no streaming failure that a `catch (SseException)` misses.",
+      "defends": "dotnet-configuration-resilience § Streaming, Errors - 'both derive from a common SseException base'"
+    },
+    {
+      "id": "errors.sse.timeout-carries-the-idle-window",
+      "kind": "present",
+      "file": "Core/Exceptions/SseTimeoutException.cs",
+      "pattern": "public\\s+TimeSpan\\s+IdleTimeout\\s*\\{\\s*get;\\s*\\}",
+      "claim": "SseTimeoutException carries `TimeSpan IdleTimeout` - the window that elapsed without a frame - so the catch block's `ex.IdleTimeout` resolves.",
+      "defends": "dotnet-configuration-resilience § Streaming, 'SseTimeoutException.IdleTimeout reports the window that elapsed'"
+    },
+    {
+      "id": "errors.sse.deserialization-carries-frame-and-inner-jsonexception",
+      "kind": "present",
+      "file": "Core/Response/JsonSseResponse.cs",
+      "pattern": "catch\\s*\\(JsonException\\s+(\\w+)\\)[\\s\\S]{0,120}?throw\\s+new\\s+SseDeserializationException\\([^;]*?,\\s*\\1\\)",
+      "claim": "A frame that fails to deserialize is rethrown as SseDeserializationException with the original JsonException as its InnerException - so `ex.InnerException` in the catch block is the JsonException, and only a JsonException is converted this way.",
+      "defends": "dotnet-configuration-resilience § Streaming, Errors - 'carries the RawFrame text and the underlying JsonException as InnerException'"
+    },
+    {
+      "id": "errors.sse.deserialization-carries-the-raw-frame",
+      "kind": "present",
+      "file": "Core/Exceptions/SseDeserializationException.cs",
+      "pattern": "public\\s+string\\s+RawFrame\\s*\\{\\s*get;\\s*\\}",
+      "claim": "SseDeserializationException carries the offending payload as `string RawFrame` - the catch block's `ex.RawFrame` resolves.",
+      "defends": "dotnet-configuration-resilience § Streaming, the catch (SseDeserializationException ex) clause"
+    },
+    {
+      "id": "errors.authscheme.is-not-an-sdkexception",
+      "kind": "present",
+      "file": "Core/Exceptions/AuthSchemeException.cs",
+      "pattern": "class\\s+AuthSchemeException\\s*:\\s*Exception\\b",
+      "claim": "AuthSchemeException derives straight from Exception - it is NOT an SdkException<T>, so a catch (SdkException<...>) won't match it and it must be caught separately.",
+      "defends": "dotnet-error-handling § Notes, first bullet"
+    },
+    {
+      "id": "errors.authscheme.carries-the-scheme-failures",
+      "kind": "present",
+      "file": "Core/Exceptions/AuthSchemeException.cs",
+      "pattern": "IReadOnlyList<Exception>\\s+SchemeFailures\\s*\\{\\s*get;\\s*init;\\s*\\}",
+      "claim": "AuthSchemeException carries `IReadOnlyList<Exception> SchemeFailures` - the per-scheme failures, which is what the separate catch reads.",
+      "defends": "dotnet-error-handling § Notes, first bullet - 'it carries IReadOnlyList<Exception> SchemeFailures'"
+    }
+  ]
+}

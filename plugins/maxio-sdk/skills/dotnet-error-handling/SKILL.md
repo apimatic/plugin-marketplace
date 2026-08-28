@@ -3,6 +3,21 @@ name: dotnet-error-handling
 description: Error and exception handling for an APIMatic-generated .NET SDK in C# — load before writing any try/catch around an SDK call, an exception-translation layer, or error middleware. Covers which exception types actually reach your catch blocks, how to read status codes and error bodies safely, and the traps that make an otherwise reasonable catch ladder silently wrong.
 ---
 
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: 2026-08-28 — namespace layout and the four Case-A usings, against Errors/*.cs and
+     Core/ErrorResponse. Connection-failure ladder corrected: RawClient has NO try/catch on this surface,
+     so options.Retry.Timeout surfaces as Polly.Timeout.TimeoutRejectedException (inner:
+     TaskCanceledException) and the old two-type guard missed it. Confirmed by running the SDK.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
+
 # Error handling for an APIMatic .NET SDK
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{Operation}`,
@@ -30,9 +45,29 @@ These types live in **distinct** namespaces — `Core.*` is **not** a single nam
 - `ApiError` **and** `RawError` → `{RootNamespace}.Core.ErrorResponse`
 - the per-operation `{Operation}Error` models (e.g. `CreateWidgetError`) → `{RootNamespace}.Errors`
 
-So catching a typed (Case A) exception needs **three** usings — `Core.Exceptions`, `Core.ErrorResponse`,
-and `.Errors`; a Case B catch needs only the first two (`Core.Exceptions` + `Core.ErrorResponse`). These
-types are identical in shape across APIMatic .NET SDKs.
+So a typed (Case A) catch needs up to **four** namespaces, not three — how many depends on whether you
+spell the `out` types out or use `out var`:
+
+| namespace | what you need from it |
+| --- | --- |
+| `{RootNamespace}.Core.Exceptions` | `SdkException<TError>` — the exception itself |
+| `{RootNamespace}.Errors` | the `{Operation}Error` you name in the `catch` |
+| `{RootNamespace}.Core.ErrorResponse` | `RawError`, which the inherited `TryGetRawError` hands back |
+| *depends on the body* | the **typed body** a `TryGet…` yields — see below |
+
+**The fourth is not a fixed namespace.** A typed body is whatever the API definition declared, so where
+its type lives follows the body's schema kind — a model in `{RootNamespace}.Models`, a union in
+`.Models.OneOf` / `.Models.AnyOf`, an enum in `.Models.Enums`, a binary body in `.Core.Models`
+(`ErrorByteContent`), and a map or dynamic body in no SDK namespace at all
+(`IReadOnlyDictionary<string, JsonElement>` needs `System.Collections.Generic` and `System.Text.Json`). A
+scalar body — `TryGetString`, `TryGetLong` — needs nothing. Read the accessor's `out` type and import what
+*it* names; do not assume `.Models`.
+
+The last two rows only bite when you write the `out` type out. `out var` needs neither, which is why the
+template below imports three namespaces and not four — it uses `out var` for the typed bodies and names
+`RawError` explicitly. A Case B catch needs only
+`Core.Exceptions` and `Core.ErrorResponse`. This namespace layout is identical across the APIMatic .NET SDKs
+checked.
 
 ## Catch the exception
 
@@ -49,7 +84,7 @@ the concrete type is already known, so no runtime discovery is needed. Catch the
 
 ### Which `TError` does an endpoint throw?
 
-Answer this from the contract sheet (the SDK helper agent grounds it from the SDK map/source): the
+Answer this from the contract sheet (grounded from the SDK map/source): the
 operation's row names the error case (typed `{Operation}Error` vs `RawError`) and, for Case A, lists the
 exact `TryGet…` accessors with the HTTP status each maps to — no need to grep a clone or open the error
 class at all.
@@ -68,12 +103,15 @@ placeholder, **not** the type you catch). The type named after **`of <see cref="
 - `… of <see cref="{Operation}Error"/> …` → catch `SdkException<{Operation}Error>` (Case A).
 - `… of <see cref="RawError"/> …` → catch `SdkException<RawError>` (Case B).
 
-Equivalently, when grounding from the SDK source (whoever holds it — in this plugin's flow the
-SDK helper agent): a
+Equivalently, when grounding from the SDK source (the clone the getting-started skill describes): a
 `{Operation}Error` type exists under `Errors/` **only** for Case-A operations; if there is no
-`{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is a **compile-time** error
-(`SdkException<ListWidgetsError>` won't compile — no such type), not a silent bug — so the compiler keeps you
-honest.
+`{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is only *sometimes* a compile-time error, and the direction that looks safe is the
+dangerous one. `SdkException<ListWidgetsError>` fails to compile when no such type exists — that guess the
+compiler does catch. But every `{Operation}Error` in the SDK *is* a real type, so naming the **wrong one**
+— a neighbouring operation's error type — compiles cleanly and then **never matches at runtime**, because
+`SdkException<A>` and `SdkException<B>` are unrelated closed generics. The exception sails past your
+`catch` and surfaces somewhere else, or not at all until it is an unhandled failure. Take the case from the
+contract sheet; the compiler is not a check on this.
 
 ### Case A — operation has a typed `{Operation}Error` model
 
@@ -81,9 +119,9 @@ Handling a Case-A error is a **two-step, source-driven** process — you cannot 
 memory:
 
 1. **List *every* `TryGet...` accessor the operation's `{Operation}Error` declares.** The operation's map
-   row already lists them (with the HTTP status each maps to); main takes them from the contract sheet.
-   They are the `public bool TryGet...(out ...)` methods on the `{Operation}Error` type (the SDK helper
-   agent confirms them from the SDK map/source). These accessors are generated per operation — one per response the operation maps —
+   row already lists them (with the HTTP status each maps to); take them from the contract sheet.
+   They are the `public bool TryGet...(out ...)` methods on the `{Operation}Error` type (grounded
+   from the SDK map/source). These accessors are generated per operation — one per response the operation maps —
    and their names embed the body type. Expect a mix of:
    - **typed-body accessors** named after a model or scalar — `TryGetValidationErrors`, `TryGetProblemDetails`,
      `TryGetString`, `TryGetLong`, …;
@@ -230,15 +268,34 @@ Those come through as `HttpRequestException` / `TaskCanceledException`, which a
 `catch (SdkException<...>)` will not match. If that catch is your only guard, a connection failure
 escapes and takes down whatever was running the call.
 
+**On this surface there is a third type, and it is the one people miss.** `RawClient` here wraps the
+send in no `try`/`catch` at all, so when `options.Retry.Timeout` elapses Polly's own
+**`TimeoutRejectedException`** reaches you untranslated — its `InnerException` is a
+`TaskCanceledException`, but the exception itself is not one, so a guard written as
+`when (ex is HttpRequestException or TaskCanceledException)` **does not match it**. The failure that
+guard exists for is precisely the one that escapes it. Two consequences worth stating plainly:
+
+- Catch it explicitly. It lives in `Polly.Timeout`, so the `using` is `using Polly.Timeout;` and your
+  boundary takes a direct **Polly** dependency it did not ask for. That is a real cost of this
+  surface, not an oversight to route around — the alternative is letting the SDK's own configured
+  timeout escape your boundary.
+- Do not confuse it with `HttpClient.Timeout`, which *does* throw `TaskCanceledException`. Both are
+  per-attempt bounds; they surface as two different exception types. See
+  **maxio-sdk:dotnet-configuration-resilience**.
+
 **Convert connection failures to your own error type in one place.** If you wrap the SDK behind
 your own abstraction (a client interface, a service, a repository), catch connection failures at
 that boundary and rethrow the same error type you already use for API errors — so the rest of the
-code has a single failure type to handle instead of two unrelated ones:
+code has a single failure type to handle instead of three unrelated ones:
 
 ```csharp
 catch (SdkException<RawError> ex)                // API error (non-2xx)
 {
     throw new {ProviderException}("...", ex);
+}
+catch (TimeoutRejectedException ex)              // options.Retry.Timeout elapsed - NOT a
+{                                                // TaskCanceledException on this surface
+    throw new {ProviderException}("provider timed out", ex);
 }
 catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)  // connection failure
 {

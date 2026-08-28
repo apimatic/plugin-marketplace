@@ -3,12 +3,25 @@ name: dotnet-models
 description: Working with models in an APIMatic-generated .NET SDK in C# — building request models, required members and nullability, enums, union/AnyOf accessors, and JSON wire names versus C# property names. Load before constructing request payloads or mapping SDK models onto your own domain types.
 ---
 
+<!-- core-surface: APIMatic .NET generator pre-4.0.0 — the client sends no `X-APIMatic-Gen-Version` header.
+     Confirmed 2026-08-25 against asadali214/advanced-billing-sample-sdk@v1.0.2: 88 Core/*.cs.
+     This surface has NO LoggingOptions, NO RequestOptions, NO RetryOptions.Disabled(). Its retry predicate
+     is `.Handle<HttpRequestException>()` OR `.HandleResult(status AND method)` — so transport faults retry
+     on EVERY verb and only the status arm is method-gated; MaxRetries = 0 throws in Polly (the floor is 1);
+     a retry-ineligible request runs on an EMPTY pipeline and so loses the per-attempt timeout; there is no
+     Retry-After handling and no delay clamp.
+     verified-this-file: not audited, and not scheduled - this plugin wraps a pre-4.0.0 test
+     SDK and is not a generation target. Production plugins are generated at 4.0.0 or later; see
+     the paypal-sdk / twilio-sdk copy of this file for the audited text.
+     Sampled from one pre-4.0.0 SDK only; another pre-4.0.0 SDK may differ, so re-check before relying on
+     this. The paypal-sdk / twilio-sdk copies of this file describe generator 4.0.0 — correct there, wrong
+     here. Do NOT copy runtime claims across a core-surface boundary. -->
+
 # Working with models in an APIMatic .NET SDK
 
 Most request/response data are immutable `record`s built with object-initializers (covered in
 `dotnet-calling-endpoints`). This skill covers the **non-obvious model shapes** that trip integrations up.
-The patterns are generic across APIMatic .NET SDKs; take the real type names from the contract sheet (the
-SDK helper agent grounds it from the SDK map/source) — never a decompiled or reflected view of the
+The patterns are generic across APIMatic .NET SDKs; take the real type names from the contract sheet (grounded from the SDK map/source) — never a decompiled or reflected view of the
 installed package.
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{Union}`,
@@ -59,7 +72,7 @@ The factory and `TryGet` names are built mechanically from the **variant's CLR t
 | a list of `{Variant}` | `.ListOf{Variant}(IReadOnlyList<{Variant}>)` | `TryGetListOf{Variant}(out IReadOnlyList<{Variant}>)` |
 
 The exact CLR type varies per union — a numeric variant may be `double`, `decimal`, or `long` — so take the
-real method name from the contract sheet (the SDK helper agent grounds it from the SDK map/source). (Unions use the per-variant
+real method name from the contract sheet (grounded from the SDK map/source). (Unions use the per-variant
 factories and `TryGet…` readers shown above; `FromValue` belongs to enums.) The `Optional<T>` backing a
 union is internal — interact only through the
 factories and `TryGet…`.

@@ -1,0 +1,307 @@
+{
+  "group": "rawclient",
+  "note": "The request/response path: how a call is assembled, how a response is read, and what ApiResult exposes.",
+  "assertions": [
+    {
+      "id": "rawclient.attempt.request-built-inside-pipeline",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "pipeline\\.ExecuteAsync\\(\\s*async\\s+ctx\\s*=>.*?new\\s+HttpRequestMessage\\(.*?\\},\\s*\\w+\\)",
+      "dotall": true,
+      "claim": "A fresh HttpRequestMessage is built for each attempt — the construction sits inside the resilience pipeline's per-attempt delegate — so a marker set via HttpRequestOptionsKey is gone by the retry and the guard never fires.",
+      "defends": "dotnet-configuration-resilience § Making a write safe under transport retries, option 4, first bullet"
+    },
+    {
+      "id": "rawclient.attempt.send-inside-pipeline",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "pipeline\\.ExecuteAsync\\(\\s*async\\s+ctx\\s*=>.*?\\.\\s*SendAsync\\(.*?\\},\\s*\\w+\\)",
+      "dotall": true,
+      "claim": "The retry pipeline sits ABOVE SendAsync — the send is inside the per-attempt delegate — so every retry gets a fresh full HttpClient.Timeout and each attempt is a separate handler invocation that appends to a stub's captured list.",
+      "defends": "dotnet-configuration-resilience § Bounding a call, the HttpClient.Timeout paragraph; dotnet-testing § Assert the outgoing request"
+    },
+    {
+      "id": "rawclient.attempt.headers-read-and-ctx-token",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "SendAsync\\(\\s*\\w+\\s*,\\s*HttpCompletionOption\\.ResponseHeadersRead\\s*,\\s*ctx\\.CancellationToken\\s*\\)",
+      "claim": "Each attempt is sent with HttpCompletionOption.ResponseHeadersRead and the pipeline's own per-attempt token — which is what makes the per-attempt Timeout abort a stalled send, and what lets a stream be handed to its iterator before the body arrives.",
+      "defends": "dotnet-configuration-resilience § Streaming (Server-Sent Events); § Bounding a call, the per-attempt rows"
+    },
+    {
+      "id": "rawclient.context.method-set-before-pipeline",
+      "kind": "ordered",
+      "file": "Core/RawClient.cs",
+      "first": "Properties\\.Set\\(\\s*\\w+\\.MethodKey\\s*,\\s*request\\.HttpMethod\\s*\\)",
+      "then": "pipeline\\.ExecuteAsync\\(",
+      "claim": "The verb the method filter gates on is the request's own HTTP method, put on the resilience context before the pipeline runs — drop that line and TryGetValue fails, so NOTHING retries.",
+      "defends": "dotnet-configuration-resilience § Retries, Notes, the method-filter bullet"
+    },
+    {
+      "id": "rawclient.context.caller-token-seeds-pipeline",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "ResilienceContextPool\\.Shared\\.Get\\(\\s*cancellationToken\\s*\\)",
+      "claim": "The CancellationToken you pass to the call seeds the resilience context itself, so it bounds the whole call — every attempt and every backoff sleep — and not one attempt. It is the only one of the three layers that is a total.",
+      "defends": "dotnet-configuration-resilience § Bounding a call — the three layers, and which one is a total"
+    },
+    {
+      "id": "rawclient.eligibility.consulted-once-outside-the-predicate",
+      "kind": "count",
+      "glob": "Core/ResiliencePipelineFactory.cs",
+      "pattern": "\\bCanRetry\\b",
+      "expect": 1,
+      "claim": "Retry eligibility is decided per request type BEFORE the pipeline runs: the request's CanRetry is read exactly once, when the pipeline is selected, and never inside the retry predicate.",
+      "defends": "dotnet-configuration-resilience § Retries, Notes, the multipart/binary bullet"
+    },
+    {
+      "id": "rawclient.timeout.translated-message",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "\"The request was canceled due to the configured RetryOptions\\.Timeout elapsing\\.\"",
+      "claim": "The exception the SDK substitutes for a Polly timeout carries exactly the message \"The request was canceled due to the configured RetryOptions.Timeout elapsing.\"",
+      "defends": "dotnet-configuration-resilience § Retries, Notes, 'You never catch TimeoutRejectedException'"
+    },
+    {
+      "id": "rawclient.timeout.inner-is-timeoutexception",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "new\\s+TaskCanceledException\\(.*?new\\s+TimeoutException\\(\\s*\\w+\\.Message\\s*,\\s*\\w+\\s*\\)",
+      "dotall": true,
+      "claim": "The TaskCanceledException the SDK throws for its own timeout has a TimeoutException as InnerException (itself wrapping the original TimeoutRejectedException) — that inner type is how you tell an SDK timeout from your own cancellation, which arrives as the same outer type.",
+      "defends": "dotnet-configuration-resilience § Retries, Notes, 'You never catch TimeoutRejectedException'; dotnet-error-handling § Connection failures"
+    },
+    {
+      "id": "rawclient.cancel.caller-token-excluded-from-failure-log",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "catch\\s*\\(Exception\\s+\\w+\\)\\s+when\\s*\\(\\s*\\w+\\s+is\\s+not\\s+OperationCanceledException\\s*\\|\\|\\s*!\\s*cancellationToken\\.IsCancellationRequested\\s*\\)",
+      "claim": "A cancellation caused by your own token is excluded from the SDK's general failure handler by an exception filter, so the token cuts the call cleanly instead of being logged and re-surfaced as a terminal SDK failure.",
+      "defends": "dotnet-configuration-resilience § Bounding a call, 'the token cuts the call cleanly'"
+    },
+    {
+      "id": "rawclient.transport.rethrows-unwrapped",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "catch\\s*\\(Exception\\s+\\w+\\)\\s+when\\s*\\([^)]*\\)\\s*\\{[^}]*\\bthrow;\\s*\\}",
+      "claim": "The general handler ends in a bare `throw;` — it logs and re-throws without wrapping — so HttpRequestException, TaskCanceledException and a private sentinel type all propagate out of the SDK unwrapped, and a catch (SdkException<...>) will not match them.",
+      "defends": "dotnet-error-handling § Connection failures, and guarding every call; dotnet-configuration-resilience § Making a write safe under transport retries, option 4, second bullet"
+    },
+    {
+      "id": "rawclient.execute.throwing-delegates-to-result",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "public\\s+async\\s+Task<TResponse>\\s+Execute<TResponse,\\s*TError>\\(.*?\\(await\\s+ExecuteResult\\(.*?\\)\\.GetResponseOrThrow\\(\\)",
+      "dotall": true,
+      "claim": "The throwing call is literally the result call plus GetResponseOrThrow() — so a success returns only the deserialized body (never the request URL or status), and the TError on the throwing path is provably the same TError the ApiResult carries.",
+      "defends": "dotnet-error-handling § Result-style alternative, 'the same TError as the throwing path'; dotnet-calling-endpoints § Making the call and reading the response"
+    },
+    {
+      "id": "rawclient.execute.result-hook-is-public",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "public\\s+Task<ApiResult<TResponse,\\s*TError>>\\s+ExecuteResult<TResponse,\\s*TError>\\(",
+      "claim": "The non-throwing plumbing a {Operation}Result sibling calls is present in Core on every SDK — a public ExecuteResult returning Task<ApiResult<TResponse, TError>> — whether or not any operation exposes the sibling.",
+      "defends": "dotnet-error-handling § Result-style alternative; dotnet-calling-endpoints § Method signature convention, the optional {Operation}Result sibling"
+    },
+    {
+      "id": "rawclient.execute.getresponseorthrow-only-on-throwing-paths",
+      "kind": "count",
+      "glob": "Core/RawClient.cs",
+      "pattern": "GetResponseOrThrow\\(\\)",
+      "expect": 2,
+      "claim": "GetResponseOrThrow is called from exactly two places — the throwing Execute and the throwing page iterator — so the result-style variants hand the ApiResult back untouched and do not throw on a non-success status.",
+      "defends": "dotnet-error-handling § Result-style alternative, 'does not throw on a non-success status'; dotnet-testing § Test the result-style (ApiResult) variant"
+    },
+    {
+      "id": "rawclient.outcome.status-and-headers-on-both-branches",
+      "kind": "count",
+      "glob": "Core/RawClient.cs",
+      "pattern": "ApiResult<TResponse,\\s*TError>\\.(?:Success|Failure)\\([^)]*,\\s*statusCode,\\s*responseHeaders\\)",
+      "expect": 2,
+      "claim": "The HTTP status and headers are passed into the ApiResult on BOTH outcomes — the success branch and the error branch each carry the captured statusCode and response headers.",
+      "defends": "dotnet-error-handling § Result-style alternative; dotnet-calling-endpoints § Making the call and reading the response; dotnet-testing § Test the result-style (ApiResult) variant"
+    },
+    {
+      "id": "rawclient.pagination.state-advances-per-page",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "requestFactory\\(\\s*state\\s*\\).*?\\bstate\\.Next\\(\\s*\\w+\\s*,\\s*\\w+\\.Headers\\s*\\).*?\\bstate\\s*=\\s*next;",
+      "dotall": true,
+      "claim": "The paging arguments seed only the FIRST page: each subsequent request is rebuilt from an advanced state, and the state advances from the page body plus its response headers — which is how offset, cursor, page-number and Link-header paging are all driven by the same loop.",
+      "defends": "dotnet-configuration-resilience § Pagination, 'the SDK advances the paging state for you'"
+    },
+    {
+      "id": "rawclient.pagination.failed-page-throws",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "yield\\s+return\\s+\\w+\\.GetResponseOrThrow\\(\\);",
+      "claim": "The throwing Pageable unwraps each page with GetResponseOrThrow as it yields it, so a failed page fetch throws SdkException<TError> mid-enumeration rather than quietly ending the await foreach.",
+      "defends": "dotnet-configuration-resilience § Pagination, 'A failed page fetch throws SdkException<TError> mid-enumeration'"
+    },
+    {
+      "id": "rawclient.stream.success-mapper-gated-by-status",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "IsSuccess\\(statusCode\\)\\)\\s*\\{[^}]*\\.Response\\.Map\\(",
+      "claim": "The success mapper — the step that produces a streaming operation's IAsyncEnumerable — runs only inside the success-status branch; a non-2xx becomes a failure ApiResult first. That is why an error before the stream opens surfaces from the opening await, not from the foreach.",
+      "defends": "dotnet-configuration-resilience § Streaming (Server-Sent Events), Errors, 'Before the stream opens'"
+    },
+    {
+      "id": "rawclient.stream.no-polly-below-the-open",
+      "kind": "absent",
+      "glob": "Core/Response/*.cs",
+      "pattern": "\\bPolly\\b",
+      "claim": "Nothing in the response/frame-reading layer references the resilience library — the pipeline has already returned by the time frames are read — so retries do not apply once the stream is open.",
+      "defends": "dotnet-configuration-resilience § Streaming (Server-Sent Events), 'Retries do not apply once the stream is open'"
+    },
+    {
+      "id": "rawclient.wire.path-param-escaped-then-plain-replace",
+      "kind": "present",
+      "file": "Core/TemplateParamsFactory.cs",
+      "pattern": "string\\.Join\\(\",\",\\s*ParameterFlattener\\.Flatten\\(value\\)\\.Select\\(Uri\\.EscapeDataString\\)\\).*?template\\.Replace\\(",
+      "dotall": true,
+      "claim": "A template parameter is flattened, each part URL-escaped with Uri.EscapeDataString, multi-valued parts joined with a literal comma, and the result substituted by a plain string replace of the {name} token — so a value containing '/' goes on the wire as %2F and nothing parses the URL.",
+      "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment, the template-substitution rule"
+    },
+    {
+      "id": "rawclient.wire.baseurl-joined-with-single-slash",
+      "kind": "present",
+      "file": "Core/TemplateParamsFactory.cs",
+      "pattern": "\\$\"\\{baseUrl\\.TrimEnd\\('/'\\)\\}/\\{path\\.TrimStart\\('/'\\)\\}\"",
+      "claim": "A BaseUrl with no {placeholders} passes through expansion unchanged and is used as-is: the final URL is that base with trailing slashes trimmed, joined to the path by exactly one '/'.",
+      "defends": "dotnet-configuration-resilience § ServerOptions configuration for each Environment, 'A literal URL with no {placeholders} is used as-is'"
+    },
+    {
+      "id": "rawclient.apiresult.type-and-namespace",
+      "kind": "present",
+      "file": "Core/Models/ApiResult.cs",
+      "pattern": "namespace\\s+\\w+\\.Core\\.Models;.*?public\\s+readonly\\s+struct\\s+ApiResult<TResponse,\\s*TError>",
+      "dotall": true,
+      "claim": "ApiResult<TResponse, TError> is a public readonly struct in {RootNamespace}.Core.Models, response type first and error type second — the namespace the result-style samples import.",
+      "defends": "dotnet-error-handling § Result-style alternative — ApiResult<TResponse, TError>; dotnet-testing § Test the result-style (ApiResult) variant, the using list"
+    },
+    {
+      "id": "rawclient.apiresult.trygetters-notnullwhen",
+      "kind": "count",
+      "glob": "Core/Models/ApiResult.cs",
+      "pattern": "public\\s+bool\\s+TryGet(?:Response|Error)\\(\\[NotNullWhen\\(true\\)\\]\\s+out\\s+T(?:Response|Error)\\?\\s+\\w+\\)",
+      "expect": 2,
+      "claim": "An ApiResult is inspected with TryGetResponse(out response) and TryGetError(out error), both annotated [NotNullWhen(true)] — which is what makes the out variable non-null inside the if without a nullable warning.",
+      "defends": "dotnet-error-handling § Result-style alternative; dotnet-testing § Test the result-style (ApiResult) variant; dotnet-configuration-resilience § Pagination, the no-throw variant"
+    },
+    {
+      "id": "rawclient.apiresult.match-overloads-named-params",
+      "kind": "count",
+      "glob": "Core/Models/ApiResult.cs",
+      "pattern": "Match(?:<TResult>)?\\(\\s*(?:Func|Action)<[^)]*?>\\s+onSuccess,\\s*(?:Func|Action)<[^)]*?>\\s+onFailure\\)",
+      "expect": 2,
+      "claim": "result.Match has two overloads — a Func one returning TResult and an Action one — and both name their parameters onSuccess / onFailure, which the skill's sample passes as named arguments.",
+      "defends": "dotnet-error-handling § Result-style alternative, the Match sample"
+    },
+    {
+      "id": "rawclient.apiresult.deconstruct-order",
+      "kind": "present",
+      "file": "Core/Models/ApiResult.cs",
+      "pattern": "Deconstruct\\(\\s*out bool isSuccess,\\s*\\[NotNullWhen\\(true\\)\\]\\s*out TResponse\\? \\w+,\\s*\\[NotNullWhen\\(false\\)\\]\\s*out TError\\? \\w+\\)",
+      "claim": "ApiResult deconstructs into exactly three values in the order (isSuccess, response, error) — the order the skill's `var (isSuccess, response, error) = result;` line depends on.",
+      "defends": "dotnet-error-handling § Result-style alternative, the deconstruction sample"
+    },
+    {
+      "id": "rawclient.apiresult.getresponseorthrow-throws-typed",
+      "kind": "present",
+      "file": "Core/Models/ApiResult.cs",
+      "pattern": "GetResponseOrThrow\\(\\).*?throw\\s+new\\s+SdkException<TError>\\s*\\{\\s*Error\\s*=\\s*\\w+\\s*\\}",
+      "dotall": true,
+      "claim": "GetResponseOrThrow() bridges back to the throwing behaviour: it returns the response, or throws SdkException<TError> with the deserialized error on .Error.",
+      "defends": "dotnet-error-handling § Result-style alternative, 'Bridge back to the throwing behavior'"
+    },
+    {
+      "id": "rawclient.throw.single-sdkexception-site",
+      "kind": "count",
+      "glob": "**/*.cs",
+      "pattern": "throw\\s+new\\s+SdkException",
+      "expect": 1,
+      "claim": "The thrown type is always the generic SdkException<TError>: the whole SDK has exactly one site that throws an API-error exception, and there is no non-generic or per-operation exception type to catch instead.",
+      "defends": "dotnet-error-handling § Catch the exception, 'The thrown type is always the generic SdkException<TError>'"
+    },
+    {
+      "id": "rawclient.auth.401-invalidates-without-resend",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "IsUnauthorized\\(\\w+\\.StatusCode\\)\\)\\s*\\w+\\.AuthPolicies\\.InvalidateRevocable\\(\\);\\s*return\\s+\\w+;",
+      "claim": "On a 401 the cached credential is invalidated and that same response is returned — the failing request itself is NOT retried; the fresh token is acquired on your next call.",
+      "defends": "dotnet-authentication § Token caching & refresh, 'the failing request is not retried'; § OAuth 2.0 — client credentials"
+    },
+    {
+      "id": "rawclient.auth.401-is-the-only-invalidation-trigger",
+      "kind": "present",
+      "file": "Core/HttpStatusPolicy.cs",
+      "pattern": "IsUnauthorized\\(HttpStatusCode \\w+\\)\\s*=>\\s*\\w+\\s*==\\s*HttpStatusCode\\.Unauthorized;",
+      "claim": "401 alone triggers invalidation — a 403 does not, so a provider that answers an expired token with 403 never gets a re-acquired token.",
+      "defends": "dotnet-authentication § Token caching & refresh, 'on a 401 it invalidates the cached token and re-acquires'"
+    },
+    {
+      "id": "rawclient.seam.no-self-constructed-transport",
+      "kind": "absent",
+      "glob": "**/*.cs",
+      "pattern": "new\\s+(?:HttpClient|HttpClientHandler|SocketsHttpHandler|HttpMessageInvoker)\\s*\\(",
+      "claim": "The SDK never constructs its own HttpClient or message handler — the injected HttpClient is the only transport, so a stub handler blocks all network traffic including OAuth2 token fetches.",
+      "defends": "dotnet-testing § A reusable stub handler, 'so no real network calls happen'"
+    },
+    {
+      "id": "rawclient.seam.single-send-site",
+      "kind": "count",
+      "glob": "Core/**/*.cs",
+      "pattern": "\\.Send(?:Async)?\\(",
+      "expect": 1,
+      "claim": "Core reaches the handler through exactly one send call and there is no synchronous Send path — so overriding the protected async SendAsync(HttpRequestMessage, CancellationToken) is sufficient to intercept every request.",
+      "defends": "dotnet-testing § A reusable stub handler"
+    },
+    {
+      "id": "rawclient.seam.httpclient-timeout-never-set",
+      "kind": "absent",
+      "glob": "**/*.cs",
+      "pattern": "[Cc]lient\\.Timeout\\s*=",
+      "claim": "The SDK never assigns HttpClient.Timeout, so the 100s in that row of the bounding table is the BCL default standing untouched — the coincidence with RetryOptions.Default().Timeout is not the SDK setting it, and it is yours to change.",
+      "defends": "dotnet-configuration-resilience § Bounding a call, the HttpClient.Timeout row and the commented-out httpClient.Timeout line"
+    },
+    {
+      "id": "rawclient.async.no-sync-over-async",
+      "kind": "absent",
+      "glob": "Core/**/*.cs",
+      "pattern": "\\.Wait\\(\\)|\\.GetAwaiter\\(\\)\\.GetResult\\(\\)|\\bTask\\.Run\\(",
+      "claim": "The SDK's send path is fully async — no thread is blocked while a call waits: Core contains no .Wait(), no GetAwaiter().GetResult() and no Task.Run.",
+      "defends": "dotnet-configuration-resilience § Retries, 'The SDK's send path is fully async'; dotnet-calling-endpoints § Cancellation"
+    },
+    {
+      "id": "rawclient.request.content-disposed-in-finally",
+      "kind": "present",
+      "file": "Core/RawClient.cs",
+      "pattern": "finally\\s*\\{\\s*\\w+\\.Content\\?\\.Dispose\\(\\);\\s*\\}",
+      "claim": "Core disposes the outgoing request's Content in a finally immediately after each send — before the awaited operation returns — so a test that wants the sent body must buffer it inside the stub rather than read it off a captured request afterwards.",
+      "defends": "dotnet-testing § Assert the outgoing request, the LastRequest.Content sample"
+    },
+    {
+      "id": "rawclient.errors.generated-error-namespace",
+      "kind": "at-least",
+      "glob": "Errors/*.cs",
+      "pattern": "^namespace\\s+\\w+\\.Errors;",
+      "expect": 1,
+      "requires": [
+        "errors"
+      ],
+      "claim": "A generated {Operation}Error type lives in {RootNamespace}.Errors — one of the four namespaces a Case A catch ladder has to import, and distinct from Core.Exceptions and Core.ErrorResponse. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-error-handling § Case A — operation has a typed {Operation}Error model, the using list; dotnet-testing § Test an error path"
+    },
+    {
+      "id": "rawclient.rawerror.untyped-body-accessors",
+      "kind": "count",
+      "glob": "Core/ErrorResponse/RawError.cs",
+      "pattern": "public\\s+[\\w<>?\\[\\].,\\s]+\\s+ReadAs(?:Bytes|String|Json<T>)\\(\\)",
+      "expect": 3,
+      "claim": "RawError — the error the untyped Case B path carries — exposes exactly the three body readers the skill uses: ReadAsBytes(), ReadAsString() and ReadAsJson<T>(), alongside StatusCode.",
+      "defends": "dotnet-error-handling § Case B — operation throws SdkException<RawError>"
+    }
+  ]
+}

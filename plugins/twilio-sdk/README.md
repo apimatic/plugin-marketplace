@@ -1,13 +1,13 @@
-# Twilio SDK Assistant (Claude Code plugin)
+# Twilio SDK Assistant (Claude Code + Cursor + Codex + VS Code plugin)
 
-A Claude Code plugin that helps developers **install and consume the Twilio .NET SDK**
+A plugin for **Claude Code, Cursor, Codex and VS Code** that helps developers **install and consume the Twilio .NET SDK**
 (the APIMatic-generated C# SDK at
 [context-plugins/twilio-csharp-sdk](https://github.com/context-plugins/twilio-csharp-sdk)),
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
-The **SDK map is bundled with the plugin**, and a single `twilio-sdk` agent grounds every fact in it —
-cloning the SDK source only when the map can't settle a fact. Structure adopted from the
-`maxio-sdk` plugin (an `integrate-twilio` router plus one `twilio-sdk` agent).
+The **SDK map is bundled with the plugin**, and the `integrate-twilio` workflow skill grounds every fact
+in it — cloning the SDK source only when the map can't settle a fact. Structure adopted from the
+`maxio-sdk` plugin (an `integrate-twilio` workflow skill over the `twilio-getting-started` map).
 
 ## The SDK map (bundled; source cloned only on a gap)
 
@@ -23,11 +23,11 @@ plus `map/` branch pages):
   `TryGet…`), and full enum value lists.
 
 `sdk-map.md` records the source commit it was generated from (the map is generated from the SDK
-source, which remains the ground truth; the SDK repo and the map regenerate together). The agent
-**navigates by map lookup instead of grepping**: it answers most questions from the map directly —
+source, which remains the ground truth; the SDK repo and the map regenerate together). The workflow
+**navigates by map lookup instead of grepping**: most questions are answered from the map directly —
 field lists with JSON wire names, error accessors, enum values — and only when the map can't settle
-a fact does it clone the SDK source (branch `main`, the ref the map was generated from) and open the
-one file the map names. Grepping / globbing / `find`-ing the tree to locate something is a defect —
+a fact is the SDK source cloned (commit `51fdf48`, the ref the map was generated from) and the one
+file the map names opened. Grepping / globbing / `find`-ing the tree to locate something is a defect —
 the map is the locator.
 
 ## Two layers
@@ -53,13 +53,13 @@ it for lookup before touching the SDK source.
 
 ## Skills
 
-- **integrate-twilio** — orchestrator/router. Routes every Twilio .NET SDK task — planning, contract
-  questions, and SDK errors — to the single `twilio-sdk` agent, and drives the implement-and-verify
-  loop. Grounds every fact in the contract sheet the agent produces — never model knowledge, and never
-  the map directly.
+- **integrate-twilio** — the workflow skill. Plans first: writes a map-grounded contract sheet
+  (`twilio-plan.md`) before any code, then implements from that sheet, and fixes SDK compile/build
+  errors map-first, in place. Every contract fact comes from the bundled map via
+  `twilio-getting-started` — never model knowledge.
 - **twilio-getting-started** — install (the `AsadAli.TwilioSdk` NuGet package), the
   Production environment, Basic auth (Account SID + Auth Token), the bundled SDK map, and how to
-  clone the SDK source only on a map gap. The helper-facing entry point.
+  clone the SDK source only on a map gap. The map-layer entry point.
 - **dotnet-client-initialization** — construct `{Api}Client` + `{Api}ClientOptions`, supply an `HttpClient`,
   pick a server environment, register in DI.
 - **dotnet-authentication** — wire up Basic / Bearer / API-key / OAuth2 / composite auth.
@@ -71,19 +71,16 @@ it for lookup before touching the SDK source.
 - **dotnet-configuration-resilience** — retries, timeouts, pagination, logging.
 - **dotnet-testing** — unit-test SDK calls by injecting a fake `HttpClient` / `HttpMessageHandler`.
 
-## Agents
-
-- **twilio-sdk** — the single SDK agent. Grounds every contract in the bundled map (cloning the SDK
-  source only when the map can't settle a fact), writes a contract-grounded `twilio-plan.md` before any
-  code is written, answers narrow contract questions, and fixes SDK compile/build errors in place —
-  building to verify. No MCP.
-
 ## Install
 
 ```
 /plugin marketplace add apimatic/plugin-marketplace
 /plugin install twilio-sdk@apimatic
 ```
+
+Cursor loads the same plugin from `.cursor-plugin/plugin.json`, Codex from
+`.codex-plugin/plugin.json`, and VS Code from the root `plugin.json` (Agent Plugins 1.0 —
+skills are discovered from `skills/` by convention, so the manifest lists none).
 
 Then ask a usage question (e.g. *"how do I send an SMS with Twilio in C#?"*) to trigger the
 relevant skill.

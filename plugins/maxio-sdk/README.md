@@ -1,12 +1,13 @@
-# Maxio SDK Assistant (Claude Code plugin)
+# Maxio SDK Assistant (Claude Code + Cursor + Codex + VS Code plugin)
 
-A Claude Code plugin that helps developers **install and consume the Maxio Advanced Billing .NET SDK**,
+A plugin for **Claude Code, Cursor, Codex and VS Code** that helps developers **install and consume the Maxio Advanced Billing .NET SDK**,
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
-The **SDK map is bundled with the plugin**, and a single `maxio-sdk` agent grounds every fact in it —
-cloning the SDK source only when the map can't settle a fact. Sourced from
-[apimatic/v4-plugins](https://github.com/apimatic/v4-plugins) `plugins/maxio-sdk`, extended with
-**subagent orchestration** (an `integrate-maxio` router plus one `maxio-sdk` agent).
+The **SDK map is bundled with the plugin**, and the `integrate-maxio` workflow skill grounds every
+fact in it — cloning the SDK source only when the map can't settle a fact. Sourced from
+[apimatic/v4-plugins](https://github.com/apimatic/v4-plugins) `plugins/maxio-sdk`, extended with a
+**plan-first workflow** (`integrate-maxio`: contract sheet before code, implement from it, fix SDK
+errors map-first).
 
 ## The SDK map (bundled; source cloned only on a gap)
 
@@ -20,10 +21,10 @@ plus `map/` branch pages):
   enum value lists.
 
 `sdk-map.md` records the SDK version and source commit it was generated from (the map is generated
-from the SDK source, which remains the ground truth). The agent **navigates by map lookup instead of
-grepping**: it answers most questions from the map directly — field lists with JSON wire names, error
-accessors, enum values — and only when the map can't settle a fact does it clone the SDK source
-(pinned to the ref the map was generated from) and open the one file the map names. Grepping /
+from the SDK source, which remains the ground truth). The workflow **navigates by map lookup instead of
+grepping**: most questions are answered from the map directly — field lists with JSON wire names, error
+accessors, enum values — and only when the map can't settle a fact is the SDK source cloned
+(pinned to the ref the map was generated from) and the one file the map names opened. Grepping /
 globbing / `find`-ing the 600+-file tree to locate something is a defect — the map is the locator.
 
 ## Two layers
@@ -49,12 +50,11 @@ defer to it for lookup before touching the SDK source.
 
 ## Skills
 
-- **integrate-maxio** — orchestrator/router. Routes every Maxio .NET SDK task — planning, contract
-  questions, and SDK errors — to the single `maxio-sdk` agent, and drives the implement-and-verify
-  loop. Grounds every fact in the contract sheet the agent produces — never model knowledge, and never
-  the map directly.
+- **integrate-maxio** — the workflow skill. Plans first: writes a map-grounded contract sheet
+  (`maxio-plan.md`) before any code, implements from that sheet, and fixes SDK compile/build errors
+  map-first, in place. Grounds every fact in the bundled SDK map — never model knowledge.
 - **maxio-getting-started** — NuGet install, US/EU environments, Basic-auth quickstart, the bundled SDK
-  map, and how to clone the SDK source only on a map gap. The helper-facing entry point.
+  map, and how to clone the SDK source only on a map gap. The map-owning entry point.
 - **dotnet-client-initialization** — construct `{Api}Client` + `{Api}ClientOptions`, supply an `HttpClient`,
   pick a server environment, register in DI.
 - **dotnet-authentication** — wire up Basic / Bearer / API-key / OAuth2 / composite auth.
@@ -66,19 +66,16 @@ defer to it for lookup before touching the SDK source.
 - **dotnet-configuration-resilience** — retries, timeouts, pagination, logging.
 - **dotnet-testing** — unit-test SDK calls by injecting a fake `HttpClient` / `HttpMessageHandler`.
 
-## Agents
-
-- **maxio-sdk** — the single SDK agent. Grounds every contract in the bundled map (cloning the SDK
-  source only when the map can't settle a fact), writes a contract-grounded `maxio-plan.md` before any
-  code is written, answers narrow contract questions, and fixes SDK compile/build errors in place —
-  building to verify. No MCP.
-
 ## Install
 
 ```
 /plugin marketplace add apimatic/plugin-marketplace
 /plugin install maxio-sdk@apimatic
 ```
+
+Cursor loads the same plugin from `.cursor-plugin/plugin.json`, Codex from
+`.codex-plugin/plugin.json`, and VS Code from the root `plugin.json` (Agent Plugins 1.0 —
+skills are discovered from `skills/` by convention, so the manifest lists none).
 
 Then ask a usage question (e.g. *"how do I authenticate this SDK with an API key?"*) to trigger the
 relevant skill.

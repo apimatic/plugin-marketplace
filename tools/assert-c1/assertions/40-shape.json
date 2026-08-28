@@ -1,0 +1,264 @@
+{
+  "group": "shape",
+  "note": "Signatures, error namespaces, models, auth and DI. These are the claims that decide whether code an agent writes from the skill compiles and behaves — the signature and namespace ones especially, because they are what a positional call and a catch ladder are built from.",
+  "assertions": [
+    {
+      "id": "signature.requestoptions-before-ct",
+      "kind": "probe",
+      "probe": "operations-carry-requestoptions-before-ct",
+      "claim": "Every generated operation ends `RequestOptions? requestOptions = null, CancellationToken ct = default`, in that order.",
+      "defends": "dotnet-calling-endpoints § signature template and § Cancellation",
+      "requires": [
+        "api"
+      ]
+    },
+    {
+      "id": "signature.request-options-single-property",
+      "kind": "present",
+      "file": "Core/RequestOptions.cs",
+      "pattern": "public\\s+sealed\\s+record\\s+RequestOptions\\s*\\{\\s*public\\s+LogLevel\\?\\s+LogLevel\\s*\\{\\s*get;\\s*init;\\s*\\}\\s*\\}",
+      "dotall": true,
+      "claim": "RequestOptions has exactly one property, LogLevel?.",
+      "defends": "dotnet-calling-endpoints § requestOptions bullet; dotnet-configuration-resilience § per-call override"
+    },
+    {
+      "id": "errors.sdkexception-namespace",
+      "kind": "present",
+      "file": "Core/Exceptions/SdkException.cs",
+      "pattern": "namespace\\s+\\w+\\.Core\\.Exceptions",
+      "claim": "SdkException<T> lives in {RootNamespace}.Core.Exceptions.",
+      "defends": "dotnet-error-handling § the four namespaces"
+    },
+    {
+      "id": "errors.sdkexception-unconstrained",
+      "kind": "present",
+      "file": "Core/Exceptions/SdkException.cs",
+      "pattern": "class\\s+SdkException<TError>\\s*:\\s*Exception",
+      "claim": "SdkException<TError> has no `where TError : ApiError` constraint — which is why TError can be a RawError, and why catching a real-but-wrong error type compiles and then never fires.",
+      "defends": "dotnet-error-handling § two shapes and § 'Guessing wrong is only sometimes a compile-time error'"
+    },
+    {
+      "id": "errors.apierror-namespace",
+      "kind": "present",
+      "file": "Core/ErrorResponse/ApiError.cs",
+      "pattern": "namespace\\s+\\w+\\.Core\\.ErrorResponse",
+      "claim": "ApiError (and RawError) live in {RootNamespace}.Core.ErrorResponse, NOT with SdkException.",
+      "defends": "dotnet-error-handling § the four namespaces"
+    },
+    {
+      "id": "errors.typed-body-in-models",
+      "kind": "at-least",
+      "glob": "Errors/*.cs",
+      "pattern": "^using\\s+\\w+\\.Models;",
+      "expect": 1,
+      "claim": "A typed {Operation}Error's body type comes from {RootNamespace}.Models — the fourth using a Case A catch needs once it names the body's type. Floor of 1: this pins the SHAPE where the construct is emitted at all. A legitimate SDK whose definition never produces one cannot settle it — the empty-glob rule turns that into a SKIP, not a failure.",
+      "defends": "dotnet-error-handling § the four namespaces",
+      "requires": [
+        "errors"
+      ]
+    },
+    {
+      "id": "models.no-property-level-converters",
+      "kind": "probe",
+      "probe": "no-converter-on-model-property",
+      "claim": "No model property carries a [JsonConverter], so a DateTimeOffset property round-trips as System.Text.Json's default ISO-8601-with-offset. The four date converters exist but attach to whole-response payloads.",
+      "defends": "dotnet-models § Dates & numbers; reference.md § Date/time",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.date-converters-exist",
+      "kind": "count",
+      "glob": "Core/Converters/*DateTimeOffsetConverter.cs",
+      "pattern": "class\\s+\\w+DateTimeOffsetConverter",
+      "expect": 4,
+      "claim": "Four date converters are generated: ISO-8601, RFC-1123, Unix epoch, date-only.",
+      "defends": "dotnet-models § Dates & numbers"
+    },
+    {
+      "id": "models.jsonignore-only-on-defaultless",
+      "kind": "probe",
+      "probe": "jsonignore-only-on-defaultless-optionals",
+      "claim": "[JsonIgnore(WhenWritingNull)] is emitted only on optional properties with no initializer; a defaulted one is always serialized.",
+      "defends": "dotnet-models/reference.md § Notes",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.no-client-side-validation",
+      "kind": "probe",
+      "probe": "no-client-side-validation",
+      "claim": "The DataAnnotations attributes the generator emits are never evaluated by the SDK — they document the provider's contract, they do not guard the call.",
+      "defends": "dotnet-models § Validation attributes are documentation, not enforcement",
+      "requires": [
+        "models"
+      ]
+    },
+    {
+      "id": "models.enums-are-sealed-records",
+      "kind": "probe",
+      "probe": "generated-enums-are-sealed-records",
+      "claim": "Generated enums are `public sealed record`s — which is WHY ToString() returns the record debug form rather than the wire value.",
+      "defends": "dotnet-models § Enums, the ToString warning",
+      "requires": [
+        "enums"
+      ]
+    },
+    {
+      "id": "models.enum-known-values-case-insensitive",
+      "kind": "present",
+      "file": "Core/Enum/TypedEnum.cs",
+      "pattern": "typeof\\(TValue\\)\\s*==\\s*typeof\\(string\\)[^}]*StringComparer\\.OrdinalIgnoreCase",
+      "dotall": true,
+      "claim": "String-enum known values are indexed case-insensitively, so FromValue(\"captured\") returns the CAPTURED constant and the declared casing goes on the wire. Int enums match exactly.",
+      "defends": "dotnet-models § Enums, the case-insensitivity paragraph"
+    },
+    {
+      "id": "models.enum-tostring-override-is-shadowed",
+      "kind": "present",
+      "file": "Core/Enum/TypedEnum.cs",
+      "pattern": "public\\s+override\\s+string\\s+ToString\\(\\)\\s*=>\\s*Value\\.ToString\\(\\)",
+      "claim": "TypedEnum DOES override ToString() correctly — the trap is that each generated enum is a record whose synthesised ToString() shadows it. Both halves must hold for the warning to be accurate.",
+      "defends": "dotnet-models § Enums, the ToString warning"
+    },
+    {
+      "id": "models.enum-implicit-conversion-to-value",
+      "kind": "present",
+      "file": "Core/Enum/TypedEnum.cs",
+      "pattern": "public\\s+static\\s+implicit\\s+operator\\s+TValue\\(TypedEnum<TValue,\\s*TEnum>",
+      "claim": "The implicit conversion targets TValue — which is why `+` yields the wire value on a string enum and the debug form on an int enum.",
+      "defends": "dotnet-models § Enums, the ToString warning"
+    },
+    {
+      "id": "models.union-optional-is-internal",
+      "kind": "present",
+      "file": "Core/Models/Optional.cs",
+      "pattern": "internal\\s+readonly\\s+record\\s+struct\\s+Optional<TValue>",
+      "claim": "The Optional<T> backing a union is internal — you interact only through the factories and TryGet.",
+      "defends": "dotnet-models § union types"
+    },
+    {
+      "id": "auth.expiry-buffer-30s",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuthToken.cs",
+      "pattern": "ExpiryBufferSeconds\\s*=\\s*30\\s*;",
+      "claim": "Tokens are reused until 30s before expiry.",
+      "defends": "dotnet-authentication § Token caching & refresh"
+    },
+    {
+      "id": "auth.no-expires-in-never-expires",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuthToken.cs",
+      "pattern": "IsExpired\\(DateTimeOffset timeNow\\)\\s*=>\\s*\\n?\\s*ExpiresIn\\s+is\\s+>\\s*0\\s*&&",
+      "dotall": true,
+      "claim": "When the server omits expires_in, IsExpired short-circuits to false — the token is cached for the client's life and only a 401 replaces it.",
+      "defends": "dotnet-authentication § Token caching & refresh, the expires_in warning"
+    },
+    {
+      "id": "auth.unconfigured-yields-none-scheme",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuth2Scheme.cs",
+      "pattern": "credentials\\s+is\\s+not\\s+null\\s*\\n?\\s*\\?\\s*new\\s+OAuth2Scheme<TCredentials>[^:]*:\\s*NoneAuthScheme\\.Instance",
+      "dotall": true,
+      "claim": "Unset credentials produce a no-op scheme, not an error — the request goes out unauthenticated and the provider returns 401.",
+      "defends": "dotnet-authentication § Combined / multiple schemes and § Missing credentials must stop the app from starting"
+    },
+    {
+      "id": "auth.any-skips-unconfigured",
+      "kind": "present",
+      "file": "Core/Authentication/AuthSchemeAny.cs",
+      "pattern": "if\\s*\\(!scheme\\.IsConfigured\\(\\)\\)\\s*\\n?\\s*continue;",
+      "dotall": true,
+      "claim": "AuthSchemeAny SKIPS unconfigured schemes rather than trying them, so AuthSchemeException is thrown only when a configured scheme fails — and nothing configured throws nothing.",
+      "defends": "dotnet-authentication § Combined / multiple schemes"
+    },
+    {
+      "id": "auth.token-cache-is-per-instance",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuth2Scheme.cs",
+      "pattern": "private\\s+volatile\\s+OAuthToken\\?\\s+_cachedToken;",
+      "claim": "The token cache is an INSTANCE field on the scheme, which the client constructor builds — so a per-request client refetches a token on every call.",
+      "defends": "dotnet-client-initialization § lifetime; dotnet-authentication § Token caching"
+    },
+    {
+      "id": "auth.invalidate-does-not-lock",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/OAuth2Scheme.cs",
+      "pattern": "public\\s+void\\s+Invalidate\\(\\)\\s*=>\\s*_cachedToken\\s*=\\s*null;",
+      "claim": "Invalidate() is a bare volatile write and does not take the fetch lock — an in-flight fetch can repopulate the cache. It is a hint, not a barrier.",
+      "defends": "dotnet-authentication § Token caching & refresh"
+    },
+    {
+      "id": "auth.token-strategy-is-public",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/IOAuth2TokenStrategy.cs",
+      "pattern": "public\\s+interface\\s+IOAuth2TokenStrategy<in\\s+TCredentials>",
+      "claim": "IOAuth2TokenStrategy is public — the token source is a supported extension point, not an internal detail.",
+      "defends": "dotnet-authentication § Supplying your own token source"
+    },
+    {
+      "id": "auth.password-grant-is-not-refreshable",
+      "kind": "present",
+      "file": "Core/Authentication/OAuth2/Password/OAuth2PasswordCredentialsStrategy.cs",
+      "pattern": ":\\s*IOAuth2TokenStrategy<OAuth2PasswordCredentials>",
+      "claim": "The password grant implements the NON-refreshable strategy, so a refresh_token in its response is discarded. Only authorization-code refreshes.",
+      "defends": "dotnet-authentication § Token caching & refresh, the 'only the authorization-code grant refreshes' bullet"
+    },
+    {
+      "id": "di.registers-singleton",
+      "kind": "present",
+      "file": "ServiceCollectionExtensions.cs",
+      "pattern": "services\\.AddSingleton\\(sp\\s*=>",
+      "claim": "The generated DI extension registers the client as a singleton — so IHttpClientFactory handler rotation never reaches it and a DNS change is cached indefinitely.",
+      "defends": "dotnet-client-initialization § the DI extension",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "di.fills-logger-factory-from-container",
+      "kind": "present",
+      "file": "ServiceCollectionExtensions.cs",
+      "pattern": "LoggerFactory\\s*=\\s*options\\.Logging\\.LoggerFactory\\s*\\?\\?\\s*sp\\.GetService<ILoggerFactory>\\(\\)",
+      "claim": "Add{Api}Client fills LoggerFactory from the container, so SDK request logging is already ON in any host — and the {CLIENT}_LOG environment variable is inert on that path.",
+      "defends": "dotnet-configuration-resilience § Logging, the three-state table; dotnet-client-initialization § options class",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "di.resolves-default-unnamed-client",
+      "kind": "present",
+      "file": "ServiceCollectionExtensions.cs",
+      "pattern": "httpClientFactory\\.CreateClient\\(\\)",
+      "claim": "The extension resolves the DEFAULT (unnamed) IHttpClientFactory client — which is why a handler attached there has an app-wide blast radius.",
+      "defends": "dotnet-client-initialization § DI; dotnet-configuration-resilience § DelegatingHandler",
+      "requires": [
+        "di"
+      ]
+    },
+    {
+      "id": "client.ctor-builds-pipelines-logger-auth",
+      "kind": "probe",
+      "claim": "The client constructor eagerly builds the resilience pipelines, the logger (reading the {CLIENT}_LOG env var) and the auth schemes — for an OAuth2 SDK the auth scheme IS the token cache, so a per-request client refetches a token on every call.",
+      "defends": "dotnet-client-initialization § lifetime",
+      "probe": "client-ctor-is-not-a-thin-wrapper",
+      "requires": [
+        "root-client"
+      ]
+    },
+    {
+      "id": "shape.no-result-siblings-generated",
+      "kind": "absent",
+      "glob": "Api/*.cs",
+      "pattern": "Task<ApiResult<|Pageable<ApiResult<",
+      "requires": [
+        "api"
+      ],
+      "claim": "No operation returns ApiResult - the no-throw `{Operation}Result` variant is not generated on either sampled SDK, so StatusCode and Headers are unreachable through the supported surface.",
+      "defends": "paypal-getting-started / twilio-getting-started - Response metadata"
+    }
+  ]
+}

@@ -6,3 +6,11 @@
 /.claude
 /.specstory
 /.vscode
+
+# assert-c1 behavioural tier build output
+tools/assert-c1/behaviour/bin/
+tools/assert-c1/behaviour/obj/
+
+# Python bytecode — tools/ is scripts, never a package.
+__pycache__/
+*.py[cod]

@@ -3,6 +3,28 @@ name: dotnet-authentication
 description: Authentication for an APIMatic-generated .NET SDK in C# — supplying credentials, the auth scheme and manager shape, per-environment configuration, and rotating or refreshing credentials. Load before wiring credentials or an auth scheme into the client, or when a call fails with 401/403.
 ---
 
+<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
+     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
+     context-plugins/twilio-csharp-sdk@51fdf48: 122 Core/*.cs, byte-identical modulo the root namespace.
+     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
+     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
+     for retry-ineligible requests.
+     verified-this-file: 2026-08-25 - the credential classes and their namespaces, the 30s expiry buffer,
+     the omitted-expires_in behaviour, 401 invalidation and its concurrency contract, the public
+     IOAuth2TokenStrategy extension point, AuthSchemeAny's skip-if-unconfigured semantics, the
+     authorization-code ClientSecret/PKCE guard ordering, and the non-refreshable OAuthToken binding that
+     makes the password grant discard a refresh_token. NOT covered: no live token-endpoint exchange was
+     exercised for any grant - neither sampled SDK uses anything but client-credentials, so the
+     authorization-code and password behaviour is read from Core and from compiled probes against it.
+     CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
+     (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
+     differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
+     and RequestOptions gains a `Hooks` property (so "its single property is LogLevel?" is already stale
+     against the template). Re-verify against the EMITTED Core of the SDK in hand, not against
+     X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check this stamp in
+     both files first. -->
+
 # Authenticating an APIMatic .NET SDK client
 
 How you authenticate depends on the security scheme(s) the API uses. APIMatic surfaces each scheme as a
@@ -13,7 +35,7 @@ client (see `dotnet-client-initialization`).
 > `{Api}ClientOptions`, `{BasicAuthProperty}`) — replace it with the concrete identifier from the source.
 
 To see which schemes a specific SDK accepts, read the **credentials properties on its `{Api}ClientOptions`
-class** — those are the source of truth (take them from the contract sheet the SDK helper agent grounds from the
+class** — those are the source of truth (take them from the contract sheet, grounded from the
 SDK map/source, not a decompiled or reflected view of the installed package). The `{RootNamespace}.Core.Authentication` folder ships *every*
 scheme class as shared runtime code regardless of what the API accepts, so rely on the options class rather
 than that folder. (An SDK whose API uses only Basic, for instance, exposes a single
@@ -80,7 +102,7 @@ using {RootNamespace}.Core.Authentication.OAuth2.AuthorizationCode;
 options.{OAuthProperty} = new OAuth2AuthorizationCodeCredentials
 {
     ClientId = "...",
-    ClientSecret = "...",                       // optional; needed only when PKCE is disabled (Pkce = null)
+    ClientSecret = "...",                       // see the note below — often required even with PKCE
     RedirectUri = "https://app.example.com/callback",
     Scope = "...",                              // optional
     State = "...",                              // optional CSRF token
@@ -96,6 +118,19 @@ options.{OAuthProperty} = new OAuth2AuthorizationCodeCredentials
 
 The SDK exchanges the code for a token and refreshes it when it expires; if the refresh fails, it invokes
 `PromptForAuthorizationCode` again to re-authorize.
+
+⚠ **`ClientSecret` is optional only when PKCE is enabled *and* the token request is form-body style.**
+Two independent guards, failing at different moments:
+
+| PKCE | token request built | no secret ⇒ |
+| --- | --- | --- |
+| disabled (`Pkce = null`) | either factory | `InvalidOperationException("ClientSecret is required when PKCE is disabled.")` — **before** the prompt runs |
+| enabled (default `S256`) | `ForBasicAuthRequest` | `InvalidOperationException("Basic auth requires a client secret. For public clients, enable PKCE by …")` — **after** `PromptForAuthorizationCode` has already run |
+| enabled | `ForFormBodyRequest` | fine — this is the public-client case |
+
+The Basic form is the common wiring, and its failure is the expensive one: the user completes a full
+browser round-trip before the exchange throws. Check which factory your generated `AuthSchemes` uses before
+treating the secret as optional.
 
 ## OAuth 2.0 — resource owner password
 
@@ -114,21 +149,63 @@ options.{OAuthProperty} = new OAuth2PasswordCredentials
 
 ## Token caching & refresh (all OAuth2 grants)
 
-- Tokens are cached in-memory and reused until ~30s before expiry.
-- Refreshable grants (those that return a refresh token) refresh automatically; otherwise a new token is
-  acquired.
-- On `401`, the cached token is invalidated and re-acquired on the next call.
+- Tokens are cached in-memory, per client instance, and reused until **30s** before expiry.
+- **Only the authorization-code grant refreshes.** It is the one grant wired to
+  `IOAuth2RefreshableTokenStrategy` / `OAuth2RefreshableScheme`. Client-credentials and
+  resource-owner-password re-run the whole grant when the token expires — and a `refresh_token` in a
+  password-grant response is discarded, because the non-refreshable `OAuthToken` has no binding for it. Do
+  not infer refresh behaviour from what the provider returns.
+- On `401`, the cached token is invalidated and re-acquired on the next call — the failing request is
+  **not** retried. For the authorization-code grant, invalidation drops the refresh token along with the
+  access token, so "re-acquired" means the *full* grant runs again and `PromptForAuthorizationCode` fires:
+  a `401` there is an interactive re-authorization, not a silent refresh. Plan for that in a
+  non-interactive host.
+
+⚠ **If the token response omits `expires_in`, the token never expires as far as the SDK is concerned.**
+`expires_in` is RECOMMENDED but not required by RFC 6749, and the SDK's expiry check short-circuits to
+"not expired" when it is absent — so the first token is cached for the life of the client and the only
+thing that ever replaces it is a `401`. That is usually fine and occasionally not: a token revoked
+server-side keeps being sent until a request fails with it. If your provider omits `expires_in` and you
+need proactive rotation, supply your own token strategy (below) rather than trying to bound the cache.
+
+- **Invalidation is a hint, not a barrier.** `Invalidate()` clears the cache without taking the fetch lock,
+  so a token fetch already in flight can complete and re-populate it. That is deliberate — the refreshed
+  token post-dates the invalidation — but it means "invalidate then immediately read" is not a guarantee of
+  a fresh token.
+
+### Supplying your own token source
+
+The token strategy is a public extension point: the options class exposes a
+`{OAuthProperty}TokenStrategy` alongside the credentials, typed
+`IOAuth2TokenStrategy<{CredentialsType}>` (or `IOAuth2RefreshableTokenStrategy<…>` for refreshable grants),
+and the generated client falls back to the built-in strategy only when you leave it null.
+
+```csharp
+options.{OAuthProperty}TokenStrategy = new MyTokenStrategy();   // Task<OAuthToken> GetToken(creds, ct)
+```
+
+Reach for it when the token must come from somewhere other than the SDK's own call to the token endpoint —
+a shared cache across processes, a secrets broker, a sidecar that already holds a valid token, or a test
+double. The per-client in-memory cache above still wraps whatever you return.
 
 ## Combined / multiple schemes
 
 When an operation (or the whole API) requires more than one scheme, APIMatic composes them:
 
 - **AND** — all schemes are applied to every request (`AuthSchemeAll`).
-- **OR** — the first scheme that succeeds is used; if all fail, an `AuthSchemeException` is thrown
+- **OR** — schemes with **no credentials configured are skipped, not tried**; the first configured scheme
+  that succeeds wins, and `AuthSchemeException` is thrown only if every *configured* scheme fails
   (`AuthSchemeAny`).
 
 You configure this by setting the relevant credentials properties on the options class; the generated
 client wires the AND/OR composition for you.
+
+⚠ **Configure nothing and the request goes out unauthenticated — no exception.** This is the behaviour of a
+single unconfigured scheme too: an unset credentials property yields a no-op scheme, not an error, so the
+call reaches the provider with no `Authorization` header and comes back `401`. The SDK will never tell you
+that you forgot to supply a credential; only the provider will, one round-trip later and one layer away
+from the cause. That is why the startup check in *Missing credentials must stop the app from starting*
+(below) is not optional politeness.
 
 ## No auth
 
