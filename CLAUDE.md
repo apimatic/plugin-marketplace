@@ -156,14 +156,23 @@ the REQUIRED READING block to write skill names **plugin-qualified** (`paypal-sd
 
 ### integrate-* and *-getting-started are rendered from templates
 
-The two heavily API-specific skills are generated: `templates/plugin/` holds their template forms
-(frame + slots) with the per-API content in `values/{api}.json`, extracted from the paypal/twilio
-pair — same generator surface, so every difference between those two copies was by definition an
-API slot. `python templates/plugin/render.py --check` proves the shipped copies match the
-templates; a failing check means someone edited a shipped copy directly — move the edit into the
-frame or the values file and re-render. maxio-sdk is not a rendering target (pre-4.0.0 frame
-facts), and `templates/plugin/README.md` records the map-location change the frames must absorb
-when generator-emitted SDKs start carrying the map in the SDK repo.
+The two API-specific skills are generated: `templates/plugin/` holds their template forms
+(frame + slots) with the per-API values in `values/{api}.json`. Since 2026-08-28 the frames are
+**simplified to identity slots only** — API name, source-code and package details, the set
+today's plugin generator can fill — with every other API-specific passage rewritten as static
+frame text that points at the map. The richer hand-written per-API content the frames used to
+carry is preserved verbatim in `docs/api-specific-skill-content.md` for later re-incorporation.
+`python templates/plugin/render.py --check` proves the shipped copies match the templates (and
+that the shipped pair's `dotnet-*` statics are byte-identical); a failing check means someone
+edited a shipped copy directly — move the edit into the frame or the values file and re-render.
+maxio-sdk is not a rendering target (pre-4.0.0 frame facts).
+
+`templates/plugin-template/` is the generator's blueprint for FUTURE SDKs — a third, distinct
+tree: its SDKs carry the map **inside the SDK source repo** in a new method-first shape (operation
+pages + shapes read from the source files the map names, no model pages), and its `dotnet-*`
+statics describe the **post-4.0.0 codegen-v2 surface** (124 `Core/*.cs`; hooks, kept unknown
+fields, two-property RequestOptions), verified 2026-08-28 against the generator's emitted Petstore
+sample. Its skills and statics are deliberately NOT interchangeable with the shipped pair's.
 
 ### The claims are executable — run them before you trust them
 
@@ -183,6 +192,12 @@ retry method filter gates only the status arm, so **writes are resent on transpo
 
 Assertions marked `run-verified` were settled by executing the SDK, not by reading it. Reach for that when
 the source is ambiguous — it is how the `TimeoutRejectedException` hole was found.
+
+The post-4.0.0 codegen-v2 surface (the generator's StaticCode, and its emitted sample SDKs) fails
+**19** of the general assertions by construction — the 15 Core-side ids in
+`generator-template-drift.txt` plus 4 that need generated code. That delta is the exact boundary
+between the shipped pair's skills (4.0.0) and the blueprint's (`templates/plugin-template/`,
+post-4.0.0): a different delta means the generator moved again.
 
 ## Per-IDE manifest convention
 

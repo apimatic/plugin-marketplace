@@ -90,11 +90,11 @@ one after construction.
   property that has a **default value** (`public bool? Flag { get; init; } = false;`) gets no `JsonIgnore`,
   so it is **always serialized** — a body you never touched still sends every defaulted field. Check the
   property before assuming "unset" means "absent from the payload"; the difference matters on a PATCH.
-- A model captures unknown response fields only when it has an additional-properties map; where it has
-  none, unknown fields are dropped. Neither SDK sampled for this file contains such a map, and their
-  emitted `Core/` carries no additional-properties type at all — the runtime file exists only in a newer
-  generator template (see the CAUTION in the SKILL's core-surface stamp). So treat "unknown fields are
-  dropped" as the case you will meet, and check the model before assuming a field survived.
+- Every generated model ends with `[JsonExtensionData] public AdditionalProperties AdditionalProperties
+  { get; init; } = [];` — unknown response fields are captured there (keyed by **wire name**) and
+  round-trip on serialize. See the SKILL's *Unknown / future fields* for the read/write API and the
+  cautions. On the older 4.0.0 surface this property does not exist and unknown fields are dropped —
+  check the core-surface stamp before carrying this expectation across SDKs.
 - Validation attributes (`[StringLength]`, `[RegularExpression]`, `[MaxLength]`, `[MinLength]`) are
   transcribed from the API definition and are **never evaluated by the SDK** — see the SKILL for what to do
   about that.

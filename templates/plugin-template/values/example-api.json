@@ -6,5 +6,5 @@
   "sdk.repoUrl": "<https URL of the SDK source repo>",
   "sdk.cloneRef": "<the pinned ref the map was generated from — a tag or full commit SHA; a branch is not a pin>",
   "sdk.envLogVar": "<the SDK's log env var: UPPER(rootNamespace) + CLIENT_LOG, e.g. PAYPALSERVERSDKCLIENT_LOG>",
-  "map.pathInSdkRepo": "<path of the map inside the SDK repo, e.g. sdk-map — the generator emits the map there>"
+  "map.pathInSdkRepo": "<directory inside the SDK repo holding sdk-map.md and map/ - the SDK root, i.e. the directory with the .csproj; '.' when the SDK is the repo root>"
 }

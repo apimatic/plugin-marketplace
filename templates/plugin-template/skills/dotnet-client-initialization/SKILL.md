@@ -3,21 +3,28 @@ name: dotnet-client-initialization
 description: Creating and registering an APIMatic-generated .NET SDK client in C# — construction, the builder/options shape, HttpClient ownership and lifetime, and dependency-injection registration in ASP.NET Core. Load before wiring the client into an application's service container or writing the factory that builds it.
 ---
 
-<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
-     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
-     context-plugins/twilio-csharp-sdk@51fdf48: 122 Core/*.cs, byte-identical modulo the root namespace.
-     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
-     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
-     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
-     for retry-ineligible requests.
+<!-- core-surface: APIMatic .NET post-4.0.0 codegen-v2 template surface — 124 Core/*.cs. The wire
+     header still reads `X-APIMatic-Gen-Version: 4.0.0`, so the version string does NOT identify this
+     surface; the census does: over 4.0.0's 122 files it ADDS Core/Hooks/SdkHook.cs,
+     Core/Models/AdditionalProperties.cs and Core/Extensions/HttpContentExtensions.cs, and DROPS
+     Core/Extensions/ObjectExtensions.cs. Confirmed 2026-08-28 against the generator's emitted Swagger
+     Petstore sample SDK (spec 1.0.26): 342 assert-c1 assertions ran, 295 passed; the 19 failures are
+     the surface delta, and every skill claim they touch was re-verified in that SDK's source.
+     This surface HAS: LoggingOptions on the options class; RequestOptions (LogLevel? + Hooks) on every
+     operation; client-wide options.Hooks (SdkHook — BeforeRequest/AfterResponse, once per attempt);
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set, surfaced as
+     TaskCanceledException; the method filter ANDed above BOTH retry arms; Retry-After honoured with a
+     hard 60s delay clamp; a timeout-only (not empty) pipeline for retry-ineligible requests;
+     [JsonExtensionData] AdditionalProperties on every generated model; typed {Operation}Error classes
+     under Errors/.
      verified-this-file: 2026-08-25 - the options-class surface (including Logging), the DI extension's singleton registration and its handler-rotation consequence, and the per-attempt timeout arithmetic.
-     CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
-     (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
-     differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
-     and RequestOptions gains a `Hooks` property (so "its single property is LogLevel?" is already stale
-     against the template). Re-verify against the EMITTED Core of the SDK in hand, not against
-     X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check this stamp in
-     both files first. -->
+     re-verified 2026-08-28 on the post-4.0.0 sample: the options class gains Hooks; constructor and DI shape unchanged.
+     CAUTION - the version string does NOT pin any surface. An SDK stamped 4.0.0 may be the OLDER
+     122-file surface this repo's shipped paypal-sdk/twilio-sdk plugins describe — different binary-body
+     retry eligibility, single-property RequestOptions, no hooks, unknown JSON fields dropped. Re-verify
+     against the EMITTED Core of the SDK in hand (count Core/*.cs; check for Core/Hooks/SdkHook.cs), not
+     against X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check
+     this stamp in both files first. -->
 
 # Initializing an APIMatic .NET SDK client
 
@@ -55,6 +62,8 @@ public class {Api}ClientOptions
     public RetryOptions Retry { get; set; } = RetryOptions.Default();
     public LoggingOptions Logging { get; set; } = new();
     public ServerOptions Server { get; set; } = new();
+    public IReadOnlyList<SdkHook> Hooks { get; set; } = [];   // request/response observation —
+                                                              //   see dotnet-configuration-resilience § Hooks
     // + one nullable credentials property per auth scheme the API declares, and — for an OAuth2
     //   scheme — a nullable {Scheme}TokenStrategy hook alongside it (see dotnet-authentication)
 }

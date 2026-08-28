@@ -3,13 +3,20 @@ name: dotnet-configuration-resilience
 description: Client configuration and resilience for an APIMatic-generated .NET SDK in C# — retries and backoff, timeouts and cancellation, base-URL/server selection, list pagination, SSE streaming, and request/response logging. Load before you register or tune the client — the option names alone do not reveal which calls retry, what a timeout actually bounds, or what you must still set yourself.
 ---
 
-<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
-     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
-     context-plugins/twilio-csharp-sdk@51fdf48: 122 Core/*.cs, byte-identical modulo the root namespace.
-     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
-     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
-     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
-     for retry-ineligible requests.
+<!-- core-surface: APIMatic .NET post-4.0.0 codegen-v2 template surface — 124 Core/*.cs. The wire
+     header still reads `X-APIMatic-Gen-Version: 4.0.0`, so the version string does NOT identify this
+     surface; the census does: over 4.0.0's 122 files it ADDS Core/Hooks/SdkHook.cs,
+     Core/Models/AdditionalProperties.cs and Core/Extensions/HttpContentExtensions.cs, and DROPS
+     Core/Extensions/ObjectExtensions.cs. Confirmed 2026-08-28 against the generator's emitted Swagger
+     Petstore sample SDK (spec 1.0.26): 342 assert-c1 assertions ran, 295 passed; the 19 failures are
+     the surface delta, and every skill claim they touch was re-verified in that SDK's source.
+     This surface HAS: LoggingOptions on the options class; RequestOptions (LogLevel? + Hooks) on every
+     operation; client-wide options.Hooks (SdkHook — BeforeRequest/AfterResponse, once per attempt);
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set, surfaced as
+     TaskCanceledException; the method filter ANDed above BOTH retry arms; Retry-After honoured with a
+     hard 60s delay clamp; a timeout-only (not empty) pipeline for retry-ineligible requests;
+     [JsonExtensionData] AdditionalProperties on every generated model; typed {Operation}Error classes
+     under Errors/.
      verified-this-file: 2026-08-28 — UNIFIED, API-PORTABLE copy, byte-identical in paypal-sdk and
      twilio-sdk; states no API-definition-dependent fact unconditionally. Samples pass the cancellation token
      by name (ct:) — the generated parameter is literally named ct on this surface. PARTIAL on pagination AND SSE: `Pageable<TPage,TItem> :
@@ -17,13 +24,13 @@ description: Client configuration and resilience for an APIMatic-generated .NET 
      RawClient.ExecutePaged, but neither sampled SDK generates a paginated or a streaming operation,
      so both operation-level signatures are inferred from Core rather than observed.
      Verified: retry predicate, RetryOptions defaults, Disabled(), timeout-only pipeline, Retry-After + 60s clamp, LoggingOptions/HttpLogger/LoggingEnvironment redaction and levels.
-     CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
-     (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
-     differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
-     and RequestOptions gains a `Hooks` property (so "its single property is LogLevel?" is already stale
-     against the template). Re-verify against the EMITTED Core of the SDK in hand, not against
-     X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check this stamp in
-     both files first. -->
+     re-verified 2026-08-28 on the post-4.0.0 sample: retry defaults and the both-arm method filter unchanged; binary-body retry eligibility relaxed to content-present-only; hooks added; path/query JSON normalisation kept under a new mechanism (ParameterFlattener serializes to JsonElement; ObjectExtensions.cs is gone).
+     CAUTION - the version string does NOT pin any surface. An SDK stamped 4.0.0 may be the OLDER
+     122-file surface this repo's shipped paypal-sdk/twilio-sdk plugins describe — different binary-body
+     retry eligibility, single-property RequestOptions, no hooks, unknown JSON fields dropped. Re-verify
+     against the EMITTED Core of the SDK in hand (count Core/*.cs; check for Core/Hooks/SdkHook.cs), not
+     against X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check
+     this stamp in both files first. -->
 
 # Configuration & resilience for an APIMatic .NET SDK
 
@@ -109,7 +116,8 @@ pooled connection and the caller's browser are all held open for that whole wind
 this table as a value you have chosen only once you have written it down; `Timeout` in particular has no
 defensible default for a request-path call.
 
-Customize:
+Customize — always by `with` on `Default()`: every `RetryOptions` member is `required`, so a partial
+`new RetryOptions { MaxRetries = 5 }` does not compile:
 
 ```csharp
 using {RootNamespace}.Core.Configuration;
@@ -151,10 +159,12 @@ Notes:
   configurable — a provider asking for a 10-minute pause gets 60s, and a large `BackOffFactor` cannot push a
   single delay past a minute.
 - **Multipart is not blanket-excluded.** Retry eligibility is decided per request type *before* the
-  pipeline runs: a binary-body request never retries; a multipart/form-data request retries **unless it
-  carries a binary part**; JSON, form-url-encoded and empty-body requests are eligible. An ineligible
-  request is **not** left unprotected — it runs on a *timeout-only* pipeline built from the same
-  `RetryOptions`, so it keeps the per-attempt `Timeout` and loses only the retry strategy.
+  pipeline runs: a binary-body request with its payload **present** never retries (with the optional
+  payload absent it is an empty send and stays eligible); a multipart/form-data request retries
+  **unless it carries a binary part**; JSON, form-url-encoded and empty-body requests are eligible.
+  An ineligible request is **not** left unprotected — it runs on a *timeout-only* pipeline built
+  from the same `RetryOptions`, so it keeps the per-attempt `Timeout` and loses only the retry
+  strategy.
 - `Timeout` is **per attempt**, not total — to cap a whole call, use a `CancellationToken` (below). It is
   nullable: set `Timeout = null` to disable the per-attempt timeout entirely.
 - `OnRetry`'s `RetryAttempt` also carries `Reason` — `RetryReason.Status(HttpStatusCode)` or
@@ -583,7 +593,8 @@ constructed yourself, since `Add{Api}Client` always fills it (it calls `AddHttpC
 production even when you point it at `NullLoggerFactory.Instance`.
 
 **Per-call override.** Every generated operation takes a `RequestOptions? requestOptions = null` argument
-whose single property is `LogLevel?`. Passing `new RequestOptions { LogLevel = LogLevel.Debug }` **sets** the
+with two properties: `LogLevel?` — the logging override this section covers — and `Hooks`, the per-call
+hook list (see *Hooks* below). Passing `new RequestOptions { LogLevel = LogLevel.Debug }` **sets** the
 verbosity for that one call without touching the client's configuration — useful for tracing one failing
 endpoint. Two things about it are easy to get wrong:
 
@@ -593,10 +604,43 @@ endpoint. Two things about it are easy to get wrong:
 - It cannot lift a level your `ILoggerFactory` has filtered out. `_logger.IsEnabled(level)` is still ANDed in
   front, so a per-call `Trace` against a factory whose minimum is `Information` logs nothing extra.
 
+### Hooks — the SDK's own request/response seam
+
+`options.Hooks` (client-wide) and `requestOptions.Hooks` (per call, **appended after** the client-wide
+list — it does not replace it) take `SdkHook` instances (`{RootNamespace}.Core.Hooks`). Subclass
+`SdkHook`, or build one from a delegate — sync shown; `Func<…, CancellationToken, ValueTask>` overloads
+exist for async work:
+
+```csharp
+options.Hooks =
+[
+    SdkHook.OnRequest((req, ctx) => { /* HttpRequestMessage; ctx.Method, ctx.Uri */ }),
+    SdkHook.OnResponse((res, ctx) => { /* HttpResponseMessage — status AND headers */ }),
+];
+```
+
+The facts that decide how you use them:
+
+- **They run inside the retry pipeline, once per attempt.** `OnRequest` fires after auth is applied — so
+  it sees what actually goes out — and `OnResponse` sees every attempt's raw response; "the" observed
+  value is therefore the last attempt's.
+- **This is the only supported place the success path exposes status and headers** (`Retry-After`,
+  rate-limit budgets, a request-id echo) — the operation's return value carries only the body. A
+  per-call hook can close over a local, which puts the observed value in scope in the same method's
+  `catch`; a client-wide hook needs `AsyncLocal` or a scoped service to reach it.
+- **A hook is an observation seam, not a veto point.** An exception thrown from a hook is not retried
+  (the transport arm retries only `HttpRequestException` and the timeout rejection) — it just fails the
+  call, and a throwing `OnResponse` fails a call that succeeded on the wire. To refuse a re-send, use
+  the write-guard `DelegatingHandler` under *Make the write idempotent* — a blocked attempt must never
+  reach the network, which no observation hook can guarantee.
+
 ### When you still want a `DelegatingHandler`
 
-Reach for one only for something the built-in logger does not do — a correlation id, metrics, a custom sink,
-a header the SDK does not set. Be aware that the obvious hand-rolled version logs `request.RequestUri`
+For a correlation id, metrics, a custom sink, or a header the SDK does not set, the lighter tool is a
+hook (above) — it travels with the client options and needs no handler chain. Reach for a
+`DelegatingHandler` only when you must sit below the SDK on the raw `HttpClient` pipeline: the
+write-guard that refuses a re-send, or instrumentation shared with the same `HttpClient`'s non-SDK
+consumers. Be aware that the obvious hand-rolled version logs `request.RequestUri`
 **unredacted**, which the built-in path would have masked, so redact it yourself if you go this way:
 
 ```csharp

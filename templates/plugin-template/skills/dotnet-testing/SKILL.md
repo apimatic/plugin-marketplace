@@ -3,21 +3,28 @@ name: dotnet-testing
 description: Testing code that calls an APIMatic-generated .NET SDK in C# — which seam to fake, covering error and edge paths, asserting real behaviour rather than execution, and keeping tests independent of SDK internals. Load before writing tests for the integration layer.
 ---
 
-<!-- core-surface: APIMatic .NET generator 4.0.0 — the client sends `X-APIMatic-Gen-Version: 4.0.0`.
-     Confirmed 2026-08-25 against asadali214/checkout-sample-sdk@v1.0.1 (9653d18) and
-     context-plugins/twilio-csharp-sdk@51fdf48: 122 Core/*.cs, byte-identical modulo the root namespace.
-     This surface HAS: LoggingOptions on the options class; RequestOptions on every operation;
-     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set; the method filter ANDed above
-     BOTH retry arms; Retry-After honoured with a hard 60s delay clamp; a timeout-only (not empty) pipeline
-     for retry-ineligible requests.
+<!-- core-surface: APIMatic .NET post-4.0.0 codegen-v2 template surface — 124 Core/*.cs. The wire
+     header still reads `X-APIMatic-Gen-Version: 4.0.0`, so the version string does NOT identify this
+     surface; the census does: over 4.0.0's 122 files it ADDS Core/Hooks/SdkHook.cs,
+     Core/Models/AdditionalProperties.cs and Core/Extensions/HttpContentExtensions.cs, and DROPS
+     Core/Extensions/ObjectExtensions.cs. Confirmed 2026-08-28 against the generator's emitted Swagger
+     Petstore sample SDK (spec 1.0.26): 342 assert-c1 assertions ran, 295 passed; the 19 failures are
+     the surface delta, and every skill claim they touch was re-verified in that SDK's source.
+     This surface HAS: LoggingOptions on the options class; RequestOptions (LogLevel? + Hooks) on every
+     operation; client-wide options.Hooks (SdkHook — BeforeRequest/AfterResponse, once per attempt);
+     RetryOptions.Disabled(); TimeoutRejectedException inside the retry set, surfaced as
+     TaskCanceledException; the method filter ANDed above BOTH retry arms; Retry-After honoured with a
+     hard 60s delay clamp; a timeout-only (not empty) pipeline for retry-ineligible requests;
+     [JsonExtensionData] AdditionalProperties on every generated model; typed {Operation}Error classes
+     under Errors/.
      verified-this-file: 2026-08-25 — the retry-trigger and send-count claims only.
-     CAUTION - the version string does NOT pin this surface. The generator's own StaticCode/Core template
-     (codegen-v2) still stamps 4.0.0 but has moved ahead of the SDKs above: 20 of 121 shared Core files
-     differ, it adds Hooks/SdkHook.cs, Models/AdditionalProperties.cs and Extensions/HttpContentExtensions.cs,
-     and RequestOptions gains a `Hooks` property (so "its single property is LogLevel?" is already stale
-     against the template). Re-verify against the EMITTED Core of the SDK in hand, not against
-     X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check this stamp in
-     both files first. -->
+     re-verified 2026-08-28 on the post-4.0.0 sample: the HttpClient constructor seam and header behaviour unchanged; note wire-name assertions — the AdditionalProperties extension-data property carries no [JsonPropertyName].
+     CAUTION - the version string does NOT pin any surface. An SDK stamped 4.0.0 may be the OLDER
+     122-file surface this repo's shipped paypal-sdk/twilio-sdk plugins describe — different binary-body
+     retry eligibility, single-property RequestOptions, no hooks, unknown JSON fields dropped. Re-verify
+     against the EMITTED Core of the SDK in hand (count Core/*.cs; check for Core/Hooks/SdkHook.cs), not
+     against X-APIMatic-Gen-Version. Do NOT copy runtime claims across a core-surface boundary - check
+     this stamp in both files first. -->
 
 # Testing code that uses an APIMatic .NET SDK
 

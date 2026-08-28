@@ -1,6 +1,6 @@
 ---
 name: integrate-paypal
-description: MANDATORY FIRST STEP for PayPal .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate PayPal in C# — take a payment at checkout, capture, refund, save a card, subscriptions, billing plans, vaulting, transaction search — or when a PayPal .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file paypal-plan.md is written at <project repo root>/paypal-plan.md BEFORE any project file is created or edited; (2) paypal-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
+description: MANDATORY FIRST STEP for PayPal .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate PayPal in C# — any feature that creates, reads, updates, searches or deletes PayPal resources through this SDK — or when a PayPal .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file paypal-plan.md is written at <project repo root>/paypal-plan.md BEFORE any project file is created or edited; (2) paypal-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
 ---
 
 # PayPal .NET SDK — Workflow (map + skills)
@@ -194,27 +194,27 @@ it does not bar the read-only prerequisite work above.
 
    | # | Concern | The decision the plan must record |
    |---|---|---|
-   | 1 | **Credential fail-fast** | Where credentials are bound, and that the host refuses to start when one is missing or blank — rather than discovering it as a 401 on the first call in production. |
+   | 1 | **Credential fail-fast** | Where credentials are bound, and that the host refuses to start when one is missing or blank — rather than discovering it as a 401 on the first call in production. The scheme(s) and credential properties this SDK takes are in the map's *Servers & auth* section; a multi-part credential needs **every** part checked, because a blank part is not a missing one. |
    | 2 | **Secret sourcing & rotation** | Where the secret comes from, and that `AddPayPalServerSdkClient` builds the options object **once at registration** and captures it in the singleton — so a rotated secret does not take effect until the process restarts. If rotation without a restart is required, say how. |
    | 3 | **Total timeout budget** | The number the caller actually gets, not the knob. `Timeout` is **per attempt**: under the defaults a hung `GET` costs ≈407s and a hung `POST` ≈100s. State the budget and where it is enforced — a `CancellationToken` deadline is the only thing that bounds a whole call. |
    | 4 | **Write-retry ownership** | Which of the scope's writes the SDK may resend and which it may not. The default `HttpMethodsToRetry` is `GET, HEAD, PUT, OPTIONS`, so `POST`/`PATCH`/`DELETE` are never resent by the SDK — and `PUT` **is**. |
-   | 5 | **Idempotency & ambiguous writes** | For each write in scope: the key it uses, or that none exists. Name the real parameter — `payPalRequestId`, on 12 operations, nullable and positional. The injected `Idempotency-Key` header is **not** a key and must not be cited as one. Where no key exists, record the reconciliation path instead. |
-   | 6 | **Observability** | What is logged at which level, that **JSON request bodies are logged unredacted** when `LogRequestBody` is on, and which correlation id reaches your own logs — `DebugId` is `required` on every typed error body. |
-   | 7 | **Card data** | Whether the scope can carry a raw PAN — the payment-source branch of `CreateOrder`, `AuthorizeOrder`, `CaptureOrder`, `ConfirmOrder`, `CreatePaymentToken`, `CreateSetupToken`, `CreateSubscription`. If it can: `LogRequestBody` stays off **and** `LoggerFactory` is assigned explicitly, so `PAYPALSERVERSDKCLIENT_LOG=trace` cannot switch it on from outside the code. |
-   | 8 | **Environment selection** | Which base URL each deployment talks to. `ServerEnvironment` has exactly **one** member — `Sandbox` — and every call resolves through `Server.Default.Sandbox.BaseUrl`. Reaching production therefore means assigning the production URL to a property named `Sandbox`; setting `options.Environment` alone never leaves the sandbox host. Say which deployment sets what. |
+   | 5 | **Idempotency & ambiguous writes** | For each write in scope: the key it uses, or that none exists. Whether an operation takes a REAL caller-supplied key — and its parameter name — is on that operation's map row. The generator-injected `Idempotency-Key` header (`Guid.NewGuid()`, fresh on every call) is **not** a key and must not be cited as one. Where no key exists, record the reconciliation path instead. |
+   | 6 | **Observability** | What is logged at which level, that **JSON request bodies are logged unredacted** when `LogRequestBody` is on, and which correlation id from the provider's error bodies (the map's error rows name the fields) reaches your own logs. |
+   | 7 | **Sensitive data** | Whether the scope carries data you would not want in a log — the map's model pages list every request field in scope (card or account numbers, personal data, message content). If it does: `LogRequestBody` stays off **and** `LoggerFactory` is assigned explicitly, so `PAYPALSERVERSDKCLIENT_LOG=trace` cannot switch it on from outside the code. Form bodies are masked only by deny-list, so a key you have not listed prints in the clear. |
+   | 8 | **Environment selection** | Which base URLs each deployment talks to. Enumerate the server groups and `ServerEnvironment` members from the map's *Servers & auth* section — there may be more than one group, and each operation resolves through its own. State which groups the scope touches and what each deployment sets; if the SDK declares no sandbox environment, say how test traffic is kept away from the live system. |
 
    A reviewer grades this from the table alone: each row either records a decision or records why
    it does not apply. A row that points at a skill, restates the concern, or sits blank is **not
    addressed**. Rows 5, 7 and 8 are the ones where "not addressed" costs something that cannot be
-   recovered afterwards — a duplicate charge, a PAN in a log, or production traffic sent to
-   sandbox (or worse, sandbox traffic sent to production).
+   recovered afterwards — a duplicate charge or duplicate write, sensitive data in a log, or test traffic sent to a live
+   system.
 6. **Assumptions & Blockers** — anything you had to assume about the user's intent, and anything
    that blocks planning. An empty section is a valid outcome; an invented fact is not.
    If you expect the provider to reject a call the plan makes, that is a **Blocker** — not an
    assumption, and never a caveat inside the step that causes it. The plan is wrong until someone
    resolves it.
-7. Every row's **source** cell cites its map page (e.g. `operations/Orders.md`,
-   `records-1-Ac-Pa.md`) so a later lookup is one targeted page open, not a search. A row with no
+7. Every row's **source** cell cites its map page (e.g. `operations/{Controller}.md`,
+   `records-….md`) so a later lookup is one targeted page open, not a search. A row with no
    map page to cite is not a contract fact: write `YOUR CALL — not in the map` there instead, so
    you, at implementation time, weigh it against the task rather than taking it as given. Shape:
    > `| Caller identity | resolve from the app's own identity path | YOUR CALL — not in the map |`

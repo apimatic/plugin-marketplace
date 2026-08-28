@@ -78,21 +78,24 @@ def main():
             else:
                 io.open(out_path, "w", encoding="utf-8", newline="\n").write(text)
                 print("wrote %s" % out_pat.format(api=api))
-    # The blueprint tree carries its own copies of the seven static dotnet-* skills; a third
-    # copy is a third chance to drift, so --check also proves them byte-identical to shipped.
+    # The shipped pair's static dotnet-* skills must stay byte-identical to each other. The
+    # blueprint's copies are NOT in this check any more: they describe the post-4.0.0 codegen-v2
+    # surface (see templates/plugin-template/README.md), so differing from the shipped 4.0.0 pair
+    # is correct there, not drift.
     if args.check:
         import glob as _glob
-        tdir = os.path.join(os.path.dirname(HERE), "plugin-template", "skills")
-        for src in sorted(_glob.glob(os.path.join(tdir, "dotnet-*", "*"))):
-            rel = os.path.relpath(src, tdir).replace(os.sep, "/")
-            for plug in ("paypal-sdk", "twilio-sdk"):   # both: transitively asserts paypal == twilio
-                shipped = os.path.join(ROOT, "plugins", plug, "skills", rel)
-                if rd(shipped) != rd(src):
-                    failed += 1
-                    print("DRIFT templates/plugin-template/skills/%s != %s static — re-copy from "
-                          "the shipped pair (or fix shipped first)" % (rel, plug))
-        if not failed:
-            print("ok    plugin-template statics == shipped statics")
+        pdir = os.path.join(ROOT, "plugins", "paypal-sdk", "skills")
+        static_failed = 0
+        for src in sorted(_glob.glob(os.path.join(pdir, "dotnet-*", "*"))):
+            rel = os.path.relpath(src, pdir).replace(os.sep, "/")
+            twin = os.path.join(ROOT, "plugins", "twilio-sdk", "skills", rel)
+            if rd(twin) != rd(src):
+                failed += 1
+                static_failed += 1
+                print("DRIFT plugins/twilio-sdk/skills/%s != paypal-sdk copy — the shipped pair "
+                      "must stay byte-identical; fix whichever copy is wrong and re-copy" % rel)
+        if not static_failed:
+            print("ok    shipped paypal-sdk statics == twilio-sdk statics")
     return 1 if failed else 0
 
 

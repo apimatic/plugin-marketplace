@@ -1,6 +1,6 @@
 ---
 name: {{api.id}}-getting-started
-description: {{api.name}} .NET SDK identity and lookup layer (.NET/C# only) you load directly — install, root namespace, environments, auth pattern, and the SDK map (shipped inside the SDK source repo) of every operation signature, model, enum, union and error type. Load it for every contract fact, never memory; integrate-{{api.id}} is the workflow that uses it.
+description: {{api.name}} .NET SDK identity and lookup layer (.NET/C# only) you load directly — install, root namespace, environments, auth pattern, and the SDK map (shipped inside the SDK source repo): every operation signature and error case by lookup, plus the source file declaring each model, enum and error type. Load it for every contract fact, never memory; integrate-{{api.id}} is the workflow that uses it.
 ---
 
 # Getting started with the {{api.name}} .NET SDK
@@ -25,12 +25,13 @@ confirm names against the map.
 
 > **Ground every signature, model, enum, and error type in the SDK map** (`sdk-map.md` + `map/`,
 > at `{{map.pathInSdkRepo}}/` inside the SDK source repo — see the *SDK source* section for
-> obtaining it) — it carries every operation signature, error type, enum value list, field
-> list with JSON wire names, and union accessor by lookup, so most questions never touch the SDK source
-> at all. When the map can't answer something — a full method/model body, or a map-sourced name that
-> fails to compile — open the one file the map names, in the same clone the map came from; **never fill the gap from memory.** Do **not** decompile or
-> reflect over the installed reference, do **not** fetch GitHub files ad hoc, and do **not** grep or run
-> other expensive searches over the clone.
+> obtaining it). The map is **method-first**: operation signatures, error cases with their
+> `TryGet…` accessors, pagination and server/auth wiring are on its pages by lookup — and for every
+> type an operation names, the map names the **file that declares it**, so a shape question (fields,
+> wire names, enum values, union accessors) is one targeted file open, never a search. When a
+> map-sourced name fails to compile, re-read the file its row names; **never fill the gap from
+> memory.** Do **not** decompile or reflect over the installed reference, do **not** fetch GitHub
+> files ad hoc, and do **not** grep or run other expensive searches over the clone.
 
 ## SDK identity
 
@@ -63,9 +64,10 @@ on.
 The SDK splits its public types across **separate child namespaces**. C# does **not** import child
 namespaces transitively, so `using {{sdk.rootNamespace}}.Models;` alone does **not** make enums, union
 types, or error types visible — you get `CS0103`/`CS0246` ("name/type does not exist") on build. Add a
-separate `using` for each kind of type you reference — the map lists each type's namespace, so take it from
-the map row; only if the map is silent do you open the file in the clone and copy the `namespace`
-declaration at its top.
+separate `using` for each kind of type you reference — `sdk-map.md`'s **Namespaces by content type**
+table maps each source directory to its namespace, so read the namespace off the path the map gives
+for the type; anything left ambiguous is settled by the `namespace` declaration at the top of the
+type's own file.
 
 ## Install — add the NuGet package
 
@@ -82,46 +84,65 @@ dotnet add package {{sdk.package}}
 > referenced by the build, and is obtained at the start of SDK work, because the map lives
 > inside it (see *SDK source* below).
 
-## SDK map — look up first, open second, never grep
+## SDK map — look up first, open the named file second, never grep
 
-The SDK ships a generated table-of-contents **inside its source repo**, at
-`{{map.pathInSdkRepo}}/` — the map and the SDK regenerate together in one repo, so they cannot
-drift apart. Obtain the source first (next section); every path below is relative to the clone:
+The SDK ships a generated map **inside its source repo**, at `{{map.pathInSdkRepo}}/` — the map and
+the SDK regenerate together in one repo, so they cannot drift apart. The map is **method-first**:
+operation contracts are on its pages; model, enum and error **shapes are deliberately not
+duplicated there** — the map names the file declaring each type, and you read the shape in that
+file. Obtain the source first (next section); every path below is relative to the SDK root in the
+clone:
 
-- **`{{map.pathInSdkRepo}}/sdk-map.md`** — the index: SDK identity (namespace, version, source commit), the
-  client-construction and error-handling models, the servers/auth wiring, and link tables into `map/`.
-- **`{{map.pathInSdkRepo}}/map/operations/{Controller}.md`** — one page per controller. Each operation
-  row carries the HTTP verb/path, the exact C# signature with must-pass-explicitly params, the return type,
-  the error case (typed `{Operation}Error` vs `RawError`) with its `TryGet…` accessors, and pagination.
-  Each page's header names the source file it came from (e.g. `Api/{Controller}.cs`).
-- **`{{map.pathInSdkRepo}}/map/models/`** — record models (alphabetical pages), `unions.md` (variant factories + `TryGet…`),
-  and `enums.md` (full value lists).
+- **`sdk-map.md`** — the index and the read-once pages: SDK identity (namespace, spec version,
+  staleness stamp), client construction and the full options surface, the error-handling model
+  (Case A typed / Case B raw), the **defaults table** for operations, the model/enum/error
+  directory conventions, *Namespaces by content type*, and *Servers & auth*.
+- **`map/operations/{Controller}.md`** — one page per controller (`client.{Controller}`), one block
+  per operation: the exact C# signature with must-pass-explicitly params, the return type, the
+  error case (A: typed `{Operation}Error` with its `TryGet…` accessors and their statuses / B:
+  `RawError`), pagination and server-group bullets **only where they differ from the defaults**,
+  and a **Type sources** table naming the file that declares every type the operation mentions.
+- **Shapes live in the source, one type per file.** Every file under `Models/` and `Errors/`
+  declares exactly one public type named after the file, so a type name *is* its path: take it from
+  the operation's Type sources table (or the kind's directory — records `Models/`, enums
+  `Models/Enums/`, typed errors `Errors/`) and read the fields, `required` flags,
+  `[JsonPropertyName]` wire names and enum values from that one file. The compiler is the backstop:
+  a wrong name fails to build.
 
 **This map is how you traverse the SDK.** Do **not** grep, Glob, `find`, or otherwise scan the clone to
-locate an operation, model, enum, union, or error type — that burns time and context on a tree
-whose entire surface is already indexed here. Instead:
+locate an operation, model, enum, union, or error type — the map (and the name-is-path convention)
+is the locator. Instead:
 
-1. Open `sdk-map.md` and follow the link table to the branch page you need (controller or model group).
-2. Read the fact by lookup — most questions (signature, error accessors, enum values, pagination) end here
-   without touching the clone at all.
-3. Only when you need a **full method or model body** the map doesn't carry, take the file path the map
-   names (e.g. `Api/{Controller}.cs`, `Errors/{Operation}Error.cs`, `Models/{Model}.cs`) and
-   **open that one file directly in the clone**.
+1. Open `sdk-map.md` and follow its controller table to the operations pages in scope; read every
+   contract fact (signature, error accessors, pagination) by lookup.
+2. **Silence means the default.** The index's defaults table states what holds for every operation
+   (throw-only, no pagination, the default server group, the `ct` parameter name); an operation's
+   block states only what differs. A block silent on pagination has none — take the default and
+   move on rather than opening the source to confirm it.
+3. For a **shape** (model fields, enum values, union accessors, a typed error's payload), open the
+   one declaring file the map names — that is the normal flow here, not a fallback — and read it
+   scoped.
+4. The **HTTP verb/route and the endpoint's behavioural prose** live on the operation method itself
+   — the XML `<remarks>` and `<param>` docs in the `Api/{Controller}.cs` file the page header
+   names. Read them there when wire-level detail or call-acceptance semantics matter; never
+   reconstruct a route from memory.
 
 Keep lookups cheap — the rules that keep a session's context small:
 
-- Collect the contracts for **every** in-scope operation in **one** map pass — signature, required fields
-  with wire names, error accessors, enum values — into the **contract sheet** in `{{api.id}}-plan.md`, then
-  implement from the sheet. Don't re-open the map per field, and never re-look-up a fact the
-  sheet already carries.
+- Collect the contracts for **every** in-scope operation in **one** pass — signatures and error
+  accessors from the map pages, then required fields with wire names and enum values from the
+  declaring files those pages name — into the **contract sheet** in `{{api.id}}-plan.md`, then
+  implement from the sheet. Don't re-open a map page or source file per field, and never
+  re-look-up a fact the sheet already carries.
 - When you do open a source file, read it **scoped**: the Read tool with an offset/limit, or the Grep tool
   on the one symbol — never dump a whole file into the conversation with `cat`/`sed`.
 - Never open the SDK's `api-reference.md` — the map supersedes it.
 
-Staleness check: `sdk-map.md` records the source ref and commit it was generated from
-(provenance). The map documents that pinned ref, while `dotnet add package` installs the latest
-release — so if a name from the map ever fails to compile, trust the compiler, re-read the
-source file the map's row names, and report the drift; never patch around it from memory.
+Staleness check: `sdk-map.md` carries the API spec version it was generated from, and the map
+documents the clone's checked-out ref — the same commit, since map and SDK live in one repo —
+while `dotnet add package` installs the latest release. So if a name from the map ever fails to
+compile, trust the compiler, re-read the source file the map's row names, and report the drift;
+never patch around it from memory.
 
 ## SDK source — get it first; the map lives inside it
 
@@ -130,10 +151,10 @@ session, not a fallback**: one shallow clone at the pinned ref, into the **syste
 directory** (`<temp>/{{api.id}}-sdk-src/`), reused for the whole session. Inside it the map sits at
 `{{map.pathInSdkRepo}}/`. The clone is a read-only reference, never in the project repo, and
 **not** a build dependency (never add a project reference to *this* clone; the build takes the
-SDK from the NuGet package in the *Install* section). What stays a last resort is opening **full
-source files**: the map pages answer most questions, and you open the one file a map row names
-only on a real gap — a map-sourced name failing to compile, ambiguity left after the lookup, or a
-full method/model body the map doesn't carry.
+SDK from the NuGet package in the *Install* section). Opening the **one declaring file** a map
+page names is the normal flow here — that is where model, enum and error shapes live. What stays
+off-limits is *locating* anything by scanning: every file you open is one the map named, opened
+scoped, never found by grep.
 
 **Clone once, up front.** Clone this session — at ref `{{sdk.cloneRef}}` (the exact
 ref the map was generated from; see the map's source-commit stamp) — into a fresh
@@ -171,13 +192,14 @@ Then confirm the SDK shape **only** from that local clone — not by either of t
 
 Layout — where the SDK map's file references resolve (open these directly; don't scan for them):
 
-- `Api/` — one file per controller/group; **this is where the operation methods and their signatures live**
-  (each carries XML-doc comments for the params, the endpoint path, and the thrown error type). The map's
-  per-controller pages name the exact file (e.g. `Api/{Controller}.cs`).
-- `Models/` (+ `Models/Enums/`, `Models/AnyOf/`, `Models/OneOf/`) — request/response records, enums, unions.
+- `Api/` — one file per controller/group; **this is where the operation methods live** (the HTTP
+  verb and route, and the XML `<remarks>`/`<param>` docs carrying the endpoint's behavioural
+  prose). The map's per-controller pages name the exact file (e.g. `Api/{Controller}.cs`).
+- `Models/` (+ `Models/Enums/`) — request/response records, unions and enums; one public type per
+  file, named after the file.
 - `Errors/` — per-operation `{Operation}Error` types (only Case-A operations have one; the map's rows say
   which case each operation is).
-- `Core/` — HTTP infrastructure (`SdkException<T>`, `RawError`, auth, retries).
+- `Core/` — HTTP infrastructure (`SdkException<T>`, `RawError`, auth, retries, `SdkHook`).
 - `Servers/`, `{{sdk.rootNamespace}}Client.cs`, `ServiceCollectionExtensions.cs` — environments, the client, DI.
 
 **Leave the clone in place — don't delete it.** It's a read-only reference with nothing of yours in it, and
@@ -192,19 +214,21 @@ fresh on every call, invisible to you, and **not** an idempotency key in any mea
 `dotnet-configuration-resilience` § *Make the write idempotent at the provider* explains why a
 visible header like this is worse than an absent one.
 
-Whether an operation takes a **real**, caller-supplied key is an API fact, on that operation's map
-row: look for a key-shaped parameter (an idempotency key, a request id) among its parameters, and
-read the parameter doc the map quotes — retention windows and mandatory cases live there. Some APIs
-expose **`If-Match` optimistic concurrency** instead — a different guarantee (reject my write if the
-resource changed) solving a different problem (lost updates, not duplicates); the map rows name
-those parameters too. For every write with no key, the answer is reconciliation —
+Whether an operation takes a **real**, caller-supplied key is an API fact, visible on that
+operation's map row: look for a key-shaped parameter (an idempotency key, a request id) in the
+signature. Its semantics — retention windows, when it is mandatory — are provider prose, in the
+method's XML `<param>`/`<remarks>` docs in the `Api/` file the page names. Some APIs expose
+**`If-Match` optimistic concurrency** instead — a different guarantee (reject my write if the
+resource changed) solving a different problem (lost updates, not duplicates); those parameters
+show in the signatures too. For every write with no key, the answer is reconciliation —
 `dotnet-configuration-resilience` § *Reconcile after a failure* — not hope.
 
-## Sensitive data — check the model pages before you log anything
+## Sensitive data — check the request models before you log anything
 
 Whether this API's **request** models carry fields you must never log — card or bank numbers,
-personal data, message content — is a map question: the model pages list every field with its wire
-name. If the scope touches such a field, three generator facts decide your logging posture (all in
+personal data, message content — is a shape question: each request model's declaring file (the
+map's Type sources table names it) lists every field with its `[JsonPropertyName]` wire name. If
+the scope touches such a field, three generator facts decide your logging posture (all in
 `dotnet-configuration-resilience` § *Logging*): JSON request bodies are logged **verbatim** when
 `LogRequestBody` is on, with no redaction; form bodies are masked only by deny-list; and leaving
 `options.Logging.LoggerFactory` unset arms the `{{sdk.envLogVar}}` environment variable, whose
@@ -213,34 +237,39 @@ carry such a field: `LogRequestBody` stays off, `LoggerFactory` is set explicitl
 and your own diagnostics never echo a request body on those paths.
 
 Responses are often safer — many APIs return masked variants of what requests carry raw — but that
-too is a model-page fact: check it before assuming.
+too is a model-shape fact: check the response model's file before assuming.
 
-## Response metadata — status and headers are not what you expect
+## Response metadata — status and headers are not on the return value
 
 On a success the SDK returns only the deserialized body: the HTTP status and headers of a
-successful call are **not reachable** in-band, and unless the map shows `{Operation}Result`
-siblings for this SDK (most APIs generate none), there is no non-throwing variant to get them
-from. On an error, what is reachable depends on the operation's error case — its map row: a Case B
-`RawError` carries `StatusCode`; a typed Case A body may or may not (see `dotnet-error-handling`).
+successful call are **not on the return value**, and unless the map's error-handling model notes
+no-throw `{Operation}Result` siblings for this SDK (most APIs generate none), there is no
+non-throwing variant to get them from. On an error, what is reachable depends on the operation's
+error case — its map row: a Case B `RawError` carries `StatusCode`; a typed Case A body may or may
+not (see `dotnet-error-handling`).
 
-**Headers are never reachable on either path.** A `Retry-After` on a 429 the SDK has already
-exhausted its retries against, rate-limit budget headers, and a request-id echo for correlation
-are all unavailable in-band. `RawClient.ExecuteResult` does return an `ApiResult`, but `RawClient`
-is `internal sealed`, so it is not a way round this. If you genuinely need transport metadata —
-metrics, a provider-availability SLA — a `DelegatingHandler` sees every response before the SDK
-maps it; under retry it observes one response *per attempt* (so "the" value is the last
-attempt's), and getting the value to the catch site needs `AsyncLocal` or a scoped service.
+**Hooks are the SDK's own seam for transport metadata.** `options.Hooks` (client-wide) and
+`requestOptions.Hooks` (per call, appended after the client-wide list) take `SdkHook` instances;
+`SdkHook.OnResponse((response, context) => …)` sees every raw `HttpResponseMessage` — status,
+`Retry-After`, rate-limit budget headers, a request-id echo for correlation — and
+`SdkHook.OnRequest` the outgoing request. A hook runs **inside the retry pipeline, once per
+attempt**, so "the" value is the last attempt's; a per-call hook can close over a local, which
+puts the observed value in scope in the same method's `catch`. `RawClient.ExecuteResult` does
+return an `ApiResult`, but `RawClient` is `internal sealed`, so hooks — not reflection, and not a
+`DelegatingHandler` you'd otherwise need — are the supported way in.
 
 ## The `dotnet-*` skill names are not unique in this marketplace
 
 Other APIMatic .NET plugins in this marketplace ship the same seven `dotnet-*` skill names. Copies
 from the **same generator version** are byte-identical, so between those plugins a collision is
 harmless. A copy from a **different generator version** is not — it describes a different runtime
-(a pre-4.0.0 plugin's retry predicate, timeout behaviour and logging surface all differ from this
-SDK's). **Load the copy that ships with THIS plugin**: write plugin-qualified names where your
-harness supports them (`{{api.id}}-sdk:dotnet-error-handling`,
+(an older plugin's retry eligibility, request-options surface and unknown-field handling all
+differ from this SDK's). **Load the copy that ships with THIS plugin**: write plugin-qualified
+names where your harness supports them (`{{api.id}}-sdk:dotnet-error-handling`,
 `{{api.id}}-sdk:dotnet-configuration-resilience`, and so on), and where it does not, check the
-`core-surface:` stamp at the top of the loaded file — it must name generator **4.0.0**.
+`core-surface:` stamp at the top of the loaded file — it must name the **post-4.0.0 codegen-v2
+surface (124 `Core/*.cs`)**. The wire header `X-APIMatic-Gen-Version` still reads `4.0.0` on this
+surface, so the stamp's census — not that version string — is what identifies the copy.
 
 ## Integration workflow — load the companion skill at each step
 
@@ -265,12 +294,14 @@ them in this order:
    see *Idempotency* above.)
 4. **Models** — load **dotnet-models** the moment a request/response field isn't a plain string or number.
    (*The signature won't tell you:* unions are built with factory methods and read via `TryGet…` (no `new`),
-   enums are `StringEnum<T>` not C# enums, and unmodeled JSON fields are dropped on deserialize.)
+   enums are `StringEnum<T>` not C# enums, and unknown response fields are kept — every model carries an
+   `AdditionalProperties` extension-data property, so they survive deserialization instead of vanishing.)
 5. **Error handling** — load **dotnet-error-handling** before you write any `try/catch`. (*The signature won't
    tell you:* an operation is either Case B (`SdkException<RawError>`, no typed accessors) or
    Case A (a typed `{Operation}Error`) — how the API mixes them is its own fact, so confirm each
-   operation's case in its map row; and `TryGetRawError` is not a catch-all on the typed errors. Each operation's map row also says
-   whether a no-throw `…Result` variant exists — never assume one does.)
+   operation's case in its map row; and `TryGetRawError` is not a catch-all on the typed errors. Whether
+   no-throw `…Result` variants exist at all is stated once, in the map's defaults table — most SDKs have
+   none; never assume one does.)
 6. **Configuration & resilience** — load **dotnet-configuration-resilience** when you tune retries, timeouts,
    the base URL, pagination, or logging. (*The signature won't tell you:* `HttpMethodsToRetry` gates **every**
    retry trigger, so a `POST` is never resent by default — but a `GET` that hangs costs ≈407s, not the ≈100s

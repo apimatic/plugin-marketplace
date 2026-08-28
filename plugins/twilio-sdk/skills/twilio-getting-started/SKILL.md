@@ -38,15 +38,15 @@ confirm names against the map.
 | --- | --- |
 | API | Twilio |
 | NuGet package | `AsadAli.TwilioSdk` (install version-less — see *Install* below) |
-| Source repo | https://github.com/context-plugins/twilio-csharp-sdk (commit `51fdf48` — the commit this map documents; `main` has since been regenerated with a newer generator) |
+| Source repo | https://github.com/context-plugins/twilio-csharp-sdk (ref `51fdf48c0d657f717642ada229682ef234db9ead` — the ref this map documents) |
 | Root namespace | `TwilioSdk` (the `using` namespace) |
 | Client class | `TwilioSdkClient` |
 | Options class | `TwilioSdkClientOptions` |
 <!-- gen:auth -->
-| Auth | Credentials properties on `TwilioSdkClientOptions`: `AccountSidAuthToken: BasicAuthCredentials?` — see the SDK map's *Servers & auth* section |
+| Auth | Credentials properties on `TwilioSdkClientOptions` — the scheme(s) and property names are in the SDK map's *Servers & auth* section |
 <!-- /gen:auth -->
 <!-- gen:environments -->
-| Environments | `options.Environment` — `ServerEnvironment` members: `Production` (see the SDK map's *Servers & auth* section) |
+| Environments | `options.Environment` — the `ServerEnvironment` members are in the SDK map's *Servers & auth* section |
 <!-- /gen:environments -->
 
 The table above is **orientation, not a copy-paste recipe** — it gives you the names and facts (install,
@@ -90,7 +90,7 @@ This skill bundles a generated table-of-contents for the SDK, right next to this
 - **`map/operations/{Controller}.md`** — one page per controller. Each operation
   row carries the HTTP verb/path, the exact C# signature with must-pass-explicitly params, the return type,
   the error case (typed `{Operation}Error` vs `RawError`) with its `TryGet…` accessors, and pagination.
-  Each page's header names the source file it came from (e.g. `Api/Api20100401Message.cs`).
+  Each page's header names the source file it came from (e.g. `Api/{Controller}.cs`).
 - **`map/models/`** — record models (alphabetical pages), `unions.md` (variant factories + `TryGet…`),
   and `enums.md` (full value lists).
 
@@ -102,7 +102,7 @@ whose entire surface is already indexed here. Instead:
 2. Read the fact by lookup — most questions (signature, error accessors, enum values, pagination) end here
    without touching the clone at all.
 3. Only when you need a **full method or model body** the map doesn't carry, take the file path the map
-   names (e.g. `Api/Api20100401Message.cs`, `Errors/CreateConfigurationError.cs`, `Models/ApiV2010AccountMessage.cs`) and
+   names (e.g. `Api/{Controller}.cs`, `Errors/{Operation}Error.cs`, `Models/{Model}.cs`) and
    **open that one file directly in the clone**.
 
 Keep lookups cheap — the rules that keep a session's context small:
@@ -131,8 +131,7 @@ repo — navigated via the SDK map above, a read-only
 reference, **not** a build dependency (never add a project reference to *this* clone; the build takes the
 SDK from the NuGet package in the *Install* section).
 
-**Clone only on a real map-side issue.** Clone once this session — at commit `51fdf48` (the exact
-commit the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder under `<temp>/twilio-sdk-src/`, and reuse
+**Clone only on a real map-side issue.** Clone once this session — at ref `51fdf48c0d657f717642ada229682ef234db9ead` (the exact ref the map was generated from; see the map's source-commit stamp) — into a fresh timestamped folder under `<temp>/twilio-sdk-src/`, and reuse
 that folder for the rest of your session:
 
 ```bash
@@ -162,13 +161,13 @@ Then confirm the SDK shape **only** from that local clone — not by either of t
   guessed paths fail, which is exactly how ad-hoc fetching breaks. Clone once and read locally instead. Only
   if you truly cannot clone (`git` is unavailable) fetch a **raw** URL
   (`https://raw.githubusercontent.com/<owner>/<repo>/51fdf48c0d657f717642ada229682ef234db9ead/…`, derived from the source repo above —
-  never a `…/blob/…` page), e.g. `…/51fdf48c0d657f717642ada229682ef234db9ead/Api/Api20100401Message.cs`.
+  never a `…/blob/…` page), e.g. `…/51fdf48c0d657f717642ada229682ef234db9ead/Api/{Controller}.cs`.
 
 Layout — where the SDK map's file references resolve (open these directly; don't scan for them):
 
 - `Api/` — one file per controller/group; **this is where the operation methods and their signatures live**
   (each carries XML-doc comments for the params, the endpoint path, and the thrown error type). The map's
-  per-controller pages name the exact file (e.g. `Api/Api20100401Message.cs`).
+  per-controller pages name the exact file (e.g. `Api/{Controller}.cs`).
 - `Models/` (+ `Models/Enums/`, `Models/AnyOf/`, `Models/OneOf/`) — request/response records, enums, unions.
 - `Errors/` — per-operation `{Operation}Error` types (only Case-A operations have one; the map's rows say
   which case each operation is).
@@ -179,71 +178,52 @@ Layout — where the SDK map's file references resolve (open these directly; don
 keeping it is what lets every later step in this session reuse it instead of cloning again. The OS reaps the
 temp directory on its own; a future session simply makes its own timestamped clone.
 
-## Idempotency — eight operations have a real key; the header is not it
+## Idempotency — the real keys are on the map; the injected header is not one
 
-Of this SDK's 887 operations, **434 are non-GET and every one of them sends an `Idempotency-Key` header**.
-On 430 of those the value is `Guid.NewGuid()`, injected by the generator — you cannot set it, and Twilio does
-not document that header as a general mechanism. Only **eight** operations let you supply a key, in two
-different shapes:
+The generator injects an `Idempotency-Key: Guid.NewGuid()` header on **every non-GET operation** —
+fresh on every call, invisible to you, and **not** an idempotency key in any meaningful sense:
+Twilio does not document reading it, and a value that changes per call deduplicates nothing.
+`dotnet-configuration-resilience` § *Make the write idempotent at the provider* explains why a
+visible header like this is worse than an absent one.
 
-| Shape | Operations |
-| --- | --- |
-| **Form field** `IdempotencyKey` (parameter `idempotencyKey`) | `Api20100401Payment.CreatePayments`, `Api20100401Payment.UpdatePayments`, `Api20100401UserDefinedMessage.CreateUserDefinedMessage`, `Api20100401UserDefinedMessageSubscription.CreateUserDefinedMessageSubscription` |
-| **Header** `Idempotency-Key`, caller's value (no injected GUID) | `ConversationsV2ConfigurationApi.CreateConfiguration`, `.DeleteConfiguration`, `.UpdateConfiguration2`, `ConversationsV2ConversationApi.DeleteConversationAsync` |
+Whether an operation takes a **real**, caller-supplied key is an API fact, on that operation's map
+row: look for a key-shaped parameter (an idempotency key, a request id) among its parameters, and
+read the parameter doc the map quotes — retention windows and mandatory cases live there. Some APIs
+expose **`If-Match` optimistic concurrency** instead — a different guarantee (reject my write if the
+resource changed) solving a different problem (lost updates, not duplicates); the map rows name
+those parameters too. For every write with no key, the answer is reconciliation —
+`dotnet-configuration-resilience` § *Reconcile after a failure* — not hope.
 
-⚠ **The two payment operations carry both keys at once.** `CreatePayments` emits
-`new HeaderParam("Idempotency-Key", Guid.NewGuid())` on the line directly above
-`new Param("IdempotencyKey", idempotencyKey)` in the form body. Only the second is yours and only the second
-means anything. The names differ by one hyphen, and these are the operations that charge a card — so this is
-the one place in the SDK where reading the wrong one costs money.
+## Sensitive data — check the model pages before you log anything
 
-On these two the compiler is on your side: `CreatePayments` and `UpdatePayments` declare
-`string idempotencyKey` — **non-nullable and positional**, so you cannot quietly omit it. The other six
-declare `string?`, and there `null` compiles and silently gives up the protection.
+Whether this API's **request** models carry fields you must never log — card or bank numbers,
+personal data, message content — is a map question: the model pages list every field with its wire
+name. If the scope touches such a field, three generator facts decide your logging posture (all in
+`dotnet-configuration-resilience` § *Logging*): JSON request bodies are logged **verbatim** when
+`LogRequestBody` is on, with no redaction; form bodies are masked only by deny-list; and leaving
+`options.Logging.LoggerFactory` unset arms the `TWILIOSDKCLIENT_LOG` environment variable, whose
+`trace` level forces body logging on with no code change and no deploy. So on any build that can
+carry such a field: `LogRequestBody` stays off, `LoggerFactory` is set explicitly in production,
+and your own diagnostics never echo a request body on those paths.
 
-**The remaining 426 writes have no key at all.** For those the answer is reconciliation — see
-`dotnet-configuration-resilience` § *Reconcile after a failure* — not a key. Do not let the injected header
-persuade you otherwise; `dotnet-configuration-resilience` § *Make the write idempotent at the provider*
-explains why a visible header is worse than an absent one.
+Responses are often safer — many APIs return masked variants of what requests carry raw — but that
+too is a model-page fact: check it before assuming.
 
-**Eleven operations offer optimistic concurrency instead**, via an `If-Match` header parameter — a
-different guarantee (reject my write if the resource changed) solving a different problem (lost updates,
-not duplicates). Seven updates: `SyncV1Document.UpdateDocument`, `SyncV1SyncListItem.UpdateSyncListItem`,
-`SyncV1SyncMapItem.UpdateSyncMapItem`, `TaskrouterV1Task.UpdateTask`,
-`TaskrouterV1TaskReservation.UpdateTaskReservation`, `TaskrouterV1Worker.UpdateWorker`,
-`TaskrouterV1WorkerReservation.UpdateWorkerReservation`. And four **conditional deletes**, which are the
-easier ones to overlook: `SyncV1SyncListItem.DeleteSyncListItem`, `SyncV1SyncMapItem.DeleteSyncMapItem`,
-`TaskrouterV1Task.DeleteTask`, `TaskrouterV1Worker.DeleteWorker`.
+## Response metadata — status and headers are not what you expect
 
-## Response metadata — headers are not reachable, and the status only sometimes
+On a success the SDK returns only the deserialized body: the HTTP status and headers of a
+successful call are **not reachable** in-band, and unless the map shows `{Operation}Result`
+siblings for this SDK (most APIs generate none), there is no non-throwing variant to get them
+from. On an error, what is reachable depends on the operation's error case — its map row: a Case B
+`RawError` carries `StatusCode`; a typed Case A body may or may not (see `dotnet-error-handling`).
 
-`dotnet-error-handling` describes `ApiResult<TResponse, TError>`, which exposes `StatusCode` and `Headers`
-on both success and failure, and correctly says the generator emits it only where configured to. **On this
-SDK it never was: zero of the 887 operations have a `{Operation}Result` sibling.** The type ships in
-`Core/Models` and nothing returns it, so that whole section describes a door this SDK does not have.
-
-What is actually reachable:
-
-| you want | on a success | on a failure |
-| --- | --- | --- |
-| the **body** | the return value | `RawError` (858 Case B ops) or a typed accessor (29 Case A ops) |
-| the **status** | not exposed | **usually yes** — `ex.Error.StatusCode` on the 858 Case B ops; on a Case A op only via the `_` fallback arm |
-| **headers** | not exposed | **never** — `RawError` carries a status but no headers |
-
-This SDK is unusually well off for the status, because almost every operation throws
-`SdkException<RawError>` and `RawError` carries `StatusCode` directly. Do not carry that assumption to
-another API generated by the same toolchain — the split between Case A and Case B comes from the API
-definition, and an SDK that is mostly Case A gives you no status at all on the documented statuses.
-
-**Headers are the real gap, and it is total.** A `Retry-After` on a 429 the SDK has already exhausted its
-retries against, rate-limit budget headers, and a request-id echo for correlation are all unavailable
-in-band, on success and failure alike. `RawClient.ExecuteResult` does return an `ApiResult`, but `RawClient`
-is `internal sealed`, so it is not a way round this either.
-
-A `DelegatingHandler` is the only route — see `dotnet-configuration-resilience` § *When you still want a
-`DelegatingHandler`*, which also covers the DI blast radius. Two caveats before you build one: under retry
-it observes one response *per attempt*, not per call, so "the" value is the last attempt's; and getting it
-to the caller needs `AsyncLocal` or a scoped service.
+**Headers are never reachable on either path.** A `Retry-After` on a 429 the SDK has already
+exhausted its retries against, rate-limit budget headers, and a request-id echo for correlation
+are all unavailable in-band. `RawClient.ExecuteResult` does return an `ApiResult`, but `RawClient`
+is `internal sealed`, so it is not a way round this. If you genuinely need transport metadata —
+metrics, a provider-availability SLA — a `DelegatingHandler` sees every response before the SDK
+maps it; under retry it observes one response *per attempt* (so "the" value is the last
+attempt's), and getting the value to the catch site needs `AsyncLocal` or a scoped service.
 
 ## The `dotnet-*` skill names are not unique in this marketplace
 
@@ -287,7 +267,7 @@ them in this order:
 3. **Calling an endpoint / building a request body** — load **dotnet-calling-endpoints** before the first
    `client.{ApiGroup}.{Operation}(...)` call. (*The signature won't tell you:* call list/search ops with
    named arguments — many optional params have no C# default and mis-bind in a positional call; and on the
-   two payment operations, `idempotencyKey` sits one hyphen away from an injected header that is not it,
+   whether a write takes a real idempotency key is on its map row — the injected `Idempotency-Key` header is not one,
    see *Idempotency* above.)
 4. **Models** — load **dotnet-models** the moment a request/response field isn't a plain string or number.
    (*The signature won't tell you:* unions are built with factory methods and read via `TryGet…` (no `new`),
