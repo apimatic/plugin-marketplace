@@ -139,9 +139,11 @@ claim was added on 2026-08-27:
 
    Separately: the two VS Code manifests that exist (context-matic, acp-paypal) predate
    1.0 — no $schema, and skills/mcpServers/logo/displayName as top-level fields, none of which
-   are in the closed 1.0 schema. Unknown fields are ignored rather than rejected, so they are
-   not invalid, but those keys do nothing and discovery falls back to convention (skills/,
-   mcp.json — note we ship .mcp.json). A conformance pass is worth scheduling.
+   are in the closed 1.0 schema. CORRECTED 2026-08-28: a root plugin.json WITHOUT $schema is
+   detected as the older Copilot format, in which skills and mcpServers ARE documented,
+   honoured component-path fields — discovery does not fall back to convention there, it goes
+   through those keys (see CLAUDE.md, "VS Code"). logo and displayName do nothing in either
+   format. A conformance pass is worth scheduling.
 
   "Cursor's agents key takes a directory, so passing a file means the specialist silently
    doesn't exist"  → WRONG. The schema is "agent files or directories". Our manifests are

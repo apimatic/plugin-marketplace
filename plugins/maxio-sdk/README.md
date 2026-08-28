@@ -1,6 +1,6 @@
-# Maxio SDK Assistant (Claude Code + Cursor + Codex plugin)
+# Maxio SDK Assistant (Claude Code + Cursor + Codex + VS Code plugin)
 
-A plugin for **Claude Code, Cursor and Codex** that helps developers **install and consume the Maxio Advanced Billing .NET SDK**,
+A plugin for **Claude Code, Cursor, Codex and VS Code** that helps developers **install and consume the Maxio Advanced Billing .NET SDK**,
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
 The **SDK map is bundled with the plugin**, and the `integrate-maxio` workflow skill grounds every
@@ -72,6 +72,10 @@ defer to it for lookup before touching the SDK source.
 /plugin marketplace add apimatic/plugin-marketplace
 /plugin install maxio-sdk@apimatic
 ```
+
+Cursor loads the same plugin from `.cursor-plugin/plugin.json`, Codex from
+`.codex-plugin/plugin.json`, and VS Code from the root `plugin.json` (Agent Plugins 1.0 —
+skills are discovered from `skills/` by convention, so the manifest lists none).
 
 Then ask a usage question (e.g. *"how do I authenticate this SDK with an API key?"*) to trigger the
 relevant skill.

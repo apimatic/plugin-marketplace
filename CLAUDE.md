@@ -14,7 +14,7 @@ This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Cla
 | `paypal-sdk` | skills + map, .NET | Claude Code, Cursor, Codex, VS Code |
 | `twilio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex, VS Code |
 
-The three SDK plugins ship to all four harnesses; the two MCP-backed plugins have no Codex manifest. An SDK plugin's four manifests all point at the same `skills/` directory — nothing is duplicated per harness.
+The three SDK plugins ship to all four harnesses; the two MCP-backed plugins have no Codex manifest. An SDK plugin's four manifests all resolve to the same `skills/` directory — the VS Code one by convention, since its schema has no `skills` field — and nothing is duplicated per harness.
 
 ## Plugins
 

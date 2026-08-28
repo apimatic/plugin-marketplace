@@ -1,6 +1,6 @@
-# PayPal SDK Assistant (Claude Code + Cursor + Codex plugin)
+# PayPal SDK Assistant (Claude Code + Cursor + Codex + VS Code plugin)
 
-A plugin for **Claude Code, Cursor and Codex** that helps developers **install and consume the PayPal .NET SDK**
+A plugin for **Claude Code, Cursor, Codex and VS Code** that helps developers **install and consume the PayPal .NET SDK**
 (the APIMatic-generated C# SDK at
 [asadali214/checkout-sample-sdk](https://github.com/asadali214/checkout-sample-sdk)),
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.

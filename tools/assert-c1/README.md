@@ -239,7 +239,7 @@ shim to `RawClient` resolves `retry.timeout-rejection-is-translated` and
 
 Five of the fourteen `pre400.*` assertions are `absent` regexes, and this is the only thing that
 can tell an `absent` regex matching nothing from one that is simply wrong. That bug has shipped
-here twice — a `` a heredoc turned into a literal backspace byte, and an OAuth2 check that was
+here twice — a `\b` that a heredoc turned into a literal backspace byte, and an OAuth2 check that was
 vacuously true on a fixture with no OAuth2 scheme at all.
 
 **behavioural** — runs the compiled checks against the published package. PayPal-specific by

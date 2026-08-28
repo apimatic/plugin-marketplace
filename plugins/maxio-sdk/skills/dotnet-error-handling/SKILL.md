@@ -119,9 +119,9 @@ Handling a Case-A error is a **two-step, source-driven** process — you cannot 
 memory:
 
 1. **List *every* `TryGet...` accessor the operation's `{Operation}Error` declares.** The operation's map
-   row already lists them (with the HTTP status each maps to); main takes them from the contract sheet.
-   They are the `public bool TryGet...(out ...)` methods on the `{Operation}Error` type (the SDK helper
-   agent confirms them from the SDK map/source). These accessors are generated per operation — one per response the operation maps —
+   row already lists them (with the HTTP status each maps to); take them from the contract sheet.
+   They are the `public bool TryGet...(out ...)` methods on the `{Operation}Error` type (grounded
+   from the SDK map/source). These accessors are generated per operation — one per response the operation maps —
    and their names embed the body type. Expect a mix of:
    - **typed-body accessors** named after a model or scalar — `TryGetValidationErrors`, `TryGetProblemDetails`,
      `TryGetString`, `TryGetLong`, …;

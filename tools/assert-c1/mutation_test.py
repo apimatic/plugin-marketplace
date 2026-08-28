@@ -234,6 +234,12 @@ def run_suite(root: str, surface: str) -> set[str]:
     out = subprocess.run(
         [sys.executable, os.path.join(HERE, "assert_c1.py"), root, "--surface", surface],
         capture_output=True, text=True, encoding="utf-8", errors="replace")
+    # A crashed child prints no summary line. Parsing its (empty) FAIL set as data would be
+    # catastrophic under baselined grading: after={} makes every baselined failure look
+    # "no longer failing", so the crash reads as the mutation being caught. Refuse instead.
+    if " assertions: " not in out.stdout:
+        raise SystemExit("assert_c1.py did not complete under mutation (rc=%s): %s"
+                         % (out.returncode, out.stderr.strip()[-2000:]))
     return {line.split()[1] for line in out.stdout.splitlines()
             if line.startswith("FAIL ") and len(line.split()) > 1}
 

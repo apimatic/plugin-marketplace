@@ -1,6 +1,6 @@
 ---
 name: integrate-paypal
-description: MANDATORY FIRST STEP for PayPal .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate PayPal in C# — take a payment at checkout, capture, refund, save a card, subscriptions, billing plans, vaulted payment methods, transaction search — or when a PayPal .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) the plan file paypal-plan.md is written at <project repo root>/paypal-plan.md BEFORE any project file is created or edited; (2) paypal-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
+description: MANDATORY FIRST STEP for PayPal .NET SDK work in a C#/.NET project — load this BEFORE opening the SDK map or touching any project file; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate PayPal in C# — take a payment at checkout, capture, refund, save a card, subscriptions, billing plans, vaulted payment methods, transaction search — or when a PayPal .NET SDK call errors or behaves unexpectedly. It carries four binding rules stated NOWHERE else — (1) for implementation work, the plan file paypal-plan.md is written at <project repo root>/paypal-plan.md BEFORE any project file is created or edited; (2) paypal-getting-started and the SDK map it carries are loaded and used for every contract fact — never memory; (3) every dotnet-* skill the contract sheet's REQUIRED READING names is loaded before implementation starts; (4) every sheet row carries one of three labels — a map page, UNVERIFIED, or YOUR CALL — not in the map. Skip it and SDK facts get written from stale memory.
 ---
 
 # PayPal .NET SDK — Workflow (map + skills)
@@ -279,7 +279,8 @@ already — the map is where every fix below comes from.
    - **Compile error** → the fix isn't done: resolve it the same map-first way and rebuild. Never
      treat a fix that doesn't compile as though it were finished.
    - **Build blocked** (output locked / "being used by another process") → the solution is
-     running. Stop the app, rebuild, verify.
+     running. If you started it, stop it, rebuild, verify; if the user is running it, ask
+     them to stop it rather than killing their process.
 6. **Runtime / provider errors** — read the provider's error payload through the documented path:
    the operation's error case and `TryGet…` accessors from its map row; `dotnet-error-handling`
    for the Case A/B mechanics (don't parse exception `.ToString()` when an accessor exists).

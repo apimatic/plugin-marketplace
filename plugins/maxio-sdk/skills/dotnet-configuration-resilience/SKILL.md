@@ -213,7 +213,7 @@ inside each `SendAsync`, and the retry pipeline sits *above* `SendAsync` — so 
 nothing. A boundary that guards only the first silently lets the second through — see
 **maxio-sdk:dotnet-error-handling**.
 
-It is still the highest-value single knob, for a reason worth understanding: its expiry throws
+`HttpClient.Timeout` is still the highest-value single knob, for a reason worth understanding: its expiry throws
 `TaskCanceledException`, which the pipeline does **not** retry (see Notes), so **the first time it fires the
 call ends**. A `10s` value therefore does bound a *hang* at ≈10s. What it does not bound is a provider that
 fails *retryably* just under the limit on every attempt — that still costs ≈ `4 × 10s + 7s ≈ 47s`. It also

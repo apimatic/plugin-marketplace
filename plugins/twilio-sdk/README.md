@@ -1,6 +1,6 @@
-# Twilio SDK Assistant (Claude Code + Cursor + Codex plugin)
+# Twilio SDK Assistant (Claude Code + Cursor + Codex + VS Code plugin)
 
-A plugin for **Claude Code, Cursor and Codex** that helps developers **install and consume the Twilio .NET SDK**
+A plugin for **Claude Code, Cursor, Codex and VS Code** that helps developers **install and consume the Twilio .NET SDK**
 (the APIMatic-generated C# SDK at
 [context-plugins/twilio-csharp-sdk](https://github.com/context-plugins/twilio-csharp-sdk)),
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
@@ -77,6 +77,10 @@ it for lookup before touching the SDK source.
 /plugin marketplace add apimatic/plugin-marketplace
 /plugin install twilio-sdk@apimatic
 ```
+
+Cursor loads the same plugin from `.cursor-plugin/plugin.json`, Codex from
+`.codex-plugin/plugin.json`, and VS Code from the root `plugin.json` (Agent Plugins 1.0 —
+skills are discovered from `skills/` by convention, so the manifest lists none).
 
 Then ask a usage question (e.g. *"how do I send an SMS with Twilio in C#?"*) to trigger the
 relevant skill.
