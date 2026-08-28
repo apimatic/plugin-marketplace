@@ -4,17 +4,17 @@ General-purpose AI models are trained on public code and documentation, much of 
 
 APIMatic gives coding assistants deterministic, version-aware API context, generated directly from your API definition and SDKs. Instead of scraping public documentation or guessing from memory, the AI is grounded in the exact OpenAPI definition, current SDK versions, executable, idiomatic code samples, and recommended integration workflows.
 
-This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Claude Code, Cursor, VS Code and Codex**. It ships five plugins under `plugins/`, all registered in `.claude-plugin/marketplace.json`:
+This repository is a multi-plugin marketplace (`name: apimatic`) targeting **Claude Code, Cursor, VS Code and Codex**. It ships five plugins under `plugins/`, all registered in `.claude-plugin/marketplace.json` (mirrored in `.cursor-plugin/marketplace.json` — edit both):
 
 | Plugin | Kind | Harness manifests |
 | --- | --- | --- |
 | `context-matic` | MCP, multi-API | Claude Code, Cursor, VS Code |
 | `acp-paypal` | MCP, PayPal | Claude Code, Cursor, VS Code |
-| `maxio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
-| `paypal-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
-| `twilio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex |
+| `maxio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex, VS Code |
+| `paypal-sdk` | skills + map, .NET | Claude Code, Cursor, Codex, VS Code |
+| `twilio-sdk` | skills + map, .NET | Claude Code, Cursor, Codex, VS Code |
 
-No plugin currently ships to all four harnesses.
+The three SDK plugins ship to all four harnesses; the two MCP-backed plugins have no Codex manifest. An SDK plugin's four manifests all point at the same `skills/` directory — nothing is duplicated per harness.
 
 ## Plugins
 
@@ -52,20 +52,21 @@ PayPal-focused plugin built on the same context engine.
 
 Maxio Advanced Billing (formerly Chargify) **.NET SDK** plugin — no MCP server, no telemetry, C#/.NET
 only. Its core feature is a bundled, generated **SDK map** (`skills/maxio-getting-started/sdk-map.md` +
-`map/`): the agent answers every signature/model/enum/error question by map lookup, clones the SDK source
-**only on first need** for a full body the map doesn't carry, and never greps the clone or opens the SDK's
-`api-reference.md`.
+`map/`): the coding agent answers every signature/model/enum/error question by map lookup, clones the SDK
+source **only on first need** for a full body the map doesn't carry, and never greps the clone or opens the
+SDK's `api-reference.md`.
 
-One agent does everything — `maxio-sdk` plans, answers narrow contract questions, and fixes build errors
-in place. Ships Claude Code, Cursor and Codex manifests; the Codex carrier is
-`codex/agents/maxio-sdk.toml`, whose `developer_instructions` is a verbatim copy of `agents/maxio-sdk.md`.
-Regenerate it with `python tools/sync-codex-carrier.py` rather than editing it by hand; CI fails the PR if
-the two drift.
+The plugin is skills-only — there is no agent file (see *Why the SDK plugins have no agent file* below).
+`integrate-maxio` is the workflow skill: it writes the plan file `maxio-plan.md` at the project root before
+any project file is touched, fills its contract sheet from the map, implements from the sheet, and fixes SDK
+compile/runtime errors map-first in place. `maxio-getting-started` owns the map. Ships Claude Code, Cursor,
+Codex and VS Code manifests, all pointing at the same `skills/` directory.
 
 **Skills**
 
-- **integrate-maxio** — router: routes a Maxio .NET SDK task to the `maxio-sdk` agent, handles blocker
-  hand-back, and drives the implement-and-verify loop.
+- **integrate-maxio** — workflow: plan file → contract sheet → implement → fix map-first. Carries the hard
+  gate (no project-file creation or edits until `maxio-plan.md` exists), the `maxio-plan.md` format, and the
+  three-label rule for sheet rows.
 - **maxio-getting-started** — SDK-specific entry point: identity, client construction, servers/auth, the
   SDK map, lookup hygiene ("keep lookups cheap"), and the contract-sheet workflow.
 - Seven `dotnet-*` companions (`dotnet-client-initialization`, `dotnet-authentication`,
@@ -90,20 +91,42 @@ map stamp).
 
 ### paypal-sdk
 
-PayPal **.NET SDK** plugin — no MCP server, Claude Code + Cursor + Codex, C#/.NET only. Bundled SDK map
-(`skills/paypal-getting-started/sdk-map.md` + `map/`) over
+PayPal **.NET SDK** plugin — no MCP server, Claude Code + Cursor + Codex + VS Code, C#/.NET only,
+skills-only. Bundled SDK map (`skills/paypal-getting-started/sdk-map.md` + `map/`) over
 `github.com/asadali214/checkout-sample-sdk` at tag `v1.0.1` (40 operations, 5 controllers), plus the
-`integrate-paypal` router and a single `paypal-sdk` agent. The SDK is on nuget.org as
+`integrate-paypal` workflow skill (plan file → contract sheet → implement → fix map-first) and the seven
+`dotnet-*` companions; `paypal-getting-started` owns the map. The SDK is on nuget.org as
 `AsadAli.Checkout.Sdk`; the clone is a read-only reference, never a build dependency.
 
 (Do not install alongside `acp-paypal` — the `integrate-paypal` skill name collides.)
 
 ### twilio-sdk
 
-Twilio **.NET SDK** plugin with the same single-agent shape, over
-`github.com/context-plugins/twilio-csharp-sdk`. Ships Claude Code, Cursor and Codex manifests; the Codex
-carrier is `codex/agents/twilio-sdk.toml`. Regenerate it with `python tools/sync-codex-carrier.py`
-rather than editing it by hand; CI fails the PR if the two drift.
+Twilio **.NET SDK** plugin with the same skills-only shape, over
+`github.com/context-plugins/twilio-csharp-sdk`: `integrate-twilio` is the workflow skill (plan file →
+contract sheet → implement → fix map-first), `twilio-getting-started` owns the map, and the seven
+`dotnet-*` companions layer usage guidance on it. Ships Claude Code, Cursor, Codex and VS Code manifests.
+
+### Why the SDK plugins have no agent file
+
+Until 2026-08-28 each SDK plugin shipped one `<p>-sdk` agent that did the planning and the fixing, and
+`integrate-<p>` was a router that spawned it. The agent was the one artifact with a different carrier on
+every harness — Markdown with frontmatter for Claude Code and Cursor, a duplicated TOML body for Codex,
+nothing at all for VS Code because its `tools:` vocabulary was unverified — and it was the source of every
+silent-load failure recorded in
+`docs/cross-platform-agents.md`: a stale Codex copy, an untrusted-project `.codex/` layer that loads
+nothing, a `tools:` list that would have given the agent the wrong capabilities without a word. Skills load identically
+on all four harnesses. So the agent went, and its content moved — verbatim wherever the referent did not
+change — into `integrate-<p>`.
+
+What survives unchanged is the plan-first gate. It used to be a subagent boundary; it is a file gate now —
+`<p>-plan.md` must exist at the project root, every section filled, before any project file is created or
+edited. What is lost is the context boundary: the planner ran in its own context, so SDK facts could not
+leak from the main agent's memory into the sheet. Without it, the three-label rule is what catches that
+leakage — every contract-sheet row cites a map page, or is `UNVERIFIED`, or is `YOUR CALL — not in the
+map`. A row carrying none of the three is a fact from memory, and exposing that is what the labels are for.
+
+If a portable agent format emerges, the agent can come back — its content is all still in `integrate-<p>`.
 
 ## The `dotnet-*` companion skills are shared, but not uniform
 
@@ -125,9 +148,9 @@ boundary ladder on `ex.Error.StatusCode`, which is right there (858 of 887 opera
 unavailable on paypal (39 of 40 are Case A, carrying no status at all). A maxio copy would describe a
 pre-4.0.0 runtime entirely.
 
-Each plugin's getting-started skill now states this, and each agent's REQUIRED READING block is required
-to write skill names **plugin-qualified** (`paypal-sdk:dotnet-error-handling`) — or, where the harness has
-no qualified form, to name the owning plugin in the same line.
+Each plugin's getting-started skill now states this, and each `integrate-*` skill's plan format requires
+the REQUIRED READING block to write skill names **plugin-qualified** (`paypal-sdk:dotnet-error-handling`)
+— or, where the harness has no qualified form, to name the owning plugin in the same line.
 
 ### The claims are executable — run them before you trust them
 
@@ -156,35 +179,42 @@ MCP-backed plugins carry one manifest per IDE, and each manifest points at its o
 - Cursor: `.cursor-plugin/plugin.json` → `.cursor-mcp.json` (header `Cursor`)
 - VS Code: root `plugin.json` (Copilot format) → `.mcp.json` (header `VSCode`)
 
-(The three SDK plugins are the exception: they have no MCP server, so their manifests point at no MCP config.
-all three of `maxio-sdk`, `twilio-sdk` and `paypal-sdk` ship Claude Code, Cursor and Codex manifests. None of the three ships a VS Code manifest — see below; that is now
-a decision rather than an omission.)
+(The three SDK plugins are the exception: they have no MCP server, so their manifests point at no MCP
+config. All three of `maxio-sdk`, `paypal-sdk` and `twilio-sdk` ship Claude Code, Cursor, Codex
+(`.codex-plugin/plugin.json`) and VS Code manifests — four manifests over one `skills/` directory. Their
+VS Code manifest is the Agent Plugins 1.0 form, not the Copilot format; see below.)
 
-### VS Code: a deliberate no, for one specific reason
+### VS Code
 
-An earlier plan asserted that the root `plugin.json` "cannot carry agents", which is **false**. Agent
-Plugins 1.0 ships custom agents from a client-extension namespace — `com.github.copilot/agents/*.agent.md`
-— alongside the portable `skills/` folder, and VS Code, Copilot CLI and the Copilot app all load them.
-Capability is not the blocker.
+The SDK plugins ship a root `plugin.json` in Agent Plugins 1.0 form. The reason they held back is gone: it
+was the `tools:` frontmatter of the `.agent.md` — a VS Code-specific vocabulary (`search/codebase`,
+`web/fetch`, `read/terminalLastCommand`, `edit`, …) the published docs do not enumerate, so a guessed list
+would have handed the agent the wrong capabilities silently — and there is no agent file any more. Skills
+declare no tools.
 
-The blocker is the `tools:` frontmatter. A `.agent.md` declares its tools from a VS Code-specific
-vocabulary (`search/codebase`, `web/fetch`, `read/terminalLastCommand`, `edit`, …) that the published docs
-do not enumerate. These agents need a terminal (`dotnet build`, the lazy `git clone`) and file writes; a
-guessed `tools:` list would hand the agent the wrong capabilities **silently**, which is the failure mode
-this repo keeps paying for. So the SDK plugins do not target VS Code until that vocabulary is verified
-against a running instance — specifically the ids for running a shell command, creating a file, and
-editing a file.
+The schema (https://agent-plugins.org/schemas/1.0.0/plugin.schema.json, JSON Schema 2020-12; VS Code's
+loading rules at https://code.visualstudio.com/docs/agent-customization/agent-plugins) is **closed** —
+`additionalProperties: false` — and requires exactly two fields: `$schema`, a `const` of that URL, and
+`name` (1–64 chars, `^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$`). The only other fields it
+allows are `version`, `description`, `author` (a closed object of `name`/`email`/`url`), `homepage`,
+`repository`, `license` (all strings), `keywords` (array of strings) and `extensions` (objects keyed by
+reverse-domain namespace, to which the spec assigns no semantics). There is **no `skills` field and no
+`agents` field**. Skills are discovered by convention: each immediate child directory of `skills/` holding
+a file named exactly `SKILL.md` is one skill, and clients must not search deeper. MCP configuration, where
+a plugin has any, lives in a sibling `mcp.json` in the 1.0 `mcp.schema.json` form — never inline in
+`plugin.json`.
 
-Note also that the two VS Code manifests that do exist (`context-matic`, `acp-paypal`) predate Agent
-Plugins 1.0: they omit the required `$schema` and use `skills`, `mcpServers`, `logo` and `displayName` as
-top-level fields, none of which are in the 1.0 closed schema. Unknown top-level fields are *ignored*, not
-rejected, so those plugins are not invalid — but their skills and MCP servers are discovered by
-convention (`skills/`, `mcp.json`) rather than by those keys, and ours ship `.mcp.json`. Worth a
-conformance pass; out of scope here.
+Our three manifests carry `$schema`, `name`, `version`, `description`, `author`, `homepage`, `repository`,
+`license` and `keywords`, and nothing else; the values mirror `.claude-plugin/plugin.json`. Do not add
+`skills`, `displayName` or `logo` to them — none is in the schema, a manifest that carries `$schema` is
+checked against it, and the spec's rule for an unknown field is report-and-ignore at best, so the field
+would do nothing while looking as if it did.
 
-Codex is carried differently from the others: the agent body cannot live in a Markdown file with
-frontmatter, so it is duplicated into `codex/agents/<agent>.toml` under `developer_instructions`. That
-duplication used to be hand-maintained, and drift was silent — Codex would run a different brief from
-Claude Code and Cursor with nothing to say so. Edit the `.md`, then run
-`python tools/sync-codex-carrier.py` to regenerate the `.toml`, and commit both together. The
-`codex-carrier-sync` workflow runs `--check` on any PR touching either.
+Note also that the two VS Code manifests that predate 1.0 (`context-matic`, `acp-paypal`) omit `$schema`.
+VS Code and Copilot CLI detect a root `plugin.json` without `$schema` as the older Copilot format, and in
+that format `skills` and `mcpServers` are documented component-path fields that are honoured — so those
+plugins load, and their skills and MCP servers are found through those keys (an earlier version of this
+note said discovery fell back to convention; it does not, in that format). `logo` and `displayName` are
+unknown in both formats and do nothing. Opting them into 1.0 means adding `$schema`, dropping the four
+non-schema fields, and renaming `.mcp.json` to `mcp.json` in the 1.0 form, since 1.0 discovers MCP config
+by that filename only. Worth a conformance pass; out of scope here.

@@ -23,8 +23,7 @@ description: Working with models in an APIMatic-generated .NET SDK in C# — bui
 
 Most request/response data are immutable `record`s built with object-initializers (covered in
 `dotnet-calling-endpoints`). This skill covers the **non-obvious model shapes** that trip integrations up.
-The patterns are generic across APIMatic .NET SDKs; take the real type names from the contract sheet (the
-SDK helper agent grounds it from the SDK map/source) — never a decompiled or reflected view of the
+The patterns are generic across APIMatic .NET SDKs; take the real type names from the contract sheet (grounded from the SDK map/source) — never a decompiled or reflected view of the
 installed package.
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{Union}`,
@@ -99,7 +98,7 @@ So a `decimal` variant is `TryGetBigDecimal`, never `TryGetDecimal`; three varia
 depending on which the definition declared — two members, one CLR type, and the C# signature cannot tell
 them apart. Where two variants would collide outright the generator suffixes them (`String`, `String2`).
 The primitive rows apply to `AnyOf` only, since a `OneOf` has no primitive variants. **Take the exact member
-name from the contract sheet** (the SDK helper agent grounds it from the SDK map/source) rather than deriving it from
+name from the contract sheet** (grounded from the SDK map/source) rather than deriving it from
 the C# type you see. (Unions use the per-variant factories and `TryGet…` readers shown above; `FromValue`
 belongs to enums.) The `Optional<T>` backing a union is internal — interact only through the factories and
 `TryGet…`.

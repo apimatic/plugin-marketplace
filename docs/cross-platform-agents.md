@@ -1,3 +1,18 @@
+NOTE (2026-08-28)
+─────────────────
+The three SDK plugins (maxio-sdk, paypal-sdk, twilio-sdk) no longer ship agent files. They moved
+to skills-only on 2026-08-28 because the agent was the one artifact with a different carrier per
+harness — .md with frontmatter for Claude Code and Cursor, a TOML developer_instructions copy for
+Codex, nothing for VS Code — and it was the source of every silent-load failure recorded below.
+Their integrate-* skills now carry the workflow. With the agents went codex/agents/<name>.toml,
+tools/sync-codex-carrier.py and the codex-carrier-sync workflow: every mention of "the carriers"
+or "the maxio carrier" below is history, kept because the failure modes it records are still real
+for anyone who ships a Codex agent. The VS Code tools: blocker in CLAIMS CHECKED AND REJECTED
+item 0 no longer applies to the SDK plugins, which now ship a root plugin.json in Agent Plugins
+1.0 form (see CLAUDE.md, "VS Code").
+
+This document still applies to acp-paypal, whose paypal-plan and paypal-debug agents are unchanged.
+
 CREATING AN AGENT FILE
 ──────────────────────
 Minimum required fields: name + description

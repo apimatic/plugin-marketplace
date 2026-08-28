@@ -230,7 +230,7 @@ Assert.Contains("\"expected_field\"", sentJson);
   var client = services.BuildServiceProvider().GetRequiredService<{Api}Client>();
   ```
 - To look up an operation's signature, its request type, or a `{Operation}Error`'s accessor names, take them
-  from the contract sheet (the SDK helper agent grounds it from the SDK map/source) — not a decompiled or
+  from the contract sheet (grounded from the SDK map/source) — not a decompiled or
   reflected view of the installed package, and not memory.
 - Prefer this `HttpClient`-seam approach over wrapping the SDK in your own interface unless you need to
   abstract the SDK for other reasons.

@@ -5,9 +5,10 @@ A plugin for **Claude Code, Cursor and Codex** that helps developers **install a
 [asadali214/checkout-sample-sdk](https://github.com/asadali214/checkout-sample-sdk)),
 plus reusable guidance for working with **any APIMatic-generated .NET SDK**.
 
-The **SDK map is bundled with the plugin**, and a single `paypal-sdk` agent grounds every fact in it —
-cloning the SDK source only when the map can't settle a fact. Structure adopted from the
-`maxio-sdk` plugin (an `integrate-paypal` router plus one `paypal-sdk` agent).
+The **SDK map is bundled with the plugin**, and the `integrate-paypal` workflow skill grounds every fact
+in it — cloning the SDK source only when the map can't settle a fact. Structure shared with the
+`maxio-sdk` plugin (an `integrate-paypal` workflow skill over the `paypal-getting-started` map skill,
+plus seven `dotnet-*` companions).
 
 ## The SDK map (bundled; source cloned only on a gap)
 
@@ -22,11 +23,11 @@ plus `map/` branch pages):
   `TryGet…` — the page is present, but this SDK declares none), and full enum value lists.
 
 `sdk-map.md` records the source commit it was generated from (the map is generated from the SDK
-source, which remains the ground truth; the SDK repo and the map regenerate together). The agent
-**navigates by map lookup instead of grepping**: it answers most questions from the map directly —
+source, which remains the ground truth; the SDK repo and the map regenerate together). The skills
+**navigate by map lookup instead of grepping**: most questions are answered from the map directly —
 field lists with JSON wire names, error accessors, enum values — and only when the map can't settle
-a fact does it clone the SDK source (tag `v1.0.1`, the ref the map was generated from) and open the
-one file the map names. Grepping / globbing / `find`-ing the tree to locate something is a defect —
+a fact is the SDK source cloned (tag `v1.0.1`, the ref the map was generated from) and the one file
+the map names opened. Grepping / globbing / `find`-ing the tree to locate something is a defect —
 the map is the locator.
 
 ## Two layers
@@ -52,14 +53,14 @@ it for lookup before touching the SDK source.
 
 ## Skills
 
-- **integrate-paypal** — orchestrator/router. Routes every PayPal .NET SDK task — planning, contract
-  questions, and SDK errors — to the single `paypal-sdk` agent, and drives the implement-and-verify
-  loop. Grounds every fact in the contract sheet the agent produces — never model knowledge, and never
-  the map directly.
+- **integrate-paypal** — the workflow skill. Plans first: writes a map-grounded contract sheet
+  (`paypal-plan.md`) before any code, loads the `dotnet-*` skills the sheet names, implements from the
+  sheet, and fixes SDK compile/build errors map-first. Grounds every fact in the bundled SDK map — never
+  model knowledge.
 - **paypal-getting-started** — install (`dotnet add package AsadAli.Checkout.Sdk` — the SDK *is* published
   to nuget.org), the `Sandbox` environment (the only one this sample SDK declares), OAuth2
   client-credentials auth, the bundled SDK map, and how to clone the SDK source only on a map gap. The
-  helper-facing entry point.
+  map layer `integrate-paypal` grounds in.
 - **dotnet-client-initialization** — construct `{Api}Client` + `{Api}ClientOptions`, supply an `HttpClient`,
   pick a server environment, register in DI.
 - **dotnet-authentication** — wire up Basic / Bearer / API-key / OAuth2 / composite auth.
@@ -71,13 +72,6 @@ it for lookup before touching the SDK source.
 - **dotnet-configuration-resilience** — retries, timeouts, pagination, logging.
 - **dotnet-testing** — unit-test SDK calls by injecting a fake `HttpClient` / `HttpMessageHandler`.
 
-## Agents
-
-- **paypal-sdk** — the single SDK agent. Grounds every contract in the bundled map (cloning the SDK
-  source only when the map can't settle a fact), writes a contract-grounded `paypal-plan.md` before any
-  code is written, answers narrow contract questions, and fixes SDK compile/build errors in place —
-  building to verify. No MCP.
-
 ## Install
 
 Claude Code:
@@ -87,10 +81,9 @@ Claude Code:
 /plugin install paypal-sdk@apimatic
 ```
 
-Cursor loads the same plugin from `.cursor-plugin/plugin.json`, and Codex from `.codex-plugin/plugin.json`
-plus the `codex/agents/paypal-sdk.toml` carrier — regenerate that with
-`python tools/sync-codex-carrier.py`, never by hand. There is no VS Code manifest; see CLAUDE.md for why
-that is a decision rather than an omission.
+Cursor loads the same plugin from `.cursor-plugin/plugin.json`, Codex from `.codex-plugin/plugin.json`, and
+VS Code from the root `plugin.json` (Agent Plugins 1.0 form; skills are discovered from `skills/` by
+convention). All four manifests point at the same `skills/` directory.
 
 Then ask a usage question (e.g. *"how do I create and capture a PayPal order in C#?"*) to trigger the
 relevant skill.

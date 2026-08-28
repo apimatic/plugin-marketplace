@@ -71,8 +71,7 @@ int n = {EnumType}.On;   // implicit conversion to int
 
 ## Union types — finding the exact members
 
-For a `OneOf`/`AnyOf` type, the contract sheet lists the exact members (the SDK helper agent grounds
-them from the SDK map/source). Each variant `{V}`
+For a `OneOf`/`AnyOf` type, the contract sheet lists the exact members (grounded from the SDK map/source). Each variant `{V}`
 produces:
 
 - a factory `static {Union} {V}({V} value)` (the parameter type usually equals the variant type name), and

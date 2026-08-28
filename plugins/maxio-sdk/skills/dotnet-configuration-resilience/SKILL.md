@@ -47,7 +47,7 @@ options.Server.{ServerName}.{Environment}.BaseUrl = "https://my-host.example.com
 ```
 
 The real server names, per-environment options, and template parameters come from the contract sheet
-(the SDK helper agent grounds them from the SDK map/source). See **dotnet-client-initialization** for selecting the environment.
+(grounded from the SDK map/source). See **dotnet-client-initialization** for selecting the environment.
 
 **`Environment` and `Server` are not read at the same time, which makes one of them look inert.** The client
 captures `options.Environment` **once, when it is constructed**, but keeps a live reference to the

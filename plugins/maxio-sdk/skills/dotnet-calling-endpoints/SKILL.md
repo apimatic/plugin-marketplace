@@ -22,7 +22,7 @@ description: Calling operations on an APIMatic-generated .NET SDK in C# — find
 Operations are **async methods** on the client. Most are **grouped under a controller property** and called
 `client.{ApiGroup}.{Operation}(...)`; an operation that belongs to no group sits **directly on the
 client**, called `client.{Operation}(...)`. The controller property, the exact operation name, and its
-signature come from the contract sheet (the SDK helper agent grounds it from the SDK map/source) — operation
+signature come from the contract sheet (grounded from the SDK map/source) — operation
 names follow no fixed verb/resource pattern, so take the real name from the sheet, never from memory.
 
 > Throughout this skill, `{...}` is a placeholder for a name you take from your SDK (e.g. `{ApiGroup}`,
@@ -48,8 +48,7 @@ public Task<{ReturnType}> {Operation}(
 - **The contract sheet is the source of truth for the signature.** Whether a parameter is nullable,
   required, or defaulted — and whether the operation takes a body — varies per operation. Path params are
   typically non-nullable primitives listed first; query and body params may be required or optional. Take
-  each operation's exact signature from the contract sheet (the SDK helper agent grounds it from the SDK
-  map/source), not from memory.
+  each operation's exact signature from the contract sheet (grounded from the SDK map/source), not from memory.
 - **Return type** varies by operation — see [Reading the response](#making-the-call-and-reading-the-response).
 - Methods are **async-only** (no sync overloads) and **throw `SdkException<TError>`** on API errors — see
   `dotnet-error-handling`.
@@ -84,8 +83,7 @@ var response = await client.{ApiGroup}.{Operation}(
 
 Request bodies are immutable `record`s built with object-initializer syntax (no builders). `required`
 members must be set; optional ones are nullable and are omitted from the JSON when left null. The request
-type is the type of the operation's `body` parameter — take its exact name from the contract sheet (the
-SDK helper agent grounds it from the SDK map/source):
+type is the type of the operation's `body` parameter — take its exact name from the contract sheet (grounded from the SDK map/source):
 
 ```csharp
 var body = new {RequestType}
@@ -141,8 +139,7 @@ var response = await client.{ApiGroup}.{Operation}(pathArg, queryArg: null, body
 > which `TError` to catch per operation — or use the non-throwing `{Operation}Result` variant (below).
 
 **Each operation's return type varies** — the shape, and even the type's name, differ by operation. The
-contract sheet's response-envelope column names the return type and the inner fields to read (the SDK helper
-agent grounds it from the SDK map/source); handle it accordingly. The cases you'll meet:
+contract sheet's response-envelope column names the return type and the inner fields to read (grounded from the SDK map/source); handle it accordingly. The cases you'll meet:
 
 - **An object that nests the resource** under a property (a record whose member holds the inner resource).
   Unwrap that member:

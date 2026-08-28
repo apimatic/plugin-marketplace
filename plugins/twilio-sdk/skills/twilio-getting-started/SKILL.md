@@ -1,16 +1,15 @@
 ---
 name: twilio-getting-started
-description: Twilio .NET SDK identity and lookup layer for the twilio-sdk helper agent (.NET/C# only) — install, root namespace, environments, auth pattern, and the bundled SDK map of every operation signature, model, enum, union and error type. The helper agent loads this to answer contract questions; other agents work from the contract sheet it produces.
+description: Twilio .NET SDK identity and lookup layer (.NET/C# only) you load directly — install, root namespace, environments, auth pattern, and the bundled SDK map of every operation signature, model, enum, union and error type. Load it for every contract fact; integrate-twilio is the workflow that uses it.
 ---
 
 # Getting started with the Twilio .NET SDK
 
-> **Who this skill is for.** This is the **map layer**, preloaded for the `twilio-sdk` helper
-> agent — if you are it, this skill is yours to follow directly and fully. It is the only place
-> the bundled SDK map is opened, and the map stays here: an implementer works from the contract
-> sheet this agent produces, and asks the warm agent for any fact the sheet is missing. The
-> "load the companion skill" steps below address whoever is doing the grounding. This skill
-> never calls back into the router, so there is no loop.
+> **Who this skill is for.** This is the **map layer**: load it to ground every Twilio SDK
+> fact. `integrate-twilio` is the workflow that drives it — you collect the contracts for the work
+> in scope into `twilio-plan.md`, implement from that sheet, and come back to the one map page a
+> row cites for any fact the sheet is missing. Every contract fact comes from here, never from
+> memory.
 
 This is the **SDK-specific** entry point. For general patterns that apply to any APIMatic-generated
 .NET SDK (auth, calling endpoints, models, error handling, retries, testing), see the companion
@@ -52,7 +51,9 @@ confirm names against the map.
 
 The table above is **orientation, not a copy-paste recipe** — it gives you the names and facts (install,
 namespaces, the auth *pattern*, the environments), while the actual integration code comes from the companion
-skills. Load each one as you reach its step (see **Integration workflow** below) and confirm its types
+skills. Load every one the contract sheet's REQUIRED READING names before you start implementing
+(`integrate-twilio` makes that binding); the **Integration workflow** below says which governs which
+step. Confirm each one's types
 against the SDK map: the client construction and DI from `dotnet-client-initialization`, the exact
 auth-credentials property name from `dotnet-authentication`, each call from `dotnet-calling-endpoints`, and so
 on.
@@ -107,8 +108,8 @@ whose entire surface is already indexed here. Instead:
 Keep lookups cheap — the rules that keep a session's context small:
 
 - Collect the contracts for **every** in-scope operation in **one** map pass — signature, required fields
-  with wire names, error accessors, enum values — into a short **contract sheet** in your plan or working
-  notes, then implement from the sheet. Don't re-open the map per field, and never re-look-up a fact the
+  with wire names, error accessors, enum values — into the **contract sheet** in `twilio-plan.md`, then
+  implement from the sheet. Don't re-open the map per field, and never re-look-up a fact the
   sheet already carries.
 - When you do open a source file, read it **scoped**: the Read tool with an offset/limit, or the Grep tool
   on the one symbol — never dump a whole file into the conversation with `cat`/`sed`.
@@ -126,7 +127,7 @@ integrations never open it. Clone only when the map has actually failed you: a m
 compile, ambiguity remains after the map lookup, or you need a full method/model body the map doesn't
 carry. (You clone only on a real map-side issue — never "just in case".) The clone lives in the **system
 temp directory** (`<temp>/twilio-sdk-src/`), never in the project
-repo, so the clone stays invisible to the main agent — navigated via the SDK map above, a read-only
+repo — navigated via the SDK map above, a read-only
 reference, **not** a build dependency (never add a project reference to *this* clone; the build takes the
 SDK from the NuGet package in the *Install* section).
 
@@ -149,7 +150,7 @@ git clone --depth 1 --branch main https://github.com/context-plugins/twilio-csha
 ```
 
 The clone lives in `<temp>/twilio-sdk-src/`, **never** in the project repo, and its path never goes into
-`twilio-plan.md` — the main agent must never see the clone or its path.
+`twilio-plan.md` — the plan must stay portable.
 
 Then confirm the SDK shape **only** from that local clone — not by either of these:
 
@@ -267,7 +268,8 @@ The drift is not cosmetic, and it is not safe to shrug at:
 
 ## Integration workflow — load the companion skill at each step
 
-Before you write the code for each step, load the named companion skill — even if you've already read the
+You loaded every companion the sheet named before starting (per `integrate-twilio`); before you write the
+code for each step, re-read the one that governs it — even if you've already read the
 relevant source. Each step calls out the trap the signature hides (in *parens*). A typical integration reaches
 them in this order:
 

@@ -84,7 +84,7 @@ the concrete type is already known, so no runtime discovery is needed. Catch the
 
 ### Which `TError` does an endpoint throw?
 
-Answer this from the contract sheet (the SDK helper agent grounds it from the SDK map/source): the
+Answer this from the contract sheet (grounded from the SDK map/source): the
 operation's row names the error case (typed `{Operation}Error` vs `RawError`) and, for Case A, lists the
 exact `TryGet…` accessors with the HTTP status each maps to — no need to grep a clone or open the error
 class at all.
@@ -103,8 +103,7 @@ placeholder, **not** the type you catch). The type named after **`of <see cref="
 - `… of <see cref="{Operation}Error"/> …` → catch `SdkException<{Operation}Error>` (Case A).
 - `… of <see cref="RawError"/> …` → catch `SdkException<RawError>` (Case B).
 
-Equivalently, when grounding from the SDK source (whoever holds it — in this plugin's flow the
-SDK helper agent): a
+Equivalently, when grounding from the SDK source (the clone the getting-started skill describes): a
 `{Operation}Error` type exists under `Errors/` **only** for Case-A operations; if there is no
 `{Operation}Error`, the operation throws `SdkException<RawError>`. Guessing wrong is only *sometimes* a compile-time error, and the direction that looks safe is the
 dangerous one. `SdkException<ListWidgetsError>` fails to compile when no such type exists — that guess the
