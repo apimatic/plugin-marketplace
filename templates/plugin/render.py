@@ -78,6 +78,21 @@ def main():
             else:
                 io.open(out_path, "w", encoding="utf-8", newline="\n").write(text)
                 print("wrote %s" % out_pat.format(api=api))
+
+    # The blueprint tree carries its own copies of the seven static dotnet-* skills; a third
+    # copy is a third chance to drift, so --check also proves them byte-identical to shipped.
+    if args.check:
+        import glob as _glob
+        tdir = os.path.join(os.path.dirname(HERE), "plugin-template", "skills")
+        for src in sorted(_glob.glob(os.path.join(tdir, "dotnet-*", "*"))):
+            rel = os.path.relpath(src, tdir).replace(os.sep, "/")
+            shipped = os.path.join(ROOT, "plugins", "paypal-sdk", "skills", rel)
+            if rd(shipped) != rd(src):
+                failed += 1
+                print("DRIFT templates/plugin-template/skills/%s != shipped static — re-copy from "
+                      "plugins/paypal-sdk/skills/ (or fix shipped first)" % rel)
+        if not failed:
+            print("ok    plugin-template statics == shipped statics")
     return 1 if failed else 0
 
 

@@ -55,9 +55,9 @@ map-grounding rules in the frame are what keep authored values honest.
 - **maxio-sdk is not a rendering target.** Its SDK is the pre-4.0.0 generator surface, and these
   frames state 4.0.0 facts (RequestOptions, LoggingOptions, the retry predicate). A pre-4.0.0
   frame would be a separate extraction.
-- **The map location will move.** These frames still describe the bundled map
-  (`skills/{api}-getting-started/sdk-map.md` + `map/`), because today's SDK repos carry no map.
-  The decision of record is that FUTURE generator-emitted SDKs carry the map in the SDK source
-  repo — when that lands, the getting-started frame's *SDK map* / *SDK source* sections invert
-  (obtain the SDK source at the pinned ref first; the map lives inside it) and the clone stops
-  being lazy. That is a frame change, marked here so it is not discovered mid-generation.
+- **These frames describe the bundled-map era** — today's shipped plugins, whose SDK repos
+  carry no map. The generator's blueprint for FUTURE SDKs, where the map lives inside the SDK
+  source repo, is `templates/plugin-template/` — same slot vocabulary plus
+  `{{map.pathInSdkRepo}}`, with the *SDK map* / *SDK source* sections already inverted (obtain
+  the source first; the map is inside it). Frame improvements made here should be considered
+  for the blueprint too, and vice versa.
