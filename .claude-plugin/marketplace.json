@@ -30,6 +30,11 @@
       "name": "twilio-sdk",
       "source": "./plugins/twilio-sdk",
       "description": "Install and consume the Twilio .NET SDK, grounded in a bundled SDK map. A single twilio-sdk agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-twilio router + the twilio-sdk agent. No MCP server."
+    },
+    {
+      "name": "visa-sdk",
+      "source": "./plugins/visa-sdk",
+      "description": "Install and consume the Visa/CyberSource Merged Spec .NET SDK, grounded in a bundled SDK map. A single visa-sdk agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-visa router + the visa-sdk agent. No MCP server. NOTE: this SDK declares no security scheme, so its dotnet-authentication skill is SDK-specific (an opt-in HTTP Signature hook) and must not be copied into another APIMatic .NET plugin."
     }
   ]
 }
