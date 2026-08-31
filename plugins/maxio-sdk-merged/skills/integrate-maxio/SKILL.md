@@ -1,6 +1,6 @@
 ---
 name: integrate-maxio
-description: Entry point for Maxio Advanced Billing (formerly Chargify) .NET SDK work in a C#/.NET project. Load this first when asked to integrate Maxio billing — subscriptions, customers, usage, invoices, plan changes — or when a Maxio SDK call errors or behaves unexpectedly. Defines the delegation contract, the agent reuse rules, and which companion skills are required reading before you write code.
+description: MANDATORY FIRST STEP for Maxio Advanced Billing (formerly Chargify) .NET SDK work in a C#/.NET project — load this BEFORE spawning the maxio-sdk agent, not after; .NET/C# SDK ONLY, never load it for any other language. Applies when asked to integrate Maxio billing in C# — subscriptions, customers, usage, invoices, plan changes, components, coupons — or when a Maxio SDK call errors or behaves unexpectedly. Knowing to delegate to the maxio-sdk agent is NOT a substitute for loading this, because it carries five binding gates stated NOWHERE else and not inferable from the agent description — (1) the exact plan-file path you must dictate to the agent, (2) the no-project-file-edits window while the agent runs, (3) the hard gate that the plan file exists and has been read before any code, (4) the mandatory load of every dotnet-* companion skill the contract sheet names, and (5) the map boundary, where the SDK map and maxio-getting-started are the agent's to open and never yours.
 ---
 
 # Maxio Advanced Billing .NET SDK — Router (map + one agent)
@@ -133,7 +133,14 @@ place, and its edits collide with yours. This holds for an agent you spawned AND
 resumed via a follow-up message (a resumed or backgrounded agent is still running). The one
 thing you may do during a wait is the **read-only** Step-1 prerequisite work (repo survey,
 restore, baseline build, env checks) — it touches no project file. When those are done and the
-agent is still running, wait.
+agent is still running, end your turn with a brief status update rather than sitting inside the
+turn: a subagent's completion notification can only reach you at a turn boundary, so ending the
+turn is how you actually receive it.
+
+Ending the turn here is not handing back to the user, not deferring work, and not the kind of
+early stop that leaves the task unfinished — it is the mechanism for making progress on work
+that is genuinely running in the background. Treat it as continuing the task, not pausing it:
+the moment the notification arrives, pick the plan straight back up.
 
 ## Anti-patterns — never do these
 
