@@ -48,10 +48,14 @@ do not let it pick its own location.
 
 It writes `twilio-plan.md` (plan + contract sheet) and returns its path.
 
-**Parallelize the wait — prerequisites only.** Repo reconnaissance (where the integration
-lands in this codebase) is not the `twilio-sdk` agent's job: kick it off in the SAME message
-as the spawn (parallel tool calls; background spawns if your harness has them). While the
-agent works, do ONLY work that needs no SDK knowledge and touches no project file:
+**Spawn it and wait for it to return.** Let the spawn call complete and hand you the contract
+sheet. Do not background the spawn, and do not bundle other work into the same message to
+avoid waiting: a backgrounded spawn hands you nothing back, and you have no supported way to
+collect the sheet afterwards.
+
+**Then, before your first line of integration code, do the prerequisites.** Repo
+reconnaissance (where the integration lands in this codebase) is not the `twilio-sdk` agent's
+job. This work needs no SDK knowledge and touches no project file:
 
 - the repo survey (read-only exploration of conventions and layering) — brief it to return
   each convention as *pattern + the ONE exemplar file path to imitate*, NOT inline code
@@ -63,7 +67,7 @@ agent works, do ONLY work that needs no SDK knowledge and touches no project fil
 - credentials/environment verification (per the task's secret-handling rules);
 - setting up your task tracking.
 
-Never sit idle while one of these read-only prerequisites is still undone. Equally, never use
+Never begin implementation with one of these prerequisites still undone. Equally, never use
 the wait to get a "head start" on implementation: **creating or editing ANY project file
 before the gate below is a defect**, no matter how obvious the code seems — the agent edits
 files in place, so your writes race its writes. This applies while it is running whether you
