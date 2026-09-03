@@ -1,0 +1,17 @@
+{
+  "name": "paypal-platforms-team",
+  "displayName": "Paypal Platforms Team",
+  "version": "0.2.0",
+  "description": "Integrate and consume the APIMatic-generated Paypal SDK — bundled skills for C#/.NET, Python.",
+  "author": {
+    "name": "APIMatic",
+    "email": "developer@apimatic.io"
+  },
+  "license": "MIT",
+  "homepage": "https://context.apimatic.io/",
+  "repository": "https://github.com/apimatic/plugin-marketplace",
+  "skills": [
+    "./skills/dotnet",
+    "./skills/python"
+  ]
+}
