@@ -30,6 +30,21 @@
       "name": "twilio-sdk",
       "source": "./plugins/twilio-sdk",
       "description": "Install and consume the Twilio .NET SDK, grounded in a bundled SDK map. A single twilio-sdk agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-twilio router + the twilio-sdk agent. No MCP server."
+    },
+    {
+      "name": "paypal-platforms-team",
+      "source": "./plugins/paypal-platforms-team",
+      "description": "Install and consume the PayPal .NET SDK, grounded in a bundled SDK map. A single paypal-platforms-team agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-paypal router + the paypal-platforms-team agent. No MCP server. (Do not install alongside acp-paypal or paypal-sdk — the integrate-paypal skill name collides.)"
+    },
+    {
+      "name": "maxio-platforms-team",
+      "source": "./plugins/maxio-platforms-team",
+      "description": "Install and consume the Maxio Advanced Billing .NET SDK, grounded in a bundled SDK map. A single maxio-platforms-team agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-maxio router + the maxio-platforms-team agent. No MCP server. (Do not install alongside maxio-sdk — the integrate-maxio skill name collides.)"
+    },
+    {
+      "name": "twilio-platforms-team",
+      "source": "./plugins/twilio-platforms-team",
+      "description": "Install and consume the Twilio .NET SDK, grounded in a bundled SDK map. A single twilio-platforms-team agent plans a map-grounded contract sheet, answers narrow contract questions, and fixes SDK compile/build errors in place — cloning the SDK source only when the map cannot settle a fact. Includes the integrate-twilio router + the twilio-platforms-team agent. No MCP server. (Do not install alongside twilio-sdk — the integrate-twilio skill name collides.)"
     }
   ]
 }
