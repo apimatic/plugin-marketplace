@@ -38,7 +38,7 @@ confirm names against the map.
 | | |
 | --- | --- |
 | API | PayPal |
-| NuGet package | `AsadAli.Checkout.Sdk` (install version-less — see *Install* below) |
+| NuGet package | `AsadAli.Checkout.Sdk` **v1.0.1** (pin this exact version — see *Install* below) |
 | Source repo | https://github.com/asadali214/checkout-sample-sdk (tag `v1.0.1` — the release this map documents) |
 | Root namespace | `PayPalServerSdk` (the `using` namespace) |
 | Client class | `PayPalServerSdkClient` |
@@ -71,10 +71,11 @@ declaration at its top.
 This SDK is published to NuGet; install it into the project that will call PayPal:
 
 ```bash
-dotnet add package AsadAli.Checkout.Sdk
+dotnet add package AsadAli.Checkout.Sdk --version 1.0.1
 ```
 
-> Install **version-less** so it floats to the latest release — do not pin a version from memory.
+> Pin **`1.0.1`** exactly — the release this map documents. Do not install version-less and do
+> not take a version from memory.
 > The package pulls the SDK's runtime dependencies in transitively. There is **no SDK source in
 > your solution**: the only local copy that ever exists is the read-only **reference clone** the
 > *SDK source* section below describes, which lives in the system temp directory, is never
