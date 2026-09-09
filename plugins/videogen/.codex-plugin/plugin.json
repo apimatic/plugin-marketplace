@@ -1,0 +1,10 @@
+{
+  "name": "videogen",
+  "version": "0.1.0",
+  "description": "Integrate and consume the APIMatic-generated Videogen SDK — bundled skills for Python.",
+  "skills": "./skills",
+  "interface": {
+    "displayName": "Videogen",
+    "developerName": "APIMatic"
+  }
+}
