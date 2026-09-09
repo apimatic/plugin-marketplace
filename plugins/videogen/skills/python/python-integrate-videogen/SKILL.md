@@ -15,7 +15,7 @@ You do the SDK lookups yourself: `python-getting-started` is your **lookup layer
 - **Read scoped.** Those modules carry long design docstrings. `grep -n` for the symbol and read the surrounding lines rather than whole files, and never copy a docstring's design rationale onto a contract sheet — the sheet carries facts an implementer must obey, not the reasoning behind them.
 - **Write a contract sheet with no open lookups** before you implement: exact signatures, the keyword-only boundary, wire aliases, required-vs-`UNSET` members, the `ApiError.error` union per operation, and enum members for the operations in scope. `python-getting-started` ends with a checklist of the rows a Python sheet is incomplete without — treat that list as the checklist for your own sheet, and collect every in-scope operation in ONE pass rather than re-opening a module per member.
 
-**Scope guard:** the APIMatic-generated Videogen **Python SDK** (import root `videogen`, distribution `videogen`) in **Python projects only**. Unrelated API, or any language other than Python — do nothing; this skill does not apply.
+**Scope guard:** the APIMatic-generated Videogen **Python SDK** (import root `videogen`, distribution `videogen-apimatic`) in **Python projects only**. Unrelated API, or any language other than Python — do nothing; this skill does not apply.
 
 ## Workflow
 

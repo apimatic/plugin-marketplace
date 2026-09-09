@@ -18,8 +18,8 @@ Verified against `videogen/` and `pyproject.toml` of the generated package at ve
 | Fact | Value |
 | --- | --- |
 | API | Videogen |
-| Distribution name (what you install) | `videogen` |
-| Import root (what you import) | `videogen` — the same string you install |
+| Distribution name (what you install) | `videogen-apimatic` |
+| Import root (what you import) | `videogen` — **not** the string you install; see Install |
 | Source repository | https://github.com/sdks-io/vgen-python-sdk |
 | Source branch | *none recorded — the repository default* |
 | Version | `1.0.0` |
@@ -40,17 +40,23 @@ The table above is **orientation, not a copy-paste recipe** — it gives you the
 ## Install
 
 ```bash
-pip install videogen
+pip install videogen-apimatic
 python -c "import videogen, pathlib; print(pathlib.Path(videogen.__file__).parent)"
 ```
 
-**Run the second line too.** A distribution name is a claim on a shared index, not proof of identity: `videogen` may already be taken there by an unrelated project, and then `pip install` still reports success while the import fails or resolves to somebody else's package. If the probe raises `ModuleNotFoundError`, or prints a path whose contents are not this SDK, the index name is not this distribution — install it from its own repository instead, at <https://github.com/sdks-io/vgen-python-sdk>:
+**You install `videogen-apimatic` and import `videogen`.** The two strings differ deliberately: the bare name `videogen` on PyPI belongs to an unrelated project — VideoGen's own official SDK, which exports `VideoGen` / `AsyncVideoGen` rather than the `VideogenClient` / `AsyncVideogenClient` this page describes. `pip install videogen` reports success and gives you that other package, so the mistake surfaces later as an `ImportError` or a client whose methods do not match anything here.
+
+**Run the second line too.** It is the cheap proof you got this distribution: it must print a path ending in `videogen`, and `from videogen import VideogenClient` must succeed. If the probe raises `ModuleNotFoundError`, or the client class is not `VideogenClient`, you have the other package — uninstall it and install `videogen-apimatic`. Failing that, install from the SDK's own repository, at <https://github.com/sdks-io/vgen-python-sdk>:
 
 ```bash
-pip install "videogen @ git+https://github.com/sdks-io/vgen-python-sdk.git"
+pip install "git+https://github.com/sdks-io/vgen-python-sdk.git"
 ```
 
-Once installed, write the imports from the table above: the distribution name you install and the package name you import are the same string. Requires Python 3.10 or newer.
+Note the missing `name @` prefix: that form pins a requirement name pip then checks against the
+repository's own `pyproject.toml`, and the two have disagreed while the distribution was renamed.
+Letting pip read the name out of the repository works whichever name it currently declares.
+
+Once installed, write the imports from the table above — they all use the `videogen` root, never the distribution name. Requires Python 3.10 or newer.
 
 ## Imports — the package splits its surface across four modules
 
