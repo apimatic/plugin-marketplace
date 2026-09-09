@@ -34,12 +34,12 @@
     {
       "name": "paypal-platforms-team",
       "source": "./plugins/paypal-platforms-team",
-      "description": "Integrate and consume the APIMatic-generated Paypal SDK — bundled skills for C#/.NET, Python."
+      "description": "Integrate and consume the APIMatic-generated PayPal Server SDK SDK — bundled skills for C#/.NET, python, TypeScript."
     },
     {
       "name": "maxio-platforms-team",
       "source": "./plugins/maxio-platforms-team",
-      "description": "Integrate and consume the APIMatic-generated Maxio SDK — bundled skills for C#/.NET, Python."
+      "description": "Integrate and consume the APIMatic-generated Maxio Advanced Billing SDK — bundled skills for C#/.NET, python, TypeScript."
     },
     {
       "name": "twilio-platforms-team",
