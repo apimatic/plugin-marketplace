@@ -155,8 +155,11 @@ variant directly.
 {Variant1}Or{Variant2}: TypeAlias = {Variant1} | {Variant2}
 {Variant1}Or{Variant2}Dict: TypeAlias = {Variant1}Dict | {Variant2}Dict
 
-# oneOf with a discriminator — the same union, tagged
-{Union}: TypeAlias = Annotated[{Variant1} | {Variant2}, Field(discriminator="{tag}")]
+# oneOf with a discriminator — the same union, tagged by the wire key
+{Union}: TypeAlias = Annotated[
+    Annotated[{Variant1}, Tag("{value1}")] | Annotated[{Variant2}, Tag("{value2}")],
+    WireDiscriminator("{tag}"),
+]
 {Union}Dict: TypeAlias = {Variant1}Dict | {Variant2}Dict
 ```
 
@@ -171,13 +174,19 @@ elif isinstance(response.{union_field}, {Variant2}):
     ...
 ```
 
-Three things the alias does not show:
+Four things the alias does not show:
 
-- **A discriminated variant carries its tag as a defaulted `Literal`** (`{tag}: Literal["{value}"] =
-  "{value}"`). Building the model gives you the tag for free — you never set it.
-- **The dict spelling must carry the tag anyway.** The companion marks it `NotRequired`, but pydantic
-  routes a tagged union on that key, so omitting it raises `ValidationError` (`union_tag_not_found`)
-  at runtime while type-checking cleanly. Pass the model, or include `"{tag}": "{value}"` in the dict.
+- **The tag belongs to the union, not to the variant.** Build the variant you mean and pass it; the
+  union writes the tag on the way out. One model can be an arm of several unions that tag it
+  differently, so do not expect to find a tag field on it.
+- **Some variants do carry the tag as a field, because the API declares it on them.** Where the
+  field is there it is yours to set, and it is sent exactly as you wrote it — nothing overwrites it.
+  Where it is not, `to_dict()` on that model carries no tag, so hand the model to the SDK rather
+  than dumping it and posting the dict yourself.
+- **The dict spelling must carry the tag.** Read the union's companion alias: where it names a
+  wrapper (`{Union}{Variant1}Dict`), use that one — it is the variant's dict shape plus the tag key.
+  Omitting the key raises `ValidationError` (`union_tag_not_found`) at runtime while type-checking
+  cleanly.
 - **A union whose arms collapse to one is inlined at the use site** — the field is simply typed
   `{Variant} | None` and no alias module exists. Do not go looking for an alias the sheet does not
   list.
@@ -213,6 +222,18 @@ input, and output uses the alias. When a sheet lists a member as `{field} (wire 
 `{field}` in code and expect `{wireField}` in a captured request body — do not "fix" a test that
 asserts the alias.
 
+**Which spelling a type checker accepts depends on the checker, and the constructor is the casualty.**
+No checker reads `validate_by_name`; each synthesizes `__init__` from the field declarations, where
+`Field(alias=...)` renames the parameter. Plain `mypy` therefore accepts only
+`{Model}({wireField}=...)`, and `mypy` running pydantic's plugin accepts only `{Model}({field}=...)` —
+exclusive, so no keyword spelling satisfies both, and the alias spelling is not even writable where
+the wire name is a Python keyword (`from`, `class`). `pyright` accepts either and **checks neither**:
+the base model is `extra="allow"`, so the constructor takes arbitrary keywords and a typo, a wrong
+value type and a missing required member all pass even in strict mode. The `…Dict` companion is the
+one form every checker both accepts and actually checks. **Prefer it wherever you do not own the
+project's checker config, and under `pyright` regardless.** See *Type-checking notes* in
+[reference.md](reference.md) for the settings the constructor needs.
+
 **The `…Dict` companion is keyed by the PYTHON name, not the alias.** A `TypedDict` cannot declare a
 keyword or a non-identifier as a key through class syntax, and the base config's `validate_by_name` is
 what makes the Python spelling work:
@@ -223,7 +244,8 @@ client.{controller}.{operation}(body={"{wireField}": "..."})   # validates, but 
 ```
 
 The serialized body carries `"{wireField}"` either way. The second form *does* validate at runtime via
-`validate_by_alias` — so both happen to work, and only one is checked. Write the Python name.
+`validate_by_alias` — so both happen to work, and only one is checked. Write the Python name; in the
+companion it is the checked key under every configuration.
 
 ## Serializing
 
@@ -242,10 +264,11 @@ worth knowing:
 - A never-touched `OptionalNullable` field is **omitted** by `to_dict`, even though a plain
   `model_dump` renders it as `null`. That is the tri-state being honoured; it is the one documented
   place the wrapper differs from the underlying dump.
-- **`exclude_unset=True` is a trap on a locally built model.** It drops defaulted discriminator
-  fields, after which the result no longer validates back against a discriminated union. Use
-  `exclude_none=True` if your goal is just to suppress nulls. (On a *decoded response* it is the
-  right tool — see the read-path note under the `Optional[Any]` trap below.)
+- **`exclude_unset=True` is a trap on a locally built model.** It drops any field still sitting on
+  its default — including a tag field that has one — after which the result
+  no longer validates back against the union. Use `exclude_none=True` if your goal is just to
+  suppress nulls. (On a *decoded response* it is the right tool — see the read-path note under the
+  `Optional[Any]` trap below.)
 
 ## The `Optional[Any]` trap — a real serialization failure
 

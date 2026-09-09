@@ -31,7 +31,7 @@ Verified against `videogen/` and `pyproject.toml` of the generated package at ve
 | Base-URL config | `ServerConfig` (`videogen/server/server_config.py`), frozen, `extra="forbid"` |
 | Python floor | **`>=3.10`** (classifiers list `3.10–3.14`) |
 | Runtime dependencies | `httpx (>=0.28.1,<1.0.0)` · `pydantic[email] (>=2.11.0,<3.0.0)` · `typing-extensions (>=4.13.0,<5.0.0)` |
-| Typing | ships `py.typed`; the package is checked under `mypy --strict` with `warn_unreachable`. Callers get full inference — **a type error against this SDK is a real contract violation, not noise** |
+| Typing | ships `py.typed`; the package is checked under `mypy --strict` with `warn_unreachable`. Callers get full inference — **a type error against this SDK is a real contract violation, not noise**, with one documented exception — see `python-models` on wire aliases |
 | Line length / lint | `ruff`, 120 cols (only relevant when editing the SDK itself) |
 | Surface | 59 operations across 10 controllers · 110 models · 2 unions · 48 enums · 0 per-operation error unions |
 
@@ -58,7 +58,7 @@ Letting pip read the name out of the repository works whichever name it currentl
 
 Once installed, write the imports from the table above — they all use the `videogen` root, never the distribution name. Requires Python 3.10 or newer.
 
-## Imports — the package splits its surface across four modules
+## Imports — the package splits its surface across three modules
 
 Python does not re-export child modules transitively, so `from videogen import models` alone does **not** make enums, error unions, or runtime types reachable. Import each kind of type from the module that owns it.
 
@@ -81,7 +81,6 @@ Everything else comes from its own subpackage, and the split matters because eac
 | Domain models, their `…Dict` companions | `videogen.models` |
 | Enums (and their open `…OrStr` aliases) | `videogen.models.enums` |
 | `ApiError` · `RawError` · `ApiResult` · `RequestOptions` · `HttpClient` · `SdkBaseModel` · `UNSET` · `Optional` | `videogen.core` |
-| Per-operation error *unions* | `videogen.errors` — *this SDK declares none* |
 
 `videogen.core` re-exports its whole public surface (a curated `__all__`), so import from `…core` rather than from the private modules beneath it (`…core.results`, `…core.exceptions`, `…core.auth.schemes`).
 

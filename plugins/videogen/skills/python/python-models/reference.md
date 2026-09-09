@@ -87,8 +87,11 @@ from {root_package}.models import {Union}          # also {root_package}.models.
   `{Union}Dict: TypeAlias = {Variant1}Dict | {Variant2}Dict`. Named after its arms when the spec gave
   it no name (`{Variant1}Or{Variant2}`).
 - **Discriminated (`oneOf` with a discriminator, or an `allOf` base with subtypes)** —
-  `{Union}: TypeAlias = Annotated[{Variant1} | {Variant2}, Field(discriminator="{tag}")]`. Each variant
-  declares the tag as a defaulted `Literal`, so constructing the variant sets it for you.
+  `{Union}: TypeAlias = Annotated[Annotated[{Variant1}, Tag("{value1}")] | …, WireDiscriminator("{tag}")]`.
+  The tag is the union's: build the variant and the union writes it. Some variants also declare the
+  tag as a field of their own, in which case it is yours to set. Where the companion alias names a
+  wrapper (`{Union}{Variant1}Dict`), that is the dict spelling to use — the variant's own dict shape
+  plus the tag key.
 - **One surviving arm** — no alias module is emitted at all; the field is typed with that arm directly
   (`{Variant} | None` where a dropped arm was nullable). An alias the sheet does not list does not
   exist.
@@ -146,3 +149,22 @@ The SDK ships `py.typed`, so `mypy`/`pyright` check your calls against it fully.
 - A `{Model}Dict` literal is checked structurally, so an unknown key is an error there too. That check
   is what makes the dict spelling safe to use at all — it is the *only* thing that catches a
   misspelling, since the model base is `extra="allow"` at runtime.
+- **A model constructor's keyword names are the wire aliases unless `mypy` runs pydantic's plugin**,
+  and the plugin needs three settings before that spelling is as safe as the companion:
+
+  ```toml
+  [tool.mypy]
+  plugins = ["pydantic.mypy"]
+
+  [tool.pydantic-mypy]
+  init_typed = true          # check argument types, not just names
+  init_forbid_extra = true   # catch a misspelled member
+  ```
+
+  The plugin ships with pydantic, so this adds no dependency — but merge `plugins` into your existing
+  `[tool.mypy]`, since a duplicate table is a TOML error that leaves the plugin silently unloaded.
+  Without `init_typed` a wrong-typed argument passes; without `init_forbid_extra` a misspelled member
+  passes, because the base model is `extra="allow"` and the plugin then admits `**kwargs: Any`.
+  `pyright` has no such plugin and, for that same `extra="allow"`, does not check these constructors
+  at all — a typo or a missing required member passes there even in strict mode — so use the
+  `{Model}Dict` companion, which needs none of this and is checked everywhere.

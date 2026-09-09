@@ -23,14 +23,15 @@ Substitute your own `{Api}Client` and operation names as well.
 ## A reusable stub transport
 
 The transport is a `Protocol`, so a fake needs no base class, no registration and no `Mock` — just
-the two methods:
+the three members it names. `stream` is required even when nothing under test streams; omit it and
+the stub fails the type check with *missing following `HttpClient` protocol member: stream*:
 
 ```python
 import json
-from {root_package}.core import HttpRequest, HttpResponse
+from {root_package}.core import HttpRequest, HttpResponse, StreamedResponse
 
 class StubTransport:
-    """Satisfies the SDK's sync transport protocol: send() + close()."""
+    """Satisfies the SDK's sync transport protocol: send(), stream() and close()."""
 
     def __init__(self, *responses: HttpResponse) -> None:
         self._responses = list(responses)
@@ -40,6 +41,9 @@ class StubTransport:
     def send(self, request: HttpRequest) -> HttpResponse:
         self.requests.append(request)
         return self._responses.pop(0)
+
+    def stream(self, request: HttpRequest) -> StreamedResponse:
+        raise NotImplementedError("this stub answers send() only")
 
     def close(self) -> None: ...
 
@@ -287,6 +291,7 @@ raise instead of answering:
 def test_transport_failure_is_unknown_outcome():
     class Boom:
         def send(self, request): raise httpx.ConnectError("refused")
+        def stream(self, request): raise httpx.ConnectError("refused")
         def close(self) -> None: ...
 ```
 
@@ -304,7 +309,7 @@ def test_bad_credentials_is_a_config_error():
 
 ## Async tests
 
-Same seam, async shape — `async def send`, and `aclose` rather than `close`:
+Same seam, async shape — `async def send`, `async def stream`, and `aclose` rather than `close`:
 
 ```python
 class StubAsyncTransport:
@@ -312,6 +317,8 @@ class StubAsyncTransport:
     async def send(self, request):
         self.requests.append(request)
         return self._responses.pop(0)
+    async def stream(self, request):
+        raise NotImplementedError("this stub answers send() only")
     async def aclose(self) -> None: ...
 
 @pytest.mark.asyncio
@@ -355,7 +362,8 @@ works while the default transport is in play — it cannot see a call made throu
 ## Keeping tests independent of SDK internals
 
 - **Never import from a private module.** Everything you need is re-exported from
-  `{root_package}.core`, `.models`, `.models.enums` and `.errors`. An import reaching into the
+  `{root_package}.core`, `.models`, `.models.enums` and — where the API documents typed error bodies
+  — `.errors`, which is absent from an SDK that declares none. An import reaching into the
   runtime's internal layout (`…core.results`, `…core._internal.…`) will break — those modules are
   explicitly free to move behind the facade.
 - **Never assert on `str(e)` / `repr(e)`** of an SDK exception or a `RawError`. Both are deliberately
@@ -397,8 +405,8 @@ never gate CI on a third party's uptime unless you mean to.
   therefore sees one failed operation — and the *next* call in the same test re-fetches a token, so
   queue another `token_response()` for it.
 - Mocking libraries (`unittest.mock`, `pytest-mock`) work too — the protocol is structural, so a
-  `Mock()` with `send`/`close` configured satisfies it. The hand-written stub above gives you typed
-  captured requests and ordered responses for free.
+  `Mock()` with `send`/`stream`/`close` configured satisfies it. The hand-written stub above gives you
+  typed captured requests and ordered responses for free.
 - **Use the client as a context manager or close it** in tests as in production; a stub's `close()` is
   a no-op, but the habit keeps the test and the real wiring the same shape
   (`python-client-initialization`).

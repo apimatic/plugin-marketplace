@@ -182,8 +182,10 @@ thread-safe. The async client may be built outside a running loop, but from its 
 
 ## Supplying your own transport
 
-The transport is a `Protocol` — a structural interface, not a base class. The sync one requires
-`send(request) -> HttpResponse` and `close()`; the async one `send` and `aclose()`:
+The transport is a `Protocol` — a structural interface, not a base class. It has **three** members,
+not two: the sync one requires `send(request) -> HttpResponse`,
+`stream(request) -> StreamedResponse` and `close()`; the async one `send`, `stream` (returning an
+`AsyncStreamedResponse`) and `aclose()`:
 
 ```python
 client = {Api}Client(custom_http_client=MyTransport(), {scheme}=...)
@@ -201,12 +203,19 @@ class LoggingTransport:
         log.info("%s %s -> %s", request.method, request.url, response.status_code)
         return response
 
+    def stream(self, request): return self._inner.stream(request)
+
     def close(self): self._inner.close()
 ```
 
+**`stream` is not optional.** A transport that omits it fails the type check with *missing following
+`HttpClient` protocol member: stream*, even where nothing in your application streams — delegate it to
+the inner transport, as above, or raise from it if you are certain no streamed call can reach you.
+
 Three obligations the protocol places on anything you supply, all silent when broken: **do not mutate
 the incoming request** (it is frozen); **honour `request.timeout`** when set, falling back to your own
-when it is `None`; and **lowercase the response header names**, because callers look them up that way.
+when it is `None`; and **lowercase the response header names** — on a streamed response too — because
+callers look them up that way.
 
 Two consequences. First, **the `timeout=` you passed to the client no longer reaches the wire** — that
 value only builds the client's *own default* transport, so set the timeout on the one you pass or you

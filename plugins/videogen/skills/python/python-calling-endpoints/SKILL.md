@@ -73,8 +73,8 @@ settles both: its **Params** bullet labels the body parameter with its media typ
 body`), and its **Type sources** table names the module declaring the request model and its `…Dict`
 companion.
 
-**JSON** — one parameter, typed as a union of the model and its `TypedDict` companion, so both
-spellings type-check:
+**JSON** — one parameter, typed as a union of the model and its `TypedDict` companion, so either
+shape is accepted:
 
 ```python
 from {root_package}.models import {Model}
@@ -83,8 +83,12 @@ client.{group}.{operation}({Model}(field=...))    # model
 client.{group}.{operation}({"field": ...})        # dict — companions nest too
 ```
 
-Prefer models in application code: better inference, better errors, and required members are enforced
-at construction. The dict form suits payloads assembled from external data. See `python-models`.
+**The two are not equally checkable** — the companion is checked by every checker, while the
+constructor's keywords are the wire aliases under plain `mypy` and unchecked entirely under `pyright`
+(*Wire aliases* in `python-models`). Prefer the companion unless the project is configured for the
+constructor. Models
+still buy better errors and required members enforced at construction, which suits application code
+where you own the checker config; the dict form also suits payloads assembled from external data.
 
 **Form and multipart** — there is **no single body parameter**. Each field (and each file) becomes its
 own parameter, following the same three-way split rule above. Do not go looking for a `body=`; read the

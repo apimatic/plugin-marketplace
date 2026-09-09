@@ -238,6 +238,8 @@ class LoggingTransport:
         )
         return response
 
+    def stream(self, request): return self._inner.stream(request)
+
     def close(self): self._inner.close()
 
 client = {Api}Client(
@@ -245,7 +247,9 @@ client = {Api}Client(
 )
 ```
 
-The async version is the same shape with `async def send` and `async def aclose`.
+The async version is the same shape with `async def send`, `async def stream` and `async def aclose`.
+All three members are required in both flavours — a transport missing `stream` fails the type check
+(`python-client-initialization`).
 
 **Log the method, URL and status — not headers or bodies.** The auth header carries a live credential
 and bodies carry whatever the API moves; neither belongs in your logs or your traces. If you must
