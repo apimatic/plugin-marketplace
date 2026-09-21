@@ -262,6 +262,20 @@ The four, **weakest guarantee first** — so do not read the numbering as a reco
    so "this may already have taken effect" is the only safe reading — surface it as an **unknown outcome**
    to be settled by re-reading provider state (option 2), not as a definite failure.
 
+   **Put the re-read in this block, not in a pointer to option 2.** A guard that manufactures an unknown
+   outcome and leaves no code to settle it is worse than no guard: the operation reports failure while the
+   provider holds a real record.
+
+   ```csharp
+   catch (SdkConnectionException)   // the send failed; the write may still have landed
+   {
+       var found = await client.{ListOperation}Async(reference: reference, ct: ct);
+       if (found.Items.Count > 0) { await Complete(reference, found.Items[0], ct); return found.Items[0]; }
+       await MarkFailed(reference, ct);
+       return Failure();            // now a fact, not an assumption
+   }
+   ```
+
 `HttpMethodsToRetry` **is** the primary control here — it gates every trigger, and keeping non-idempotent
 verbs out of it is most of the job. The options above cover what it cannot: a `PUT` with side effects, a list
 you have widened, and the unknown outcome a transport failure leaves behind.
