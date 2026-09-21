@@ -320,6 +320,23 @@ await Complete(reference, result, ct);                              // settle it
 Use whatever this codebase already uses to record in-flight work; this is the same claim the section above
 describes and the same reference the re-read below searches by — one record, three purposes.
 
+### A no-op operation must not fire its side effects
+
+A transition that finds the resource already in the target state correctly does nothing. The notification,
+webhook or outbound call beside it is not idempotent and nothing gates it, so it fires again describing a
+change that did not happen.
+
+```csharp
+if (!TryTransition(resource))     // false when it was already in the target state
+    return Existing(resource);    // no notification, no webhook, no metered call
+
+await Persist(resource, ct);
+await Notify(resource, ct);
+```
+
+Have the transition report whether it changed anything, and gate every side effect the operation owns on
+that answer — in whatever form this codebase already expresses domain transitions.
+
 
 ## Bounding a call — the three layers, and which one is a total
 
