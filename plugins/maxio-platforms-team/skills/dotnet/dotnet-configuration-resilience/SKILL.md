@@ -321,6 +321,22 @@ await Complete(reference, result, ct);                             // settle it
 This is the same row the unique constraint sits on and the same reference the re-read uses — one write,
 three purposes.
 
+### A no-op operation must not fire its side effects
+
+A transition that finds the resource already in the target state correctly does nothing. The notification,
+webhook or outbound call beside it is not idempotent and nothing gates it, so it fires again describing a
+change that did not happen.
+
+```csharp
+if (!{Resource}.TryTransition())    // false when it was already in the target state
+    return Existing({Resource});    // no notification, no webhook, no metered call
+
+await _db.SaveChangesAsync(ct);
+await _notifier.ChangedAsync({Resource}, ct);
+```
+
+Gate every side effect the operation owns on whether the state actually changed.
+
 
 ## Bounding a call — the three layers, and which one is a total
 
