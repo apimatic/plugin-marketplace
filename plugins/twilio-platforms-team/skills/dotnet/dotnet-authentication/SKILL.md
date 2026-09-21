@@ -231,6 +231,17 @@ Three rules for the message it fails with:
 - **Do not fall back to a default, a placeholder, or an unauthenticated client.** Booting degraded hides
   the fault and pushes it to the first caller.
 
+**That rule is about the application, not about its test host.** A repository that already has an
+integration-test host boots it without credentials on purpose, so adding the check stops the suite and the
+change reads as though you broke it — and the usual reaction, weakening the production check, throws away
+what you just added.
+
+**Adding a startup check obliges you to supply the test host in the same change.** Follow whatever that
+host already does for other configuration it needs — non-secret placeholder configuration, or replacing
+the client registration with the test double the repository already uses (see `dotnet-testing`). Keep the
+production check enabled either way, and never gate it on an environment name: a check that is off in an
+environment you deploy is not a check.
+
 Check every credential the scheme requires. Basic auth needs both halves — a username with an empty
 password is misconfigured, not partially configured.
 
