@@ -60,6 +60,30 @@ template below imports three namespaces and not four — it uses `out var` for t
 `Core.Exceptions` and `Core.ErrorResponse`. This namespace layout is identical across the APIMatic .NET SDKs
 checked.
 
+
+## A 2xx is not necessarily a successful operation
+
+**Before any of the below: an exception-free response does not mean the operation succeeded.** Many
+operations answer `200` with a body whose *status* field says pending, queued, held or refused. No catch
+ladder fires, because nothing went wrong at the HTTP level — the provider answered, correctly, that it did
+not do the thing. **A returned id is an acknowledgement, not an outcome**, and the two are indistinguishable
+to the type system: both are a non-null result carrying an id.
+
+```csharp
+var result = await client.{Operation}Async(body, ct: ct);
+
+// WRONG: recording success because an id came back.
+switch (result.Status)             // the {EnumType} members are on this operation's contract-sheet row
+{
+    case {EnumType}.Completed: await MarkSettled(result.Id, ct); break;
+    case {EnumType}.Pending:   await MarkAwaiting(result.Id, ct); break;   // do NOT treat as done
+    default:                     await MarkRejected(result.Status, ct); break;
+}
+```
+
+Give the pending state a path distinct from both success and failure. It is neither, and a happy-path test
+will not catch treating it as either.
+
 ## Catch the exception
 
 `SdkException<TError>` exposes a single property — `public required TError Error { get; init; }`, the parsed
