@@ -239,6 +239,10 @@ what you just added.
 **Adding a startup check obliges you to supply the test host in the same change.** Follow whatever that
 host already does for other configuration it needs — non-secret placeholder configuration, or replacing
 the client registration with the test double the repository already uses (see `dotnet-testing`). Keep the
+⚠⚠ **Then run the test project that boots the host, not only the unit tests.** A startup check is
+invisible to tests that construct objects directly: if the suite you ran never starts the application,
+you have not tested the change you made. The host-booting project is the one that has to be green.
+
 production check enabled either way, and never gate it on an environment name: a check that is off in an
 environment you deploy is not a check.
 
