@@ -276,6 +276,36 @@ introduced, not a duplicate you prevented.
 **A guard needs a release.** A claim, lease or "already sent" marker with no expiry and no recovery
 path turns one transient failure into a permanent refusal: every later attempt meets the stale claim
 and is turned away. Clear it once the outcome is settled, and expire it when it never is.
+### ⚠⚠ This section does not cover the same operation arriving twice
+
+Everything above bounds **one call being sent more than once**. None of it reaches **one operation being
+requested more than once** — a double-submit, or a caller retry overlapping the original. An `AsyncLocal`
+scope is per request and a `SemaphoreSlim` is per process, so neither sees the second request: a
+read-then-create guarded by either is a **check-then-act race**, and both writes reach the provider.
+
+**Put the uniqueness claim where every request and every instance can see it** — your own store, under a
+unique constraint, written before the call:
+
+```csharp
+var reference = Deterministic(request);   // derived from what the caller sent; never Guid.NewGuid()
+
+try
+{
+    _db.{Resource}Attempts.Add(new {Resource}Attempt { Reference = reference, Status = InFlight });
+    await _db.SaveChangesAsync(ct);       // unique index on Reference
+}
+catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+{
+    return await LoadExisting(reference, ct);   // the second caller loses here, and returns the first outcome
+}
+
+var result = await client.{Operation}Async(/* send `reference` to the provider too */, ct);
+await Complete(reference, result, ct);
+```
+
+That same reference is what the reconciling re-read searches by. No retry configuration substitutes for
+this: a duplicate the provider can see is not an SDK-side concern.
+
 
 ## Bounding a call — the three layers, and which one is a total
 
