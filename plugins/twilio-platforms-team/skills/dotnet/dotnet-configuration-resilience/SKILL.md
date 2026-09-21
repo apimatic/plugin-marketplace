@@ -306,6 +306,21 @@ await Complete(reference, result, ct);
 That same reference is what the reconciling re-read searches by. No retry configuration substitutes for
 this: a duplicate the provider can see is not an SDK-side concern.
 
+### Order: your record first, the provider second
+
+Calling the provider before writing locally strands a real provider-side effect whenever the local write
+fails — nothing points at it, so it cannot be found, reused or cleaned up, and the next attempt creates a
+second one. A local write that fails *before* the call costs nothing.
+
+```csharp
+await Begin(reference, ct);                                        // durable claim, then
+var result = await client.{Operation}Async(/* reference */, ct); // the provider, then
+await Complete(reference, result, ct);                             // settle it
+```
+
+This is the same row the unique constraint sits on and the same reference the re-read uses — one write,
+three purposes.
+
 
 ## Bounding a call — the three layers, and which one is a total
 
