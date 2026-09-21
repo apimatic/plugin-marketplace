@@ -305,6 +305,21 @@ a dependency or a schema convention for this alone**, and do not assume a relati
 If nothing in the codebase can carry a claim that outlives the process, record that as a finding rather
 than approximating it with an in-process lock, which looks like a guard and is not one.
 
+### Order: your own record first, the provider second
+
+Calling the provider before recording anything locally strands a real provider-side effect whenever that
+local write fails — nothing references it, so it cannot be found, reused or reversed, and the next attempt
+creates a second one. A local write that fails *before* the call costs nothing.
+
+```csharp
+await Begin(reference, ct);                                         // claim first, then
+var result = await client.{Operation}Async(/* reference */, ct);  // the provider, then
+await Complete(reference, result, ct);                              // settle it
+```
+
+Use whatever this codebase already uses to record in-flight work; this is the same claim the section above
+describes and the same reference the re-read below searches by — one record, three purposes.
+
 
 ## Bounding a call — the three layers, and which one is a total
 
