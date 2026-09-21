@@ -337,6 +337,22 @@ await _notifier.ChangedAsync({Resource}, ct);
 
 Gate every side effect the operation owns on whether the state actually changed.
 
+### Reconciling two sources: filter both sides on the same clock
+
+The provider's timestamp records when the **provider acted**; yours records when **your row was written**.
+For anything scheduled, deferred or retried those disagree, so one window selects different records on each
+side — inventing discrepancies for rows that exist on both, and hiding real ones that fall outside the
+other side's window.
+
+```csharp
+// Record the provider's own event time when you learn it, and reconcile on that field alone.
+var providerRows = await client.{ListOperation}Async(from: from, to: to, ct: ct);
+var localRows    = _db.{Resource}.Where(x => x.ProviderEventAt >= from && x.ProviderEventAt <= to);
+```
+
+Where you cannot record it, widen the local window by the maximum deferral the domain allows and classify
+anything outside the provider window as **out of window** — a third category, never a discrepancy.
+
 
 ## Bounding a call — the three layers, and which one is a total
 
