@@ -231,6 +231,25 @@ Three rules for the message it fails with:
 - **Do not fall back to a default, a placeholder, or an unauthenticated client.** Booting degraded hides
   the fault and pushes it to the first caller.
 
+**That rule is about the application, not about its test host.** A repository that already has an
+integration-test host boots it without credentials on purpose, so adding the check stops the suite and the
+change reads as though you broke it — and the usual reaction, weakening the production check, throws away
+what you just added. **Adding a startup check obliges you to supply the test host in the same change:**
+
+```csharp
+// Either: non-secret placeholder configuration, test host only.
+builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["{Api}:{Credential}"] = "test-placeholder",
+});
+
+// Or: replace the client registration with a stub (see dotnet-testing).
+services.RemoveAll<I{Api}Client>();
+services.AddSingleton<I{Api}Client>(new Fake{Api}Client());
+```
+
+Keep the production check enabled, and never gate it on an environment name.
+
 Check every credential the scheme requires. Basic auth needs both halves — a username with an empty
 password is misconfigured, not partially configured.
 
