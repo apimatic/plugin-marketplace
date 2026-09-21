@@ -276,6 +276,35 @@ introduced, not a duplicate you prevented.
 **A guard needs a release.** A claim, lease or "already sent" marker with no expiry and no recovery
 path turns one transient failure into a permanent refusal: every later attempt meets the stale claim
 and is turned away. Clear it once the outcome is settled, and expire it when it never is.
+### ⚠⚠ This section does not cover the same operation arriving twice
+
+Everything above bounds **one call being sent more than once**. None of it reaches **one operation being
+requested more than once** — a double-submit, or a caller retry overlapping the original. An `AsyncLocal`
+scope is per request and a `SemaphoreSlim` is per process, so neither sees the second request: a
+read-then-create guarded by either is a **check-then-act race**, and both writes reach the provider.
+
+**The requirement:** the claim *this operation has already been started* must outlive both the request and
+the process, and must be **established atomically** rather than checked and then acted on. The shape:
+
+```csharp
+var reference = Deterministic(request);   // derived from what the caller sent; never Guid.NewGuid()
+
+if (!await TryClaim(reference, ct))       // atomic claim-or-fail, NOT exists-then-create
+    return await LoadExisting(reference, ct);
+
+var result = await client.{Operation}Async(/* send `reference` to the provider too */, ct);
+await Complete(reference, result, ct);
+```
+
+**How `TryClaim` is implemented is the host application's decision, not this skill's.** Read how this
+codebase already enforces uniqueness and follow it — its existing persistence layer and transaction or
+constraint idiom, an idempotency, outbox or dedupe facility if one is already present, or the provider's
+own idempotency parameter where the operation's contract-sheet row shows one. **Do not introduce a store,
+a dependency or a schema convention for this alone**, and do not assume a relational database.
+
+If nothing in the codebase can carry a claim that outlives the process, record that as a finding rather
+than approximating it with an in-process lock, which looks like a guard and is not one.
+
 
 ## Bounding a call — the three layers, and which one is a total
 
