@@ -110,6 +110,7 @@ Full re-planning only on genuine scope change; for a single missing fact mid-imp
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
 4. **Any compile or runtime error involving an SDK type or member** (`CS1061`, `CS0117`, `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `MaxioAdvancedBilling.*`, or a provider error at runtime) → *Step 4* below. Do not attempt more than one self-fix of an SDK-name error before switching to that procedure — rewriting from the same knowledge that produced the error is guessing.
 5. Run the project's tests (`dotnet test`); verify the integration end to end the way the task demands.
+6. **Reconcile the plan with the code before calling the work done.** Take the PRODUCTION READINESS table row by row and, for each row that names an artefact, point at it in the code you shipped — the file and the line. A row whose artefact is not there did not record a decision; it recorded an intention. Either the code gains the artefact or the row is corrected to say what shipped and why. A row carrying a ⚠ clause is **not** addressed while the answer that clause calls unacceptable is the answer in the code.
 
 ### Step 4 — Fixing SDK errors (map-first, in place)
 

@@ -262,9 +262,6 @@ The four, **weakest guarantee first** — so do not read the numbering as a reco
    so "this may already have taken effect" is the only safe reading — surface it as an **unknown outcome**
    to be settled by re-reading provider state (option 2), not as a definite failure.
 
-   ⚠⚠ **A `catch` on a transport failure that `return`s or `throw`s without first re-reading provider
-   state is the defect.** The send failed; the write may still have landed. Reporting failure is a guess.
-
    **Put the re-read in this block, not in a pointer to option 2.** A guard that manufactures an unknown
    outcome and leaves no code to settle it is worse than no guard: the operation reports failure while the
    provider holds a real record.
@@ -306,12 +303,7 @@ the process, and must be **established atomically** rather than checked and then
 ```csharp
 var reference = Deterministic(request);   // derived from what the caller sent; never Guid.NewGuid()
 
-// TryClaim is atomic ONLY if BOTH of these hold. Miss either and both callers pass it:
-//   1. the store REJECTS a second row for the same reference (a UNIQUE constraint,
-//      not a plain index - an index without uniqueness stops nothing)
-//   2. you learn that by CATCHING the rejection. A 'does it already exist?' read
-//      before the write is the defect, not the guard.
-if (!await TryClaim(reference, ct))       // insert-or-fail. NOT exists-then-insert.
+if (!await TryClaim(reference, ct))       // atomic claim-or-fail, NOT exists-then-create
     return await LoadExisting(reference, ct);
 
 var result = await client.{Operation}Async(/* send `reference` to the provider too */, ct);
@@ -324,13 +316,8 @@ constraint idiom, an idempotency, outbox or dedupe facility if one is already pr
 own idempotency parameter where the operation's contract-sheet row shows one. **Do not introduce a store,
 a dependency or a schema convention for this alone**, and do not assume a relational database.
 
-⚠⚠ **An in-process lock is not an acceptable answer here, and documenting it as a known limitation
-does not make it one.** `AsyncLocal`, `SemaphoreSlim`, a static dictionary or a single-host assumption
-all leave the defect intact; writing that down changes nothing about the second request.
-
-If nothing in this codebase can carry a claim that outlives the process, that is a **Blocker for §6 of
-the plan** — not an assumption, and not a PRODUCTION READINESS note. §6 is where work stops and the
-operator decides.
+If nothing in the codebase can carry a claim that outlives the process, record that as a finding rather
+than approximating it with an in-process lock, which looks like a guard and is not one.
 
 ### Order: your own record first, the provider second
 
@@ -346,9 +333,6 @@ await Complete(reference, result, ct);                              // settle it
 
 Use whatever this codebase already uses to record in-flight work; this is the same claim the section above
 describes and the same reference the re-read below searches by — one record, three purposes.
-
-⚠⚠ **If the first thing you persist is the provider's response, the ordering is already wrong.** The
-local row must exist before the call, not be created from its result.
 
 ### A no-op operation must not fire its side effects
 
@@ -367,9 +351,6 @@ await Notify(resource, ct);
 Have the transition report whether it changed anything, and gate every side effect the operation owns on
 that answer — in whatever form this codebase already expresses domain transitions.
 
-⚠⚠ **An outbound call sitting unconditionally after an idempotent transition is the defect.** The
-transition returning quietly is not a gate: the line below it runs either way.
-
 ### Reconciling two sources: filter both sides on the same clock
 
 The provider's timestamp records when the **provider acted**; a local row's timestamp usually records when
@@ -384,10 +365,6 @@ var localRows    = await LoadByProviderEventTime(from, to, ct);   // not by row-
 ```
 
 Whether the provider's event time is already stored, and where, is a question for the codebase. Where it
-⚠⚠ **Filtering the local side on a row-creation column (`CreatedAt`, `InsertedAt`) is the defect.** If
-your local query says `x.CreatedAt >= from && x.CreatedAt <= to` while the provider query filters on its
-own event time, the two sides are on different clocks and the report is wrong in both directions.
-
 is not available, widen the local window by the maximum deferral the domain allows and classify anything
 outside the provider window as **out of window** — a third category, never a discrepancy.
 
@@ -542,9 +519,7 @@ return Partial(results, nextPage: page);   // the caller has to handle the parti
 ```
 
 If there is no such convention and the return type genuinely cannot change, throw rather than return
-silently. ⚠⚠ **A `LogWarning` at the cap followed by `return results;` is the defect this paragraph exists to
-stop.** If the only thing that changes when you hit the cap is a log line, the caller still cannot tell
-a partial answer from a complete one. The return value has to change. Log it as well, never instead.
+silently. Log it as well, never instead.
 
 **No-throw variant.** Where generated, a sibling `{Operation}Result` returns
 `Pageable<ApiResult<{PageResponse}, TError>, {Item}>` — the same streaming, but its **`.AsPages(ct)`** hands
