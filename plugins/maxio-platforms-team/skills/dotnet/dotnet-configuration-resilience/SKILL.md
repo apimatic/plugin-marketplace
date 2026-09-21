@@ -337,6 +337,23 @@ await Notify(resource, ct);
 Have the transition report whether it changed anything, and gate every side effect the operation owns on
 that answer — in whatever form this codebase already expresses domain transitions.
 
+### Reconciling two sources: filter both sides on the same clock
+
+The provider's timestamp records when the **provider acted**; a local row's timestamp usually records when
+**it was written**. For anything scheduled, deferred or retried those disagree, so one window selects
+different records on each side — inventing discrepancies for records present on both, and hiding real ones
+that fall outside the other side's window.
+
+```csharp
+// Both sides filtered on the SAME semantic clock - the provider's event time, recorded locally.
+var providerRows = await client.{ListOperation}Async(from: from, to: to, ct: ct);
+var localRows    = await LoadByProviderEventTime(from, to, ct);   // not by row-creation time
+```
+
+Whether the provider's event time is already stored, and where, is a question for the codebase. Where it
+is not available, widen the local window by the maximum deferral the domain allows and classify anything
+outside the provider window as **out of window** — a third category, never a discrepancy.
+
 
 ## Bounding a call — the three layers, and which one is a total
 
