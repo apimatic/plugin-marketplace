@@ -95,6 +95,22 @@ var body = new {RequestType}
 };
 ```
 
+⚠ **Omitting an optional field is a decision, not the absence of one.** Leaving it unset means the provider
+applies whatever is already configured on its side; setting it **overrides that configuration for every
+caller**. Omit by default, and set an optional field only where the task requires that value:
+
+```csharp
+var body = new {RequestType}
+{
+    RequiredProp = value,
+    // OptionalProp omitted — the provider's configured behaviour governs.
+};
+```
+
+Two kinds are invisible in the type and expensive to get wrong: a field with a **meaningful provider-side
+default**, and a field intended for **import or migration** rather than for a newly created record. If the
+contract sheet's row does not say which, omit the field and record the question.
+
 A request body's **shape varies**: some are **flat** (scalar members directly on the record), others **nest
 an inner resource record** (whose type the sheet's request-model column likewise names). The contract sheet
 lists each model's real `required`/optional members with their wire names. A nested body looks like:
