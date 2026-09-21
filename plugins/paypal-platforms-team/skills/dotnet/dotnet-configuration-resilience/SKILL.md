@@ -507,8 +507,19 @@ Prefer to **narrow the query before you page it**: a provider-side date range, s
 `pageSize` that matches what the caller needs turns "walk everything" into a handful of pages. Paging the
 whole collection and filtering client-side is the slow path even when it terminates.
 
-**A bound that silently truncates is a different defect from one that hangs.** When you hit the cap, either
-surface it to the caller or log it — never return a partial page set that reads like a complete one.
+**A bound that silently truncates is a different defect from one that hangs.** When you hit the cap the
+result is partial, and **that fact belongs in the result** — the caller rendering the page or comparing two
+totals never reads your logs, so a partial set that looks complete is a *wrong* answer rather than a
+missing one. Return it in whatever form this codebase already uses to express a partial or continuable
+result:
+
+```csharp
+// Shape, not a prescribed type - match the repository's existing result convention.
+return Partial(results, nextPage: page);   // the caller has to handle the partial case
+```
+
+If there is no such convention and the return type genuinely cannot change, throw rather than return
+silently. Log it as well, never instead.
 
 **No-throw variant.** Where generated, a sibling `{Operation}Result` returns
 `Pageable<ApiResult<{PageResponse}, TError>, {Item}>` — the same streaming, but its **`.AsPages(ct)`** hands
