@@ -265,9 +265,24 @@ The four, **weakest guarantee first** — so do not read the numbering as a reco
    ⚠⚠ **A `catch` on a transport failure that `return`s or `throw`s without first re-reading provider
    state is the defect.** The send failed; the write may still have landed. Reporting failure is a guess.
 
-   **Put the re-read in this block, not in a pointer to option 2.** A guard that manufactures an unknown
-   outcome and leaves no code to settle it is worse than no guard: the operation reports failure while the
-   provider holds a real record.
+   **Settle the unknown outcome in code, by one of exactly two routes.** A guard that manufactures an
+   unknown outcome and leaves no code to settle it is worse than no guard: the operation reports failure
+   while the provider holds a real record.
+
+   1. **Re-read here**, in this block, before returning anything. Use it when the caller is waiting on the
+      answer and a wrong answer costs them something — money moved, an order placed, a card stored.
+   2. **Record and sweep** — write a state on the local row that says *the outcome is unknown*, and leave a
+      reconciliation path that re-reads provider state and settles those rows. Both halves, or it is not
+      this route.
+
+   ⚠⚠ **Route 2 needs a state that means UNKNOWN, not one that means failed.** `SendFailed`, `Failed`,
+   `Error` and `Undelivered` are outcomes the code is claiming to know — they are the defect, written in a
+   field instead of a return value. The send failed; *the write may still have landed*. The state has to say
+   so, and the sweep has to be real code that re-reads the provider, not an operator procedure.
+
+   ⚠⚠ **A log line is neither route.** It records that you gave up.
+   `UNKNOWN OUTCOMES` names the code that does it — for route 1 the catch block, for route 2 the state you
+   set *and* the sweep that reads it.
 
    ```csharp
    catch (SdkConnectionException)   // the send failed; the write may still have landed
