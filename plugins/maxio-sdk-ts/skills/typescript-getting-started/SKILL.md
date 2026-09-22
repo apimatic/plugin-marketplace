@@ -18,7 +18,7 @@ Verified against `package.json` and `sdk-map.md` of the generated package at ver
 | Fact | Value |
 | --- | --- |
 | API | Maxio Advanced Billing |
-| Package name (what you install, and what you import) | `maxio-advanced-billing` — **not on npm**; built from source (see *Install*) |
+| Package name (what you import) | `maxio-advanced-billing` — installed under that specifier from the published package `@zaid.sid/maxio-advanced-billing` (see *Install*) |
 | Import specifier | `maxio-advanced-billing` — the package root is the **only** entry; deep imports do not resolve |
 | Version | `1.0` (API spec version `1.0`) |
 | Client class | `MaxioAdvancedBillingClient` (`src/client.ts`) — one class, no sync/async split |
@@ -37,13 +37,19 @@ The table above is **orientation, not a copy-paste recipe** — it gives you the
 
 ## Install
 
-This SDK is not published to npm, so the install comes straight from the repository the plugin records for it:
+The package is published as `@zaid.sid/maxio-advanced-billing` and is installed **under the specifier `maxio-advanced-billing`**, so every import on this page and in the companion skills is unchanged.
+
+**Use the package manager the project already uses** — check the lockfile (`package-lock.json` → npm, `pnpm-lock.yaml` → pnpm, `bun.lock` → bun). Running the wrong one against an existing tree can fail in ways that look like the SDK is unavailable when it is not:
 
 ```bash
-npm install git+https://github.com/context-plugins/maxio-typescript-sdk#main
+npm install maxio-advanced-billing@npm:@zaid.sid/maxio-advanced-billing@^1.0.0
+pnpm add    maxio-advanced-billing@npm:@zaid.sid/maxio-advanced-billing@^1.0.0
+bun add     maxio-advanced-billing@npm:@zaid.sid/maxio-advanced-billing@^1.0.0
 ```
 
-That fetches everything the package's `files` list packs — `src/`, `sdk-map.md` and the pages under `map/operations/` — so **every lookup on this page works as soon as the install finishes**. **Make sure the installed package is built**, as the source on GitHub is not pre-built.
+Any of those writes `"maxio-advanced-billing": "npm:@zaid.sid/maxio-advanced-billing@^1.0.0"` into `package.json`, and `import { … } from "maxio-advanced-billing"` resolves to it.
+
+The published package ships a **prebuilt `dist/`** alongside `src/`, `sdk-map.md` and the 34 pages under `map/operations/` — so there is **no build step**, and **every lookup on this page works as soon as the install finishes**.
 
 Do not vendor its `src/` into your project, point `tsconfig` `paths` at a throwaway clone, or import from `dist/` directly. Installing the package properly is what makes the `exports` map, the shipped `.d.ts` chain and the dual-dialect resolution behave the way the SDK expects — **and it is what puts the SDK map inside `node_modules`, which is where every lookup below reads it from**. Requires Node `>=20` (`engines.node`).
 
