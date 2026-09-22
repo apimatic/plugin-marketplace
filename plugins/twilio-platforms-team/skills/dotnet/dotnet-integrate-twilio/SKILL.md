@@ -87,37 +87,53 @@ Never use this prerequisite work as a "head start" on implementation: **creating
 | 14 | **Provider status, and reconciliation clocks** | Which operations return a **status field**, and the code path for each non-success value. ⚠ `status ?? "COMPLETED"`, or carrying the status into a method that does not branch on it, are **not** acceptable entries. If the scope reconciles two sources, also name the **single timestamp both sides filter on**; a local row-creation column is **not** acceptable. |
 
 A reviewer grades that table alone: each row either records a decision or records why it does not apply. A row that points at a skill, restates the concern, or sits blank is **not addressed** — and a row whose ⚠ clause names an answer as unacceptable is **not addressed** if that is the answer the code ships. Rows 5, 7 and 8 are the ones where "not addressed" costs something that cannot be recovered afterwards — a duplicate charge or duplicate write, sensitive data in a log, or test traffic sent to a live system.
-Then four more tables, each named, each graded the same way. They exist because the concern they carry cannot be answered by one row of prose: a row says *that* you thought about it, a table forces you to name the thing. Write `none` explicitly where the task implies no such case.
+Then six more tables, each named, each graded the same way. They exist because the concern they carry cannot be answered by one row of prose: a row says *that* you thought about it, a table forces you to name the thing. Write `none` explicitly where the task implies no such case.
+
+Every one of them ends in a **`where in the code`** column. That cell cannot be filled while planning, and it is not meant to be: come back and fill it after the code exists, naming the file and the member that does what the row promised. ⚠⚠ **A row whose `where in the code` cell is empty is not addressed** — the row was a plan, and the plan is not the thing. A cell naming a member that does not do what the row says is worse than an empty one.
 
 **`DUPLICATE CLAIMS`** — one row per write a caller can trigger twice.
 
-| write | where the claim is stored | what rejects the second one | where that rejection is caught |
-| --- | --- | --- | --- |
+| write | where the claim is stored | what rejects the second one | where that rejection is caught | where in the code |
+| --- | --- | --- | --- | --- |
 
 ⚠⚠ Three entries are **not legal** in the third column: an in-process lock (`SemaphoreSlim`, `AsyncLocal`, a static dictionary), a read that checks whether the row already exists, and a single-host assumption. All three leave both callers through. Naming one and documenting it as a known limitation is the same row, not a better one. The store and the column are things this codebase already has or does not — find out which; if it genuinely cannot carry a claim that outlives the process, that is a Blocker in §6.
 
 **`PAGED READS`** — one row per read that walks pages.
 
-| read | what caps it | how the caller learns the answer was cut short |
-| --- | --- | --- |
+| read | what caps it | how the caller learns the answer was cut short | where in the code |
+| --- | --- | --- | --- |
 
 ⚠⚠ `a log line` is **not** a legal entry in the third column. The caller cannot read your logs. Name the field or the return type that changes.
 
 **`REPEATED OPERATIONS`** — one row per operation a caller can invoke twice in the same state.
 
-| operation | what tells you the state actually changed | the effects gated on that |
-| --- | --- | --- |
+| operation | what tells you the state actually changed | the effects gated on that | where in the code |
+| --- | --- | --- | --- |
 
 ⚠⚠ `the transition returns quietly` is **not** a legal entry in the second column, and an empty third column is not `none` — an operation with no gated effects has nothing to repeat. The line below the transition runs either way unless something stops it.
 
 **`UNKNOWN OUTCOMES`** — one row per write whose transport can fail after the provider may already have acted.
 
-| write | the operation you re-read with | the reference you search by |
-| --- | --- | --- |
+| write | the operation you re-read with | the reference you search by | where in the code |
+| --- | --- | --- | --- |
 
-⚠⚠ `report the failure to the caller` is **not** a legal entry. The send failed; the write may have landed. Reporting a definite failure is a guess, and the reference in the third column is the same one the `DUPLICATE CLAIMS` row uses.
+⚠⚠ `report the failure to the caller` is **not** a legal entry. The send failed; the write may have landed. Reporting a definite failure is a guess, and the reference in the third column is the same one the `DUPLICATE CLAIMS` row uses. The `where in the code` cell names the **catch block** that re-reads — a catch that logs and rethrows discharges nothing.
 
-A reviewer grades these four alone as well, on the same terms: a row naming an answer the ⚠⚠ clause calls illegal is **not addressed**, whatever else the plan says.
+**`OPERATION OUTCOMES`** — one row per write whose response carries a status.
+
+| write | the status field | every value it can hold, and what the app does with each | where in the code |
+| --- | --- | --- | --- |
+
+⚠⚠ Two entries are **not legal** in the third column. Defaulting an absent status to a successful one — `status ?? "COMPLETED"` and anything shaped like it — turns an outcome you could not read into the one outcome you wanted; an unreadable status is the *pending* path. And passing the status into a method that does not branch on it is not reading it. If the operation returns an identifier, that is not an outcome either: the identifier says the provider received the request, not that it did the thing.
+
+**`WRITE ORDER`** — one row per write that touches both the local store and the provider.
+
+| write | what exists locally BEFORE the call | what is written after it returns | where in the code |
+| --- | --- | --- | --- |
+
+⚠⚠ An empty second column is **not** legal. If the first thing persisted is built out of the provider's response, then a transport failure leaves the provider holding a record this application has no row for, and nothing to reconcile against. The row created before the call carries the same reference the `DUPLICATE CLAIMS` and `UNKNOWN OUTCOMES` rows use.
+
+A reviewer grades these six alone as well, on the same terms: a row naming an answer the ⚠⚠ clause calls illegal is **not addressed**, and so is a row whose `where in the code` cell is empty — whatever else the plan says.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the operations and fields the scope actually touches.
 
