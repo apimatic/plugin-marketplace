@@ -86,7 +86,38 @@ Never use this prerequisite work as a "head start" on implementation: **creating
 | 13 | **Unknown outcomes** | For each write: what the code does when the transport fails after the request may have been received. Name the **operation it re-reads** and the **reference it searches by**. ⚠ Returning or throwing a definite failure without re-reading is **not** an acceptable entry. |
 | 14 | **Provider status, and reconciliation clocks** | Which operations return a **status field**, and the code path for each non-success value. ⚠ `status ?? "COMPLETED"`, or carrying the status into a method that does not branch on it, are **not** acceptable entries. If the scope reconciles two sources, also name the **single timestamp both sides filter on**; a local row-creation column is **not** acceptable. |
 
-A reviewer grades that table alone: each row either records a decision or records why it does not apply. A row that points at a skill, restates the concern, or sits blank is **not addressed** — and a row whose ⚠ clause names an answer as unacceptable is **not addressed** if that is the answer the code ships. Rows 5, 7 and 8 are the ones where "not addressed" costs something that cannot be recovered afterwards — a duplicate charge or duplicate write, sensitive data in a log, or test traffic sent to a live system.
+A reviewer grades that table alone: each row either records a decision or records why it does not apply. A row that points at a skill, restates the concern, or sits blank is **not addressed** — and a row whose ⚠ clause names an answer as unacceptable is **not addressed** if that is the answer the code ships. Rows 5, 7 and 8 are the ones where "not addressed" costs something that cannot be recovered afterwards — a duplicate charge or duplicate write, sensitive data in a log, or test traffic sent to a live system.
+Then four more tables, each named, each graded the same way. They exist because the concern they carry cannot be answered by one row of prose: a row says *that* you thought about it, a table forces you to name the thing. Write `none` explicitly where the task implies no such case.
+
+**`DUPLICATE CLAIMS`** — one row per write a caller can trigger twice.
+
+| write | where the claim is stored | what rejects the second one | where that rejection is caught |
+| --- | --- | --- | --- |
+
+⚠⚠ Three entries are **not legal** in the third column: an in-process lock (`SemaphoreSlim`, `AsyncLocal`, a static dictionary), a read that checks whether the row already exists, and a single-host assumption. All three leave both callers through. Naming one and documenting it as a known limitation is the same row, not a better one. The store and the column are things this codebase already has or does not — find out which; if it genuinely cannot carry a claim that outlives the process, that is a Blocker in §6.
+
+**`PAGED READS`** — one row per read that walks pages.
+
+| read | what caps it | how the caller learns the answer was cut short |
+| --- | --- | --- |
+
+⚠⚠ `a log line` is **not** a legal entry in the third column. The caller cannot read your logs. Name the field or the return type that changes.
+
+**`REPEATED OPERATIONS`** — one row per operation a caller can invoke twice in the same state.
+
+| operation | what tells you the state actually changed | the effects gated on that |
+| --- | --- | --- |
+
+⚠⚠ `the transition returns quietly` is **not** a legal entry in the second column, and an empty third column is not `none` — an operation with no gated effects has nothing to repeat. The line below the transition runs either way unless something stops it.
+
+**`UNKNOWN OUTCOMES`** — one row per write whose transport can fail after the provider may already have acted.
+
+| write | the operation you re-read with | the reference you search by |
+| --- | --- | --- |
+
+⚠⚠ `report the failure to the caller` is **not** a legal entry. The send failed; the write may have landed. Reporting a definite failure is a guess, and the reference in the third column is the same one the `DUPLICATE CLAIMS` row uses.
+
+A reviewer grades these four alone as well, on the same terms: a row naming an answer the ⚠⚠ clause calls illegal is **not addressed**, whatever else the plan says.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the operations and fields the scope actually touches.
 
@@ -110,7 +141,6 @@ Full re-planning only on genuine scope change; for a single missing fact mid-imp
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
 4. **Any compile or runtime error involving an SDK type or member** (`CS1061`, `CS0117`, `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `Twilio.*`, or a provider error at runtime) → *Step 4* below. Do not attempt more than one self-fix of an SDK-name error before switching to that procedure — rewriting from the same knowledge that produced the error is guessing.
 5. Run the project's tests (`dotnet test`); verify the integration end to end the way the task demands.
-6. **Reconcile the plan with the code before calling the work done.** Take the PRODUCTION READINESS table row by row and, for each row that names an artefact, point at it in the code you shipped — the file and the line. A row whose artefact is not there did not record a decision; it recorded an intention. Either the code gains the artefact or the row is corrected to say what shipped and why. A row carrying a ⚠ clause is **not** addressed while the answer that clause calls unacceptable is the answer in the code.
 
 ### Step 4 — Fixing SDK errors (map-first, in place)
 
