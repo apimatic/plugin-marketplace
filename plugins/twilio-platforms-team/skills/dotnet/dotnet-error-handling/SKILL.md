@@ -81,10 +81,10 @@ switch (result.Status)             // the {EnumType} members are on this operati
 }
 ```
 
-⚠⚠ **Never default an absent status to success.** `status?.Value ?? "COMPLETED"` is the same defect
-with an extra step: an operation whose status you could not read has an outcome you do not know, which
-is the **pending** path, not the happy one. The same applies to carrying the status into a method that
-does not branch on it — passing it along is not reading it.
+⚠⚠ **Never default an absent status to success.** Coalescing a null status to whichever member means "done" is the same
+defect with an extra step: an operation whose status you could not read has an outcome you do not know, which is the
+**not-yet** path, not the happy one. The same applies to carrying the status into a method that does not branch on it —
+passing it along is not reading it.
 
 Read the status field on every operation whose contract-sheet row declares one, and give the pending state
 a path distinct from both success and failure. It is neither, and a happy-path test will not catch

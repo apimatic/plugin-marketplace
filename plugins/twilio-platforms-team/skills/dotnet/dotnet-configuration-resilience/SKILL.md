@@ -275,10 +275,10 @@ The four, **weakest guarantee first** — so do not read the numbering as a reco
       reconciliation path that re-reads provider state and settles those rows. Both halves, or it is not
       this route.
 
-   ⚠⚠ **Route 2 needs a state that means UNKNOWN, not one that means failed.** `SendFailed`, `Failed`,
-   `Error` and `Undelivered` are outcomes the code is claiming to know — they are the defect, written in a
-   field instead of a return value. The send failed; *the write may still have landed*. The state has to say
-   so, and the sweep has to be real code that re-reads the provider, not an operator procedure.
+⚠⚠ **Route 2 needs a state that means UNKNOWN, not one that means failed.** A state whose name asserts the
+   attempt did not succeed is an outcome the code is claiming to know — it is the defect, written into a field
+   instead of a return value. The send failed; *the write may still have landed*. The state has to say so, and
+   the sweep has to be real code that re-reads the provider, not an operator procedure.
 
    ⚠⚠ **A log line is neither route.** It records that you gave up.
    `UNKNOWN OUTCOMES` names the code that does it — for route 1 the catch block, for route 2 the state you
@@ -399,7 +399,7 @@ var localRows    = await LoadByProviderEventTime(from, to, ct);   // not by row-
 ```
 
 Whether the provider's event time is already stored, and where, is a question for the codebase. Where it
-⚠⚠ **Filtering the local side on a row-creation column (`CreatedAt`, `InsertedAt`) is the defect.** If
+⚠⚠ **Filtering the local side on a row-creation column is the defect.** If
 your local query says `x.CreatedAt >= from && x.CreatedAt <= to` while the provider query filters on its
 own event time, the two sides are on different clocks and the report is wrong in both directions.
 
