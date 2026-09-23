@@ -126,7 +126,7 @@ So: `TBD` while planning; then, once the code compiles and before you report the
 | write | the status field | every value it can hold, and what the app does with each | where in the code |
 | --- | --- | --- | --- |
 
-⚠⚠ Two entries are **not legal** in the third column. Defaulting an absent status to a successful one — `status ?? "COMPLETED"` and anything shaped like it — turns an outcome you could not read into the one outcome you wanted; an unreadable status is the *pending* path. And passing the status into a method that does not branch on it is not reading it. If the operation returns an identifier, that is not an outcome either: the identifier says the provider received the request, not that it did the thing.
+⚠⚠ Three entries are **not legal** in the third column. **A value that means the provider has not finished is not success** — `pending`, `processing`, `awaiting_*`, `assessing`, `queued`, `in_review` and their kin belong in their own outcome, and grouping them with the values that mean it is done is this row's defect written out in full. Defaulting an absent status to a successful one — `status ?? "COMPLETED"` and anything shaped like it — turns an outcome you could not read into the one outcome you wanted; an unreadable status is the pending path too. And passing the status into a method that does not branch on it is not reading it. If the operation returns an identifier, that is not an outcome either: the identifier says the provider received the request, not that it did the thing.
 
 **`WRITE ORDER`** — one row per write that touches both the local store and the provider.
 
