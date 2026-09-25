@@ -55,6 +55,11 @@
       "name": "maxio-sdk-ts",
       "source": "./plugins/maxio-sdk-ts",
       "description": "Integrate and consume the APIMatic-generated Maxio Advanced Billing TypeScript SDK, grounded in the SDK map that ships inside the installed package. Bundles the integrate-maxio workflow router, the SDK-specific getting-started lookup layer, and seven API-agnostic TypeScript companions: client initialization, authentication, calling endpoints, models, error handling, configuration and resilience, and testing. No MCP server."
+    },
+    {
+      "name": "sdk-skills-test-dev",
+      "source": "./plugins/sdk-skills-test-dev",
+      "description": "Integrate and consume the APIMatic-generated PayPal Server SDK — bundled skills for C#/.NET. Generated from codegen-v2 (dev) with the skill fixes for #409, #410, #411 and #414; for experiments."
     }
   ]
 }

@@ -1,0 +1,10 @@
+{
+  "name": "sdk-skills-test-dev",
+  "version": "1.0.0",
+  "description": "Integrate and consume the APIMatic-generated PayPal Server SDK SDK — bundled skills for C#/.NET.",
+  "skills": "./skills",
+  "interface": {
+    "displayName": "sdk-skills-test-dev",
+    "developerName": "Alishahzad1903"
+  }
+}
