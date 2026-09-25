@@ -91,13 +91,15 @@ A reviewer grades that table alone: each row either records a decision or record
 | Write | Where the claim is stored | What rejects the second one | Where that rejection is caught | Where in the code |
 | --- | --- | --- | --- | --- |
 
+Every row follows one order: **claim → SDK call → record the result**. The claim is a write of its own, made before the SDK call, so a second caller is stopped before it reaches the provider; release it when the provider refuses the call.
+
 ⚠⚠ **Where the claim is stored**: a store this application owns — the one the codebase already keeps its records in — never the provider. A provider idempotency key goes beside the claim, never in place of it.
 
-⚠⚠ **What rejects the second one**: the store refusing the second write itself, the way this codebase already refuses a duplicate. Not legal, even documented as a known limitation: an in-process lock (`SemaphoreSlim`, `AsyncLocal`, a static dictionary), a single-host assumption, or any read before the write — a status check, a lookup by key. Each lets both callers through. If the store this code runs against does not enforce a refusal you rely on, rely on one it does.
+⚠⚠ **What rejects the second one**: the store refusing the second caller's claim, the way this codebase already refuses a duplicate. A conflict on the save *after* the SDK call is too late — both callers have already reached the provider. Not legal, even documented as a known limitation: an in-process lock (`SemaphoreSlim`, `AsyncLocal`, a static dictionary), a single-host assumption, or any read before the write — a status check, a lookup by key. Each lets both callers through. Pick a refusal the store you run against enforces: a primary key is refused even by in-memory test stores; a unique index may not be.
 
-**Where that rejection is caught**: the `catch` for what the store raises on the second write — a lookup that returns the earlier result is not a catch.
+**Where that rejection is caught**: the `catch` for what the store raises on the second claim — a lookup that returns the earlier result is not a catch.
 
-Write `TBD` in **Where in the code** while you plan — every row. Once the code compiles, replace each `TBD` individually with the member that writes the claim, which runs **before** the SDK call. ⚠⚠ A `TBD` left behind, a member that is not in the code, or one note covering several rows is **not addressed**; if the code does not do what the row says, fix the code, then the cell.
+Write `TBD` in **Where in the code** while you plan — every row. Once the code compiles, replace each `TBD` individually with two members, in order: the claim write, then the SDK call it precedes. Only this column changes after coding starts. ⚠⚠ A `TBD` left behind, a member that is not in the code, or one note covering several rows is **not addressed**; if the code does not do what the row says, fix the code, then the cell.
 
 **PAGED READS** — one row per read that walks pages; `none` if the scope reads no paged list.
 
