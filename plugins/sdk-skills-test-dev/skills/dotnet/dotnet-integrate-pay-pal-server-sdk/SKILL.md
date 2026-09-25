@@ -91,9 +91,13 @@ A reviewer grades that table alone: each row either records a decision or record
 | Write | Where the claim is stored | What rejects the second one | Where that rejection is caught | Where in the code |
 | --- | --- | --- | --- | --- |
 
-⚠⚠ Not legal in the third column, even documented as a known limitation: an in-process lock (`SemaphoreSlim`, `AsyncLocal`, a static dictionary), a single-host assumption, or a read that checks whether the claim exists before writing it. Each lets both callers through. A provider idempotency key goes beside the claim, never in place of it.
+⚠⚠ **Where the claim is stored**: a store this application owns — the one the codebase already keeps its records in — never the provider. A provider idempotency key goes beside the claim, never in place of it.
 
-Write `TBD` in **Where in the code** while you plan — every row. Once the code compiles, replace each `TBD` individually with the member that does what its row promised. ⚠⚠ A `TBD` left behind, a member that is not in the code, or one note covering several rows is **not addressed**; if the code does not do what the row says, fix the code, then the cell.
+⚠⚠ **What rejects the second one**: the store refusing the second write itself, the way this codebase already refuses a duplicate. Not legal, even documented as a known limitation: an in-process lock (`SemaphoreSlim`, `AsyncLocal`, a static dictionary), a single-host assumption, or any read before the write — a status check, a lookup by key. Each lets both callers through. If the store this code runs against does not enforce a refusal you rely on, rely on one it does.
+
+**Where that rejection is caught**: the `catch` for what the store raises on the second write — a lookup that returns the earlier result is not a catch.
+
+Write `TBD` in **Where in the code** while you plan — every row. Once the code compiles, replace each `TBD` individually with the member that writes the claim, which runs **before** the SDK call. ⚠⚠ A `TBD` left behind, a member that is not in the code, or one note covering several rows is **not addressed**; if the code does not do what the row says, fix the code, then the cell.
 
 **PAGED READS** — one row per read that walks pages; `none` if the scope reads no paged list.
 
@@ -104,10 +108,12 @@ Write `TBD` in **Where in the code** while you plan — every row. Once the code
 
 **UNKNOWN OUTCOMES** — one row per write whose connection can fail after the provider may already have acted; `none` if the scope makes no writes.
 
-| Write | The operation you re-read with | The reference you search by | Where in the code |
-| --- | --- | --- | --- |
+| Write | The operation you re-read with | The reference you search by | Where in the code | The test that fails the connection |
+| --- | --- | --- | --- | --- |
 
-⚠⚠ Reporting a failure is not a legal entry. With no reference, the third column names what the match uses; if the provider offers no way to find the write, that is a Blocker in §6, not a row. **Where in the code**: the catch that re-reads, or the unknown state and its sweep, plus the test that fails the connection and asserts what follows — `TBD` while you plan, replaced once the code compiles. A `TBD` left behind is not addressed.
+⚠⚠ Reporting a failure is not a legal entry, and neither is leaving the caller to retry. Settle the outcome in the failing write's own `catch`, before it returns, or record it as unknown for code that settles it later — a report someone reads is not that code. With no reference, the third column names what the match uses; if the provider offers no way to find the write, that is a Blocker in §6, not a row.
+
+**Where in the code**: that `catch`, or the unknown state and the code that settles it — a re-read helper nothing calls is not addressed. **The test that fails the connection** asserts what follows. Both are `TBD` while you plan, replaced once the code compiles. A `TBD` left behind is not addressed.
 
 Keep the file lean: no copied map pages, no full model dumps, and no clone path — only the operations and fields the scope actually touches.
 
@@ -130,7 +136,8 @@ Full re-planning only on genuine scope change; for a single missing fact mid-imp
 2. Implement sequentially, following the repo's own conventions and layering. You loaded the companion skills the sheet named in Step 2 — implement each step in line with the one that governs it. Take every contract *fact* (signatures, wire names, error accessors, enum values) from the contract sheet or a map lookup — never re-derive one from a companion.
 3. After every change: `dotnet build`; fix non-SDK errors yourself.
 4. **Any compile or runtime error involving an SDK type or member** (`CS1061`, `CS0117`, `CS0234`, `CS0104`, `CS1503`, `CS7036`, … on `PayPalServerSdk.*`, or a provider error at runtime) → *Step 4* below. Do not attempt more than one self-fix of an SDK-name error before switching to that procedure — rewriting from the same knowledge that produced the error is guessing.
-5. Run the project's tests (`dotnet test`); verify the integration end to end the way the task demands.
+5. Once the code is complete, open each member the **DUPLICATE CLAIMS** and **UNKNOWN OUTCOMES** rows name and confirm it runs when that write runs. Where the code falls short of a row, fix the code, not the row.
+6. Run the project's tests (`dotnet test`); verify the integration end to end the way the task demands.
 
 ### Step 4 — Fixing SDK errors (map-first, in place)
 
