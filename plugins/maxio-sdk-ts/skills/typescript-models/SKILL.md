@@ -110,8 +110,9 @@ An `anyOf` becomes a bare union with nothing to switch on — `export type {Unio
 — and its schema tries the arms in **declaration order**, first match winning, so overlapping arms
 are resolved by order.
 
-⚠ **A payload matching no arm throws.** Both kinds end in a `SchemaError` mid-decode — an
-unrecognized tag has no arm to dispatch to, and an undiscriminated union that matches nothing has no
+⚠ **A payload matching no arm throws.** Both kinds fail the decode — through an operation as a
+`DecodeError` whose `cause` is the `SchemaError`, through a schema you call directly as the
+`SchemaError` itself — an unrecognized tag has no arm to dispatch to, and an undiscriminated union that matches nothing has no
 arm to fall back on. You do not get a null union or an unset variant. A provider that adds a variant
 your SDK predates turns into a decode failure on a call that was previously fine, so a union field is
 a place to expect regeneration pressure. See **typescript-error-handling** for where that surfaces in
@@ -208,9 +209,11 @@ const body: {Model} = { payload: new TextEncoder().encode("hello") };
 const text = new TextDecoder().decode(model.payload);
 ```
 
-That is for base64-in-JSON fields only. It is **not** file upload: the engine builds empty, JSON,
-form-urlencoded and text bodies and nothing else — there is no multipart or raw-binary request body
-at all (see **typescript-calling-endpoints**).
+That is for base64-in-JSON fields only, and it is **not** the file-upload carrier. The engine does
+send raw-binary and multipart bodies, but a file there is a `FileInput` — bytes the transport frames
+rather than a value a schema encodes — and the two deliberately never unify: a decoded `Uint8Array`
+field is not assignable to a file field, and `new Uint8Array(value)` is the one-copy bridge (see
+**typescript-calling-endpoints**).
 
 ## What the schema checks — and what it does not
 
@@ -232,7 +235,8 @@ a rejected request costs a round-trip and an error path — write it at your own
 constraints from `api-reference.md`, which does carry the API's documented contract.
 
 What the schema *does* check, it checks in **both** directions: encoding runs before the request is
-built, so an invalid model throws `SchemaError` and **nothing is sent**. Read that failure as the SDK
+built, so an invalid model rejects the call with an `EncodeError` — its `cause` the `SchemaError`
+naming the field — and **nothing is sent**. Read that failure as the SDK
 catching your mistake at the point you made it, not as an upstream fault — the compiler catches the
 shape and the schema catches the values, and between them very little reaches the network wrong. In
 production, catch it at the boundary where *you* assemble a payload from external input and treat it
@@ -343,4 +347,4 @@ schema surface, and the failures each date codec produces.
 ## Next
 
 - Pass models to an operation → **typescript-calling-endpoints**
-- `SchemaError`, its message and `rawBody` → **typescript-error-handling**
+- `SchemaError`, and the `DecodeError` or `EncodeError` it arrives on → **typescript-error-handling**
