@@ -13,7 +13,7 @@ This is the **SDK-specific** entry point. For general patterns that apply to any
 
 ## SDK identity
 
-Verified against `package.json` and `sdk-map.md` of the generated package at version `1.0.0`. **Re-verify after a version bump** — this page is a snapshot, not a live read.
+Verified against `package.json` and `sdk-map.md` of the generated package at version `2.0.1`. **Re-verify after a version bump** — this page is a snapshot, not a live read.
 
 | Fact | Value |
 | --- | --- |
@@ -21,7 +21,7 @@ Verified against `package.json` and `sdk-map.md` of the generated package at ver
 | Package name (what you install, and what you import) | `@zaid.sid/maxio-advanced-billing` — published to npm |
 | Import specifier | `@zaid.sid/maxio-advanced-billing` — the package root is the **only** entry; deep imports do not resolve |
 | Source repository | https://github.com/Darker98/maxio-sdk (branch `main` — the ref this map documents) |
-| Version | `1.0.0` (API spec version `1.0`) |
+| Version | `2.0.1` (API spec version `1.0`) |
 | Client class | `MaxioAdvancedBillingClient` (`src/client.ts`) — one class, no sync/async split |
 | Options type | `ClientOptions` (`src/client-options.ts`) — types only, no resolver beside it |
 | Client construction | `new MaxioAdvancedBillingClient(options: ClientOptions = {})` — the argument is optional, as is **every** field on it, so `new MaxioAdvancedBillingClient()` compiles. Fields: `serverEnvironment` · `serverOptions` · `retry` · `fetch` · `basicAuth`. `retry` is the `RetryOptions` policy; its defaults retry a GET, HEAD, PUT or OPTIONS call up to `3` times and bound each attempt by `retry.timeout` = `60_000` ms, and every one of them can be changed |
