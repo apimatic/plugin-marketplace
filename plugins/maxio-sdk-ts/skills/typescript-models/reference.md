@@ -41,7 +41,7 @@ object, and mutating it changes nothing on the wire by itself.
 | `date-time` (ISO 8601 / RFC 1123 / unix) | `Date` | `s.dateTime()` / `s.rfc1123DateTime()` / `s.unixSecondsDateTime()` |
 | int32, int64, float, double, big-decimal | `number` | `s.number()` |
 | boolean | `boolean` | `s.boolean()` |
-| binary, file | `Uint8Array` | `s.bytes()` (base64) |
+| binary, file — as a declared <em>field</em> | `Uint8Array` | `s.bytes()` (base64) |
 | a value the spec fixed | that literal type | `s.literal(value)` |
 | free-form object | `Record<string, unknown>` | `s.record(s.string(), s.unknown())` |
 | array of `T` | `T[]` | `s.array(...)` |
@@ -124,10 +124,11 @@ type EnumSchema<T> = Schema<T, T> & { readonly values: readonly T[] };
 
 Both directions throw `SchemaError` on mismatch and produce nothing partial. The message is prefixed
 `Wire value could not be decoded.` or `Type could not be encoded for the wire.`, followed by
-`path: expected X, received Y` per issue (`<root>` where there is no path); `.rawBody` carries the
-offending value, `.kind` is `"schema"`, and `.cause` is the underlying zod error with the structured
-issue list. Request encoding runs before the HTTP call, so an encode failure means **nothing was
-sent**.
+`path: expected X, received T` per issue — `T` the type that arrived, never the value (`<root>`
+where there is no path). It keeps no copy of the offending value; `.cause` is the underlying zod error
+with the structured issue list. Through an operation it arrives one level down, on the `cause` of a
+`DecodeError` or an `EncodeError`. Request encoding runs before the HTTP call, so an encode failure
+means **nothing was sent**.
 
 ## Key renaming
 
@@ -216,7 +217,8 @@ export const {union}Schema = s.discriminatedUnion<{Union}>("{wire_tag}", {
   alias spells what arrives.
 - A polymorphic base (an object schema that `allOf` subtypes with a discriminator derive from) is
   emitted here **as a discriminated union**, not as a base type. There is nothing to upcast to.
-- ⚠ A tag matching no arm is a `SchemaError`, not an unset variant.
+- ⚠ A tag matching no arm is a decode failure — a `SchemaError`, on a `DecodeError`'s `cause` through
+  an operation — not an unset variant.
 
 ```ts
 switch (value.{tag}) {
@@ -237,7 +239,8 @@ export const {union}Schema = s.of<{Union}>(s.union([s.string(), s.lazy(() => {mo
   so overlapping arms resolve by order.
 - Build by passing a value of any arm directly. There is no wrapper and no factory.
 - A union the spec left unconstrained degrades to `unknown`.
-- ⚠ A value matching no arm is a `SchemaError`.
+- ⚠ A value matching no arm is a decode failure — a `SchemaError`, on a `DecodeError`'s `cause`
+  through an operation.
 
 ## Dates
 
@@ -273,8 +276,9 @@ body.payload = new TextEncoder().encode("hello");        // encoded to base64 on
 const text = new TextDecoder().decode(model.payload);    // decoded from base64 for you
 ```
 
-Base64-in-JSON fields only. Non-base64 input fails on decode. The engine has no multipart or
-raw-binary request body, so this is not a file-upload carrier.
+Base64-in-JSON fields only. Non-base64 input fails on decode. This is not the file-upload carrier:
+a raw-binary body and a multipart file part both take a `FileInput`, which is framed rather than
+encoded, and a decoded `Uint8Array` is deliberately not assignable to one.
 
 ## Collections
 
