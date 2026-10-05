@@ -40,33 +40,23 @@ PayPal-focused plugin built on the same context engine.
 
 ### maxio-sdk
 
-Maxio Advanced Billing (formerly Chargify) **.NET SDK** plugin — no MCP server, no telemetry,
-Claude Code only, C#/.NET only. Its core feature is a bundled, generated **SDK map**
-(`skills/maxio-getting-started/sdk-map.md` + `map/`) plus a subagent orchestration layer: the agent
-answers every signature/model/enum/error question by map lookup, clones the SDK source **only on
-first need** for a full body the map doesn't carry, and never greps the clone or opens the SDK's
-`api-reference.md`.
+Maxio Advanced Billing (formerly Chargify) **.NET SDK** plugin — skills only: no agent, no MCP
+server, no telemetry, C#/.NET only. It teaches an agent to install and use the APIMatic-generated
+SDK (NuGet `Darker98.MaxioAdvancedBilling`, source `Darker98/maxio-csharp-sdk`). The SDK map
+(`sdk-map.md` + `map/operations/`) is **not bundled**: it ships in the SDK source repo, and
+`dotnet-getting-started` has the agent take one shallow clone of it at the start of SDK work.
 
-**Skills**
+**Skills** (flat `skills/<name>/`)
 
-- **integrate-maxio** — orchestrator/router: routes a Maxio .NET SDK task to the `maxio-plan` or
-  `maxio-debug` agent, handles blocker hand-back, and drives the implement-and-verify loop.
-- **maxio-getting-started** — SDK-specific entry point: identity, client construction, servers/auth,
-  the SDK map, lookup hygiene ("keep lookups cheap"), and the contract-sheet workflow.
+- **dotnet-integrate-maxio-advanced-billing** — mandatory first step / router: the plan-file gate
+  (`maxio-advanced-billing-plan.md`), contract-sheet labels and the required-reading rule.
+- **dotnet-getting-started** — SDK-specific entry point: identity, install, servers/auth, how to
+  obtain and use the SDK map.
 - Seven `dotnet-*` companions (`dotnet-client-initialization`, `dotnet-authentication`,
   `dotnet-calling-endpoints`, `dotnet-models`, `dotnet-error-handling`,
   `dotnet-configuration-resilience`, `dotnet-testing`) — usage guidance layered on the map.
 
-**Agents**
-
-- **maxio-plan** — read-only planner: loads the bundled skills + SDK map and writes a
-  contract-grounded `maxio-plan.md` before any code is written (no MCP).
-- **maxio-debug** — diagnoses and fixes Maxio code in place, map-first, verifying with `dotnet build`
-  / `dotnet test` (no MCP).
-
-The map's generated pages are never hand-edited — they are produced by the
-`sdk-map-generator` repo and verified field-exact against the SDK source
-(github.com/asadali214/advanced-billing-sample-sdk, pinned per map stamp).
+The map's pages are generated with the SDK and never hand-edited.
 
 ## Per-IDE manifest convention
 
