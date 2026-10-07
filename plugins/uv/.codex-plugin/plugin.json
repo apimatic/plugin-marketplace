@@ -1,0 +1,10 @@
+{
+  "name": "uv",
+  "version": "0.0.1",
+  "description": "Integrate and consume the APIMatic-generated Upvest Investment API SDK — bundled skills for csharp.",
+  "skills": "./skills",
+  "interface": {
+    "displayName": "uv",
+    "developerName": "Muhammad Rafay"
+  }
+}

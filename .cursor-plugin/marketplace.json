@@ -60,6 +60,11 @@
       "name": "sdk-skills-test-dev",
       "source": "./plugins/sdk-skills-test-dev",
       "description": "Integrate and consume the APIMatic-generated PayPal Server SDK — bundled skills for C#/.NET. Generated from codegen-v2 (dev) with the skill fixes for #409, #410, #411 and #414; for experiments."
+    },
+    {
+      "name": "uv",
+      "source": "./plugins/uv",
+      "description": "Integrate and consume the APIMatic-generated Upvest Investment API C#/.NET SDK, installed from source (sdks-io/uv-apimatic-dotnet-sdk-old, tag 0.0.5) - the SDK line that carries HTTP message signing. Bundled skills only; no agent, no MCP server. (Do not install alongside upvest - they cover the same API.)"
     }
   ]
 }
