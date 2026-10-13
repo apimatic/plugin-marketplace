@@ -60,6 +60,11 @@
       "name": "sdk-skills-test-dev",
       "source": "./plugins/sdk-skills-test-dev",
       "description": "Integrate and consume the APIMatic-generated PayPal Server SDK — bundled skills for C#/.NET. Generated from codegen-v2 (dev) with the skill fixes for #409, #410, #411 and #414; for experiments."
+    },
+    {
+      "name": "wm-v4",
+      "source": "./plugins/wm-v4",
+      "description": "Integrate and consume the APIMatic-generated Walmart APIs SDK — bundled skills for C#/.NET, Python, TypeScript."
     }
   ]
 }
