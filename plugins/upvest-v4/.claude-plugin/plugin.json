@@ -1,0 +1,16 @@
+{
+  "name": "upvest-v4",
+  "displayName": "Upvest Investment API",
+  "version": "0.0.1",
+  "description": "Integrate and consume the APIMatic-generated Upvest Investment API SDK — bundled skills for C#/.NET.",
+  "author": {
+    "name": "APIMatic"
+  },
+  "license": "MIT",
+  "skills": [
+    "./skills/dotnet"
+  ],
+  "agents": [
+    "./scoped/agents/upvest-investment-api-planner.md"
+  ]
+}
